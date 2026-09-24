@@ -345,6 +345,7 @@ PORTAL_FRAMES.hermanasChalk = function (g, x, y, w, h, beat) {
 
 // ---------------------------------------------------------------- room ------
 function hermanasRoomTop(g, S) {
+  if (S.phase === 'inter') hermanasPrewarm();
   // build every pose the interlude will need in the background, once
   if (!hermanasRoomTop.warmed) { hermanasRoomTop.warmed = 1; for (const w of ['kira', 'nala']) for (const [p, m] of [['bow', 'happy'], ['jump', 'happy'], ['lie', 'sad'], ['run', 'focus'], ['stand', 'wow'], ['stand', 'normal'], ['jump', 'normal']]) warm(() => hermanasAussieSide(w, p, m)); }
   g.drawImage(hermanasBeachBg(), 0, 0);
@@ -379,8 +380,6 @@ function hermanasRoomTop(g, S) {
   drawS(g, hermanasAussieSide('nala', poseN, moodN), nx - runOff, gy - jumpN + bob, { ax: .5, ay: 1, flip: true });
   if (fbx != null) { shadowOval(g, fbx, gy - 2, 7, 1.5, .3); drawS(g, hermanasFrisbeeSpr(), fbx, fby, { rot: Math.sin(t * 6) * .2 }); }
   if (react === 'lose' || react === 'over') { const k = Math.min(1, rt * 3); drawS(g, hermanasFrisbeeSpr('#ff6b3d', 18), 128, lerp(80, 172, E.outBounce(k)), { rot: rt * 3 }); drawRainCloud(g, 128, 50 + (1 - k) * -30, rt); }
-  if (special === 'speed') { for (let i = 0; i < 8; i++) { const yy = 140 + i * 5, xx = (i * 67 + fl(t * 420)) % 300 - 20; rect(g, xx, yy, 18, 1, '#ffffff'); } }
-  if (special === 'boss') { const bk = ((S.pb - 2) * 60 / S.bpm) / 1.6; const gx = lerp(-40, 300, bk % 1), gy2 = 60 + Math.sin(bk * 9) * 10; drawS(g, hermanasGullSpr(fl(NOW * 10) % 3, true, 'smug'), gx, gy2); shadowOval(g, gx, 180, 12, 2, .35); }
   if (react === 'win' && rt < .6) for (let i = 0; i < 3; i++) drawHeart(g, 128 + (i - 1) * 16, 150 - rt * 40 - i * 4, '#ff4060', 1);
 }
 function hermanasRoomBot(g, S) { g.drawImage(hermanasBeachBotBg(), 0, 0); }
@@ -408,6 +407,190 @@ function hermanasPlayTop(g, S) {
   hermanasMini(g, 60, 140, S.g.state === 'play' ? 'watch' : S.g.state === 'won' ? 'win' : 'lose', S);
 }
 
+// ---------------------------------------------------------------- announcements
+// Kira & Nala's own ¡MÁS RÁPIDO! / ¡JUEGO DEL JEFE! / ¡MÁS DIFÍCIL! (room.special):
+// a wave they surf, the thief gull's shadow and her WANTED poster, a storm and
+// the lifeguard's red flag. Lettering: their surf face from the title card.
+const HERMANAS_WORDS = { speed: ['¡MÁS', 'RÁPIDO!'], boss: ['¡JUEGO', 'DEL JEFE!'], level: ['¡MÁS', 'DIFÍCIL!'] };
+const HERMANAS_LABELS = { speed: '¡Viene una ola gorda!', boss: '¡La gaviota ladrona ataca!', level: '¡Bandera roja: más difícil!' };
+let HERMANAS_FACES = null; // built on first use: the card faces live in cards.js, later in the bundle
+function hermanasFaces() {
+  if (HERMANAS_FACES) return HERMANAS_FACES;
+  const F = CARD_SURF_FACE;
+  HERMANAS_FACES = {
+    speed: F,
+    boss: Object.assign({}, F, { id: 'hnBoss', fill: ['#ffffff', '#ffd49b', '#ff6b3d'], line: '#2a0610', shadow: ['#c02d45', '#7c1830', '#3a0010'], hi: '#fff7ae' }),
+    level: Object.assign({}, F, { id: 'hnStorm', fill: ['#ffffff', '#d7e6f5', '#9fb4cc'], shadow: ['#4d5670', '#2b2540', '#141c47'], hi: '#ffffff' }),
+  };
+  return HERMANAS_FACES;
+}
+function hermanasFitWord(kind, w) { return cardFit(w, kind === 'boss' ? 132 : 200, hermanasFaces()[kind]); }
+// rasterise the letters ahead of time, one per frame (called from the room every frame)
+function hermanasPrewarm() {
+  if (typeof cardPrewarm !== 'function' || hermanasPrewarm.done) return;
+  const list = []; for (const k in HERMANAS_WORDS) for (const w of HERMANAS_WORDS[k]) list.push([w, hermanasFitWord(k, w)]);
+  cardPrewarm(list);
+  if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) hermanasPrewarm.done = 1;
+}
+// one-shot sounds inside a draw: once per announcement
+function hermanasOnce(S, key) { S._hnOnce = S._hnOnce || {}; const k = S.count + ':' + key; if (S._hnOnce[k]) return false; S._hnOnce[k] = 1; return true; }
+function hermanasBoard(col = '#ff6b3d') {
+  return mdl('hermanas:board' + col, () => {
+    const c = mkCanvas(34, 9), g = c.g;
+    ellipsePx(g, 17, 4.5, 16.5, 4, INK); ellipsePx(g, 17, 4, 15.5, 3, '#fff8e6'); ellipsePx(g, 16, 3.5, 13, 2, '#ffffff');
+    rect(g, 3, 4, 28, 1, col); rect(g, 3, 5, 28, 1, mixHex(col, '#000000', .3));
+    polyPx(g, [[25, 8], [29, 8], [27, 9]], INK);
+    return c;
+  });
+}
+// ---- ¡MÁS RÁPIDO!: a wall of water rises and the sisters surf its face
+function hermanasSpeedFx(g, S, t) {
+  const b = t * S.bpm / 60, H = 104 * E.outBack(clamp(b / .9, 0, 1)), xc = lerp(268, 190, E.outQ(clamp(b / 3.5, 0, 1))), base = 150, w = 92;
+  const crest = x => x <= xc ? base - H * Math.exp(-Math.pow((xc - x) / w, 2) * 1.5) : base - H * lerp(1, .78, clamp((x - xc) / 70, 0, 1));
+  g.drawImage(hermanasBeachBg(), 0, 0);
+  // wind lines across the sky
+  for (let i = 0; i < 11; i++) { const y = 10 + i * 11, x = SW - ((i * 53 + b * 190) % (SW + 90)); rect(g, x, y, 20 + (i % 3) * 9, 1, 'rgba(255,255,255,.75)'); }
+  // the water wall, column by column in depth bands
+  const bands = [[0, 2, '#ffffff'], [2, 6, '#c8ecff'], [6, 18, '#7cc6f5'], [18, 40, '#3d93d6'], [40, 80, '#2f7cc4'], [80, 999, '#1b4f8c']];
+  for (let x = 0; x < SW; x++) { const cy = rd(crest(x)); for (const [a0, z, col] of bands) { const y0 = cy + a0, y1 = Math.min(SH, cy + z); if (y1 > y0) { g.fillStyle = col; g.fillRect(x, y0, 1, y1 - y0); } } }
+  // streaks running up the face
+  for (let i = 0; i < 16; i++) { const q = (i * .37 + b * .8) % 1, x = rd(lerp(-10, xc - 8, (i * .61) % 1)), y = rd(crest(x) + 10 + q * 60); if (y < SH) hline(g, x, x + 7 + (i % 3) * 3, y, i % 2 ? '#9bd6f7' : '#5aaee6'); }
+  // the lip curls over, spitting spray
+  if (H > 30) {
+    const cy = crest(xc), k = clamp((H - 30) / 70, 0, 1);
+    const lip = [[xc + 6, cy - 1], [xc - 10, cy - 11 * k], [xc - 34 * k, cy - 8 * k], [xc - 46 * k, cy + 4 * k], [xc - 40 * k, cy + 12 * k], [xc - 28 * k, cy + 6 * k], [xc - 12, cy + 7]];
+    polyPx(g, lip.map(([x, y]) => [x - 1, y - 1]), '#ffffff'); polyPx(g, lip, '#c8ecff'); polyPx(g, lip.slice(2, 6).map(([x, y]) => [x + 3, y + 1]), '#9bd6f7');
+    for (let i = 0; i < 14; i++) { const q = (b * 1.7 + i * .29) % 1, an = -2.4 - hash2(i, 7) * 1.2, v = 26 + hash2(7, i) * 30; disc(g, xc - 40 * k + Math.cos(an) * v * q, cy + Math.sin(an) * v * q + 40 * q * q, 1.6 - q, '#ffffff'); }
+  }
+  // the sisters ride down the face ahead of the curl (facing left), well apart
+  const ek = E.outBack(clamp((b - .3) / .6, 0, 1));
+  if (ek > 0) for (const [who, dx, ph, col] of [['nala', 124, 1.7, '#e23b4e'], ['kira', 62, 0, '#3565cc']]) {
+    const x = xc - dx + (1 - ek) * 170, y = crest(x), sl = clamp(Math.atan2(crest(x + 5) - crest(x - 5), 10), -.55, .55), bob = Math.sin(b * TAU * .5 + ph) * 2;
+    for (let i = 1; i <= 5; i++) disc(g, x + 13 + i * 5, y + 1 + Math.sin(b * 9 + i) * 1.5, 2.3 - i * .3, '#ffffff');
+    drawS(g, hermanasBoard(col), x, y - 1 + bob, { ax: .5, ay: .8, rot: sl, flip: true });
+    drawS(g, hermanasAussieSide(who, 'run', 'happy', .55), x - 2, y - 3 + bob, { ax: .5, ay: 1, rot: sl * .8, flip: true });
+  }
+  // the words, in their surf face, blown in from the right
+  const nk = t - .12, [w1, w2] = HERMANAS_WORDS.speed;
+  if (nk > 0) {
+    cardWord(g, w1, 58, 8, hermanasFitWord('speed', w1), { anim: i => cardAnimSlide(nk, i, { from: 200, rot: -.5, stagger: .05 }) });
+    cardWord(g, w2, 96, 38, hermanasFitWord('speed', w2), { anim: i => cardAnimSlide(nk - .15, i, { from: 200, rot: -.5, stagger: .05 }) });
+  }
+  if (b > .3 && hermanasOnce(S, 'wave')) sfx('splash', { vol: .7, pitch: .8 });
+}
+// the thief's shadow on the sand: a huge gull shape flattened on the ground
+function hermanasGullShadow(g, x, y, s, b) {
+  const f = Math.sin(b * 9) * 6 * s;
+  g.globalAlpha = .45;
+  polyPx(g, [[x - 26 * s, y - 2 * s], [x - 6 * s, y - 5 * s - f * .4], [x + 2 * s, y - 2 * s], [x + 10 * s, y - 5 * s - f * .4], [x + 30 * s, y - 2 * s], [x + 8 * s, y + 2 * s], [x - 6 * s, y + 2 * s]], '#0e0b16');
+  ellipsePx(g, x + 2 * s, y, 12 * s, 3 * s, '#0e0b16'); ellipsePx(g, x + 14 * s, y - 1 * s, 4 * s, 2 * s, '#0e0b16');
+  g.globalAlpha = 1;
+}
+// SE BUSCA: the gull's wanted poster
+function hermanasWanted() {
+  return mdl('hermanas:wanted', () => {
+    const W = 100, Hh = 116, c = mkCanvas(W, Hh), g = c.g;
+    const edge = []; for (let i = 0; i <= 10; i++) edge.push([4 + i * 9.2, 4 + (i % 2 ? 1.5 : 0)]); for (let i = 0; i <= 12; i++) edge.push([W - 4 + (i % 2 ? -1.5 : 0), 4 + i * 9]); for (let i = 10; i >= 0; i--) edge.push([4 + i * 9.2, Hh - 4 - (i % 2 ? 1.5 : 0)]); for (let i = 12; i >= 0; i--) edge.push([4 + (i % 2 ? 1.5 : 0), 4 + i * 9]);
+    polyPx(g, edge.map(([x, y]) => [x + 1, y + 2]), '#5a2c1e'); polyPx(g, edge, '#f2e2b8');
+    for (let i = 0; i < 120; i++) px(g, 6 + hash2(i, 81) * (W - 12), 6 + hash2(81, i) * (Hh - 12), hash2(i, 5) < .5 ? '#e6d2a0' : '#fff4d6');
+    txt(g, 'SE BUSCA', W / 2, 9, '#7c1830', { align: 'c', bold: true });
+    hline(g, 12, W - 12, 20, '#7c1830');
+    rect(g, 26, 25, 48, 54, INK); rect(g, 27, 26, 46, 52, '#a8d8ff'); rect(g, 27, 62, 46, 16, '#f2d59a');
+    g.drawImage(hermanasGullStand('smug'), 31, 30);
+    txt(g, 'LA GAVIOTA', W / 2, 83, INK, { align: 'c', bold: true });
+    txt(g, 'LADRONA', W / 2, 93, INK, { align: 'c', bold: true });
+    tiny(g, 'RECOMPENSA: 1 FRISBI', W / 2, 105, '#7c1830', { align: 'c' });
+    disc(g, W / 2, 5, 3, INK); disc(g, W / 2, 5, 2, '#c8c6d3'); px(g, W / 2 - 1, 4, '#ffffff');
+    return c;
+  });
+}
+// ---- ¡JUEGO DEL JEFE!: the sky darkens, a shadow sweeps the beach, SE BUSCA
+function hermanasBossFx(g, S, t) {
+  const b = t * S.bpm / 60;
+  g.drawImage(hermanasBeachBg(), 0, 0);
+  g.globalAlpha = Math.min(.55, b * .7); rect(g, 0, 0, SW, SH, '#1b1030'); g.globalAlpha = 1;
+  const sk = clamp(b / 1.3, 0, 1); if (sk < 1) hermanasGullShadow(g, lerp(-90, 340, E.ioQ(sk)), 164, 2.6, b);
+  // the sisters freeze, looking up, trembling
+  const tr = b > .4 ? Math.sin(b * 40) * .8 : 0;
+  shadowOval(g, 46, 185, 20, 2.5, .45); shadowOval(g, 106, 185, 20, 2.5, .45);
+  drawS(g, hermanasAussieSide('kira', 'stand', 'wow', .62), 46 + tr, 184, { ax: .5, ay: 1 });
+  drawS(g, hermanasAussieSide('nala', 'stand', 'wow', .62), 106 - tr, 184, { ax: .5, ay: 1, flip: true });
+  if (b > .5 && b < 2.2) { txt(g, '!', 58, 126 - Math.min(1, (b - .5) * 4) * 6, '#ffffff', { align: 'c', out: INK, bold: true }); txt(g, '!', 96, 126 - Math.min(1, (b - .5) * 4) * 6, '#ffffff', { align: 'c', out: INK, bold: true }); }
+  // the poster drops on its nail and swings to rest
+  const pk = clamp((b - .9) / .55, 0, 1);
+  if (pk > 0) { const drop = (1 - E.outBounce(pk)) * -170, sw = Math.sin(b * 6) * .08 * Math.max(0, 1 - (b - 1.4) / 2.2); g.save(); g.translate(194, 44 + drop); g.rotate(sw); g.drawImage(hermanasWanted(), -50, -4); g.restore(); if (pk >= 1 && hermanasOnce(S, 'poster')) sfx('stamp'); }
+  // the words, in the storm-red surf face
+  const nk = t - .08, [w1, w2] = HERMANAS_WORDS.boss;
+  if (nk > 0) {
+    cardWord(g, w1, 70, 22, hermanasFitWord('boss', w1), { anim: i => cardAnimDrop(nk, i, { h: -40, stagger: .045 }) });
+    cardWord(g, w2, 74, 54, hermanasFitWord('boss', w2), { anim: i => cardAnimDrop(nk - .14, i, { h: -40, stagger: .045 }) });
+  }
+  // the gull herself crosses over everything with the frisbee, cackling
+  const gk = (b - 2.1) / 1.4; if (gk > 0 && gk < 1) { const gx = lerp(290, -60, gk), gy = 110 - Math.sin(gk * Math.PI) * 26; drawS(g, hermanasGullSpr(fl(b * 10) % 3, true, 'smug'), gx, gy, { flip: true }); if (gk > .15 && gk < .7) shout(g, '¡CRUAC!', gx + 8, gy - 28, (gk - .15) * 2); if (hermanasOnce(S, 'cruac')) sfx('hermanasCruac'); }
+}
+// the lifeguard's pole and flag (yellow, then red)
+function hermanasFlag(g, x, y, b, red) {
+  vline(g, x - 1, y, 162, INK); vline(g, x, y, 162, '#c8c6d3'); vline(g, x + 1, y, 162, '#9896a4'); disc(g, x, y - 1, 2, INK); disc(g, x, y - 1, 1.3, '#ffdf4f');
+  const col = red ? '#e23b4e' : '#ffdf4f', dark = red ? '#8c1d30' : '#c98a10', pts = [], n = 10, len = 34;
+  for (let i = 0; i <= n; i++) pts.push([x + 2 + i * len / n, y + 2 + Math.sin(b * 8 - i * .6) * (1 + i * .3)]);
+  for (let i = n; i >= 0; i--) pts.push([x + 2 + i * len / n, y + 22 + Math.sin(b * 8 - i * .6) * (1 + i * .3)]);
+  polyPx(g, pts.map(([a, c]) => [a + 1, c + 1]), INK); polyPx(g, pts, col);
+  for (let i = 1; i < n; i += 3) { const [a, c] = pts[i]; vline(g, a, c + 2, c + 18, dark); }
+}
+function hermanasStormCloud(g, x, y, i) {
+  const s = .8 + (i % 3) * .2;
+  for (const [dx, dy, r] of [[0, 4, 9], [10, 0, 12], [22, 4, 10], [12, 8, 9]]) disc(g, x + dx * s, y + dy * s + 1, r * s + 1, '#1b1627');
+  for (const [dx, dy, r] of [[0, 4, 9], [10, 0, 12], [22, 4, 10], [12, 8, 9]]) disc(g, x + dx * s, y + dy * s, r * s, '#4d5670');
+  disc(g, x + 8 * s, y - 2 * s, 6 * s, '#6a6580');
+}
+// ---- ¡MÁS DIFÍCIL!: storm clouds roll in, lightning, the flag turns red
+function hermanasLevelFx(g, S, t) {
+  const b = t * S.bpm / 60, dk = clamp(b / .8, 0, 1);
+  g.drawImage(hermanasBeachBg(), 0, 0);
+  g.globalAlpha = .5 * dk; rect(g, 0, 0, SW, SH, '#243248'); g.globalAlpha = 1;
+  // the sisters huddle under the umbrella, ears down
+  shadowOval(g, 48, 186, 22, 2.5, .45); shadowOval(g, 104, 186, 22, 2.5, .45);
+  drawS(g, hermanasAussieSide('kira', 'lie', 'sad', .6), 50, 186, { ax: .5, ay: 1 });
+  drawS(g, hermanasAussieSide('nala', 'lie', 'sad', .6), 104, 186, { ax: .5, ay: 1, flip: true });
+  for (let i = 0; i < 9; i++) hermanasStormCloud(g, lerp(-80, -10, E.outQ(dk)) + i * 32 + Math.sin(b * .9 + i) * 3, lerp(-40, 4 + (i % 3) * 9, E.outQ(dk)), i);
+  for (let i = 0; i < 44; i++) { const x = (i * 29 + b * 70) % (SW + 40) - 10, y = (i * 47 + b * 240) % SH; if (y > 18) linePx(g, x, y, x - 3, y + 7, 'rgba(200,220,255,.7)'); }
+  const red = b > 1.25;
+  hermanasFlag(g, 212, 64, b, red);
+  if (b > 1.18 && b < 1.5) {
+    const k = (1.5 - b) / .32; g.globalAlpha = k * .8; rect(g, 0, 0, SW, SH, '#ffffff'); g.globalAlpha = 1;
+    const bolt = [[150, 10], [138, 44], [150, 44], [132, 86], [158, 38], [146, 38], [160, 10]]; polyPx(g, bolt.map(([x, y]) => [x + 1, y + 1]), INK); polyPx(g, bolt, '#fff7ae');
+    if (hermanasOnce(S, 'thunder')) { sfx('boom', { vol: .6, pitch: .7 }); shake('top', 3, .3); }
+  }
+  if (red && b < 2.6) shout(g, '¡BANDERA ROJA!', 196, 46, (b - 1.25) * 1.6);
+  const f = hermanasFaces(), nk = t - .15, [w1, w2] = HERMANAS_WORDS.level, jolt = b > 1.2 && b < 1.6 ? Math.sin(b * 80) * 2 : 0;
+  if (nk > 0) {
+    cardWord(g, w1, 70 + jolt, 44, hermanasFitWord('level', w1), { anim: i => cardAnimDrop(nk, i, { stagger: .05 }) });
+    cardWord(g, w2, 96 + jolt, 76, hermanasFitWord('level', w2), { anim: i => cardAnimDrop(nk - .12, i, { stagger: .05 }) });
+  }
+}
+function hermanasSpecial(g, S, kind, t) {
+  if (typeof cardWord !== 'function') return false;
+  if (kind === 'speed') hermanasSpeedFx(g, S, t);
+  else if (kind === 'boss') hermanasBossFx(g, S, t);
+  else if (kind === 'level') hermanasLevelFx(g, S, t);
+  else return false;
+}
+// the bottom screen: a lifeguard's wooden board with the news in chalk
+function hermanasSpecialBot(g, S, kind, t) {
+  const lbl = HERMANAS_LABELS[kind]; if (!lbl) return false;
+  const b = t * S.bpm / 60, k = E.outBack(clamp(b * 1.6, 0, 1)), w = txtW(lbl) + lbl.length + 44, x0 = rd(SW / 2 - w / 2), y = rd(3 - (1 - k) * 36);
+  rect(g, x0 - 1, y - 1, w + 2, 26, INK); rect(g, x0, y, w, 24, RAMP.wood[3]); rect(g, x0, y, w, 1, RAMP.wood[4]); rect(g, x0, y + 23, w, 1, RAMP.wood[1]);
+  for (let i = 0; i < 4; i++) hline(g, x0 + 22 + i * 34, x0 + 38 + i * 34, y + 5 + (i % 3) * 7, RAMP.wood[2]);
+  for (const nx of [x0 + 3, x0 + w - 4]) { px(g, nx, y + 3, RAMP.steel[3]); px(g, nx, y + 20, RAMP.steel[3]); }
+  // a chalk pictogram: a wave, the gull, the red flag
+  const ix = x0 + 13, iy = y + 12, ch = '#ffffff';
+  if (kind === 'speed') { for (let i = 0; i < 9; i++) px(g, ix - 6 + i, iy + 3 - rd(Math.sin(i * .7) * 4), ch); px(g, ix + 2, iy - 3, ch); px(g, ix + 1, iy - 4, ch); }
+  else if (kind === 'boss') { linePx(g, ix - 7, iy - 1, ix - 2, iy + 2, ch); linePx(g, ix - 2, iy + 2, ix, iy, ch); linePx(g, ix, iy, ix + 2, iy + 2, ch); linePx(g, ix + 2, iy + 2, ix + 7, iy - 1, ch); }
+  else { vline(g, ix - 4, iy - 7, iy + 7, ch); rect(g, ix - 3, iy - 7, 9, 6, '#e23b4e'); }
+  const col = kind === 'boss' ? '#ffd49b' : kind === 'level' ? '#ffc2c2' : '#ffffff';
+  txt(g, lbl, x0 + 26 + (w - 30) / 2, y + 8, col, { align: 'c', out: RAMP.wood[0], bold: true });
+}
+
 // ---------------------------------------------------------------- music -----
 const HERMANAS_SONGS = {
   card: { spb: 4, tracks: [
@@ -428,6 +611,24 @@ const HERMANAS_SONGS = {
     { i: 'p25', v: .35, n: 'E5 . . . . . . . G5 . . . A5 . . . E5 . . . . . . . C6 . B5 . A5 . G5 .' },
     { i: 'bass', v: .9, n: 'E2 E2 E2 E2 E2 E2 E2 E2 C3 C3 C3 C3 D3 D3 D3 D3 E2 E2 E2 E2 E2 E2 E2 E2 C3 C3 D3 D3 E2 E2 B1 B1' },
     { i: 'd', v: .85, n: 'k h s h k h s h k h s h k s s s k h s h k h s h k h s h k s s+x s' }] },
+};
+
+// the announcements' own jingles (4 beats): surf rock, the gull's alarm, a storm
+HERMANAS_SONGS.jingles = {
+  speed: { spb: 4, tracks: [
+    { i: 'pluck', v: .75, n: 'E4 G#4 B4 E5 G#5 B5 E6 B5 G#5 E5 G#5 B5 E6! - - .' },
+    { i: 'kalimba', v: .45, n: '. . . . . . . . E5 . G#5 . B5! - - .' },
+    { i: 'bass', v: .85, n: 'E2 E2 E3 E2 E2 E2 E3 E2 A2 A2 A3 A2 E2! - . .' },
+    { i: 'd', v: .85, n: 'k h s h k h s h k s s s k+x - . .' }] },
+  boss: { spb: 4, tracks: [
+    { i: 'brass', v: .75, n: 'E3 - - . E3 - - . G3 - - . A#3! - - -' },
+    { i: 'squeak', v: .55, n: '. . . . . . . . B5 . A5 . . . . .' },
+    { i: 'bass', v: .85, n: 'E2 - - . E2 - - . G2 - - . A#2! - - -' },
+    { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+  level: { spb: 4, tracks: [
+    { i: 'pluck', v: .72, n: 'E5 D#5 D5 C#5 C5 B4 A#4 A4 E4 G4 A#4 C#5 E5! - - .' },
+    { i: 'bass', v: .85, n: 'E2 . E2 . D2 . D2 . C2 . C2 . B1! - . .' },
+    { i: 'd', v: .85, n: 'k . h . k . h . k . s s k+x - . x' }] },
 };
 
 // ---------------------------------------------------------------- voices ----
@@ -508,7 +709,7 @@ defStage({
   room: {
     top: hermanasRoomTop, bot: hermanasRoomBot, frame: 'hermanasChalk', life: hermanasLife, lifeY: 150, lifeSpacing: 36, miniLife: hermanasMiniLife,
     counter: { x: SW / 2, y: 7 }, counterFill: ['#ffffff', '#ffffff', '#fff2c0'], mini: hermanasMini, playTop: hermanasPlayTop, portal: { x: 64, y: 26, w: 128, h: 96 },
-    staticCols: ['#243029', '#2c3b35'], cardCol: RAMP.water,
+    staticCols: ['#243029', '#2c3b35'], cardCol: RAMP.water, special: hermanasSpecial, specialBot: hermanasSpecialBot,
   },
 });
 

@@ -28,6 +28,25 @@ const CENIZA_SONGS = {
     { i: 'd', v: .85, n: 'k . s h k k s h k . s h k s s s k . s h k k s h k . s h k s s+x s' }] },
 };
 
+// the announcements' own jingles (4 beats, D minor): a harpsichord dash, the boiling organ, the blood moon
+CENIZA_SONGS.jingles = {
+  speed: { spb: 4, tracks: [
+    { i: 'pluck', v: .75, n: 'D5 E5 F5 G5 A5 Bb5 C#6 D6 E6 F6 G6 A6 D7! - - .' },
+    { i: 'organ', v: .5, n: 'D4+F4+A4 - - - . . . . A3+C#4+E4 - - - D4+F4+A4! - - .' },
+    { i: 'bass', v: .85, n: 'D3 . D3 . D3 . D3 . A2 A2 A2 A2 D3! - . .' },
+    { i: 'd', v: .8, n: 'k w s w k w s w k s s s k+x - . .' }] },
+  boss: { spb: 4, tracks: [
+    { i: 'organ', v: .75, n: 'D3+F3+A3 - - . D3+F3+A3 - - . C#3+E3+G3 - - . D3+F3+Bb3! - - -' },
+    { i: 'pluck', v: .45, n: 'D6 A5 F5 A5 D6 A5 F5 A5 E6 A5 G5 A5 F6! - - .' },
+    { i: 'bass', v: .9, n: 'D2 - - . D2 - - . A1 - - . Bb1! - - -' },
+    { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+  level: { spb: 4, tracks: [
+    { i: 'organ', v: .6, n: 'D4+F4+A4 . . . E4+G4+Bb4 . . . F4+A4+C5 . . . C#4+E4+A4! - - .' },
+    { i: 'bell', v: .5, n: '. . . . . . . . . . . . A6 - D7 -' },
+    { i: 'bass', v: .85, n: 'D3 . D3 . G2 . G2 . F2 . F2 . A2! - . .' },
+    { i: 'd', v: .8, n: 'k . w . k . w . k . s s k+x - . .' }] },
+};
+
 // ---------------------------------------------------------------- voices ----
 WHO.ceniza = { name: 'Ceniza', col: '#5a3396', voice: 'ceniza' };
 WHO.pato = { name: 'Pato', col: '#c98a10', voice: 'pato' };
@@ -339,6 +358,7 @@ function cenizaPoseFor(S) {
   return pose;
 }
 function cenizaRoomTop(g, S) {
+  if (S.phase === 'inter') cenizaPrewarm();
   const t = S.pt || 0, rt = S.reactT || 0, pose = cenizaPoseFor(S);
   g.drawImage(cenizaRoomBg(), 0, 0);
   // candles flicker on the shelves
@@ -375,8 +395,6 @@ function cenizaRoomTop(g, S) {
     }
     if (rt < .8) shout(g, '¡PUF!', 112, 64, rt);
   }
-  if (pose === 'speed') for (let i = 0; i < 6; i++) { const yy = 96 + i * 10, xx = (i * 53 + fl(t * 300)) % 60; rect(g, 196 + xx * .4, yy, 14, 1, '#ffffff'); }
-  if (boss && fl(NOW * 8) % 2) { g.globalAlpha = .12; rect(g, 0, 0, SW, SH, '#ff4060'); g.globalAlpha = 1; }
 }
 // velvet tablecloth with gold stars and moons + the shelf that holds the flasks
 function cenizaBotBg() {
@@ -471,6 +489,165 @@ PORTAL_FRAMES.gothic = function (g, x, y, w, h, beat) {
   cenizaCandle(g, x - b + 3, y + h + b + 1, NOW, 8); cenizaCandle(g, x + w + b - 3, y + h + b + 1, NOW + .4, 8);
 };
 
+// ---------------------------------------------------------------- announcements
+// Ceniza's own ¡MÁS RÁPIDO! / ¡JUEGO DEL JEFE! / ¡MÁS DIFÍCIL! (room.special):
+// a speed potion that bubbles over and a broom flight, the cauldron boiling over
+// and flooding the den, a blood moon and her hat glowing. Her gothic card face.
+const CENIZA_WORDS = { speed: ['¡MÁS', 'RÁPIDO!'], boss: ['¡JUEGO', 'DEL JEFE!'], level: ['¡MÁS', 'DIFÍCIL!'] };
+const CENIZA_LABELS = { speed: '¡Poción de velocidad!', boss: '¡El caldero se desborda!', level: '¡Luna roja: más difícil!' };
+let CENIZA_FACES = null; // built on first use: the card faces live in cards.js, later in the bundle
+function cenizaFaces() {
+  if (CENIZA_FACES) return CENIZA_FACES;
+  const F = CARD_WITCH_FACE;
+  CENIZA_FACES = {
+    speed: F,
+    boss: Object.assign({}, F, { id: 'czBoss', fill: ['#fff0f0', '#ff93bf', '#c0306a'], line2: '#ff4060', glow: ['rgba(255,64,96,.45)', 'rgba(255,64,96,.2)'] }),
+    level: Object.assign({}, F, { id: 'czRed', fill: ['#ffe8e8', '#ff9a9a', '#b3202e'], line2: '#ff5a6e', glow: ['rgba(255,90,110,.5)', 'rgba(120,20,40,.3)'] }),
+  };
+  return CENIZA_FACES;
+}
+function cenizaFitWord(kind, w) { return cardFit(w, kind === 'level' ? 164 : 190, cenizaFaces()[kind]); }
+function cenizaPrewarm() {
+  if (typeof cardPrewarm !== 'function' || cenizaPrewarm.done) return;
+  const list = []; for (const k in CENIZA_WORDS) for (const w of CENIZA_WORDS[k]) list.push([w, cenizaFitWord(k, w)]);
+  cardPrewarm(list);
+  if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) cenizaPrewarm.done = 1;
+}
+function cenizaOnce(S, key) { S._czOnce = S._czOnce || {}; const k = S.count + ':' + key; if (S._czOnce[k]) return false; S._czOnce[k] = 1; return true; }
+// the words condense out of smoke, like her name on the card
+function cenizaWords(g, kind, t, x1, y1, x2, y2) {
+  const nk = t - .1, [w1, w2] = CENIZA_WORDS[kind];
+  const smoke = (nk0) => i => { const lt = nk0 - i * .07; if (lt <= 0) return { s: 0 }; const k = E.outC(clamp(lt / .3, 0, 1)); return { s: lerp(1.5, 1, k), a: k, rot: (1 - k) * .3 }; };
+  if (nk > 0) {
+    const b1 = cardWord(g, w1, x1, y1, cenizaFitWord(kind, w1), { anim: smoke(nk) });
+    const b2 = cardWord(g, w2, x2, y2, cenizaFitWord(kind, w2), { anim: smoke(nk - .18) });
+    const col = kind === 'speed' ? 'rgba(148,220,188,.5)' : 'rgba(255,120,140,.5)';
+    b1.concat(b2).forEach((bx, i) => { const lt = nk - (i < b1.length ? i : i - b1.length) * .07 - (i < b1.length ? 0 : .18); if (lt > 0 && lt < .35) for (let q = 0; q < 4; q++) { const a = q / 4 * TAU + lt * 3; disc(g, bx.cx + Math.cos(a) * (6 + lt * 30), (i < b1.length ? y1 : y2) + 12 + Math.sin(a) * (4 + lt * 16), 3 - lt * 7, col); } });
+  }
+}
+// the speed potion: a tall flask with a lightning bolt on its label
+function cenizaSpeedFlask() {
+  return mdl('cz:speedFlask', () => {
+    const c = mkCanvas(34, 50), g = c.g, col = '#c8f04a', cd = '#6aa01a', cl = '#eaffb0';
+    disc(g, 17, 36, 13, INK); rect(g, 12, 6, 10, 20, INK);
+    disc(g, 17, 36, 12, '#dff4ff'); rect(g, 13, 7, 8, 20, '#dff4ff');
+    disc(g, 17, 38, 11, col); rect(g, 6, 29, 22, 2, '#dff4ff'); hline(g, 7, 27, 30, cl); disc(g, 21, 42, 5, cd);
+    rect(g, 13, 14, 8, 13, col); vline(g, 14, 15, 26, cl);
+    px(g, 9, 30, '#ffffff'); vline(g, 8, 32, 38, '#ffffff'); vline(g, 14, 8, 12, '#ffffff');
+    rect(g, 11, 2, 12, 5, INK); rect(g, 12, 3, 10, 3, RAMP.wood[3]);
+    // the label: a yellow bolt on parchment
+    rect(g, 10, 33, 14, 11, INK); rect(g, 11, 34, 12, 9, '#fff4dc');
+    polyPx(g, [[18, 34], [13, 39], [16, 39], [14, 43], [20, 37], [17, 37], [19, 34]], '#ffdf4f'); linePx(g, 18, 34, 14, 43, '#c98a10');
+    return c;
+  });
+}
+// ---- ¡MÁS RÁPIDO!: the potion bubbles over, she hops on her broom and zooms round the den
+function cenizaSpeedFx(g, S, t) {
+  const b = t * S.bpm / 60;
+  g.drawImage(cenizaRoomBg(), 0, 0);
+  cenizaCandle(g, 200, 86, NOW, 9); cenizaCandle(g, 176, 52, NOW, 12, '#ffd1e4'); cenizaCandle(g, 248, 52, NOW, 8);
+  // the cauldron keeps boiling on the left
+  const cx0 = 64, cy0 = 164, cs = cenizaCauldron(1);
+  cenizaFire(g, cx0, cy0 + 2, NOW, 1); g.drawImage(cs, rd(cx0 - cs.width / 2), rd(cy0 - cs.height + 4)); cenizaPotion(g, cx0, cy0 - cs.height + 16, 24, 4.5, '#5bd18b', NOW, { boil: true, swirl: true });
+  // the speed potion on the right shakes… and bubbles over
+  const fx0 = 214, fy0 = 170, shakeF = b < .6 ? Math.sin(b * 70) * 1.5 : 0;
+  shadowOval(g, fx0, fy0, 14, 2.5, .4); drawS(g, cenizaSpeedFlask(), fx0 + shakeF, fy0, { ax: .5, ay: 1 });
+  if (b > .45) {
+    const k = clamp((b - .45) / .5, 0, 1), neckY = fy0 - 48;
+    for (let i = 0; i < 12; i++) { const q = (b * 1.4 + i * .23) % 1, an = -Math.PI / 2 + (hash2(i, 3) - .5) * 1.6, v = 30 + hash2(3, i) * 40; disc(g, fx0 + Math.cos(an) * v * q, neckY + Math.sin(an) * v * q + 60 * q * q, (3.5 - q * 2.5) * k, i % 3 ? '#c8f04a' : '#ffffff'); }
+    for (const [dx, h] of [[-9, 18], [8, 26], [-2, 12]]) { const L = h * k; rect(g, fx0 + dx - 1, neckY + 4, 3, L, '#c8f04a'); disc(g, fx0 + dx + .5, neckY + 4 + L, 2, '#c8f04a'); }
+    for (let i = 0; i < 5; i++) disc(g, fx0 - 6 + i * 3, neckY + 1 - Math.abs(Math.sin(b * 9 + i)) * 3 * k, 3, '#eaffb0');
+    if (cenizaOnce(S, 'fizz')) sfx('fizz');
+  }
+  // Ceniza: stirs, vanishes in a puff, two passes on the broom, lands back
+  const hopOff = 1.0, back = 3.1;
+  if (b < hopOff || b > back) { const land = b > back ? Math.max(0, 1 - (b - back) * 4) : 0; cenizaDraw(g, 150, 176, b > back ? 'win' : 'speed', t, { jump: land * 14 }); }
+  for (const at of [hopOff, back]) { const q = (b - at) / .5; if (q > 0 && q < 1) { g.globalAlpha = 1 - q; for (let i = 0; i < 7; i++) { const an = i / 7 * TAU; disc(g, 150 + Math.cos(an) * (8 + q * 22), 132 + Math.sin(an) * (6 + q * 16), 7 - q * 4, i % 2 ? '#bf95e9' : '#e5d3fa'); } g.globalAlpha = 1; } }
+  if (b > hopOff && cenizaOnce(S, 'magic')) sfx('czMagic');
+  const pass = (p0, p1, y, dir) => {
+    const q = (b - p0) / (p1 - p0); if (q <= 0 || q >= 1) return;
+    const x = dir > 0 ? lerp(-60, 320, q) : lerp(320, -60, q), yy = y + Math.sin(q * TAU) * 6, spr = typeof cenizaBroomSpr === 'function' ? cenizaBroomSpr(fl(b * 8) % 2) : null;
+    for (let i = 1; i <= 14; i++) { const tx = x - dir * i * 9, ty = yy + 6 + Math.sin(b * 12 + i) * 2; if (i % 3 === 0) drawStar(g, tx, ty, 2.4 - i * .1, '#fff27a', b * 5 + i); else disc(g, tx, ty, 2.2 - i * .12, i % 2 ? '#5bd18b' : '#94dcbc'); }
+    if (spr) { g.globalAlpha = .25; drawS(g, spr, x - dir * 18, yy, { flip: dir < 0 }); g.globalAlpha = .45; drawS(g, spr, x - dir * 9, yy, { flip: dir < 0 }); g.globalAlpha = 1; drawS(g, spr, x, yy, { flip: dir < 0 }); }
+    drawS(g, cenizaPatoSpr('grin'), x - dir * 40, yy + 12 + Math.sin(b * 14) * 3, { flip: dir < 0, rot: dir * .5, s: .8 });
+  };
+  pass(1.05, 1.85, 116, 1); pass(2.15, 2.95, 80, -1);
+  if (b > 1.05 && cenizaOnce(S, 'zoom1')) sfx('zoom'); if (b > 2.15 && cenizaOnce(S, 'zoom2')) sfx('zoom', { pitch: 1.2 });
+  for (let i = 0; i < 8; i++) { const y = 70 + i * 13, x = SW - ((i * 61 + b * 260) % (SW + 60)); if (b > 1 && b < 3) rect(g, x, y, 16 + (i % 3) * 6, 1, 'rgba(255,255,255,.6)'); }
+  cenizaWords(g, 'speed', t, 150, 6, 146, 38);
+}
+// ---- ¡JUEGO DEL JEFE!: the cauldron boils over and floods the den
+function cenizaBossFx(g, S, t) {
+  const b = t * S.bpm / 60;
+  g.drawImage(cenizaRoomBg(), 0, 0);
+  if (fl(NOW * 8) % 2) { g.globalAlpha = .12; rect(g, 0, 0, SW, SH, '#ff4060'); g.globalAlpha = 1; }
+  // the cauldron roars, spitting red potion
+  const cx0 = 92, cy0 = 164, cs = cenizaCauldron(1.15), rimY = cy0 - cs.height + 4 + 13.8, shk = Math.sin(b * 50) * (b < 2 ? 1.2 : .5);
+  cenizaFire(g, cx0, cy0 + 2, NOW, 1.5);
+  g.drawImage(cs, rd(cx0 - cs.width / 2 + shk), rd(cy0 - cs.height + 4));
+  cenizaPotion(g, cx0 + shk, rimY, 27.6, 5.2, '#ff4060', NOW, { boil: true });
+  for (let i = 0; i < 16; i++) { const q = (b * 1.2 + i * .19) % 1, an = -Math.PI / 2 + (hash2(i, 11) - .5) * 1.4, v = 50 + hash2(11, i) * 60; const x = cx0 + Math.cos(an) * v * q, y = rimY + Math.sin(an) * v * q + 90 * q * q; if (y < SH) disc(g, x, y, 4 - q * 3, i % 3 ? '#ff4060' : '#ff93bf'); }
+  // Ceniza wades in, aghast
+  cenizaDraw(g, 184, 176, 'boss', t);
+  // the flood rises
+  const level = lerp(SH + 6, 136, E.outQ(clamp((b - .35) / 1.5, 0, 1)));
+  if (level < SH) {
+    for (let x = 0; x < SW; x += 2) { const y = rd(level + Math.sin(x * .08 + b * 5) * 2 + Math.sin(x * .21 - b * 3) * 1.2); g.fillStyle = '#c0306a'; g.fillRect(x, y, 2, SH - y); g.fillStyle = '#ff5a8a'; g.fillRect(x, y, 2, 2); }
+    for (let i = 0; i < 10; i++) { const q = (b * .9 + i * .31) % 1, x = (i * 53 + 17) % SW, y = SH - q * (SH - level); ringPx(g, x, y, 1.5 + q * 2.5, '#ff93bf'); }
+    for (let i = 0; i < 6; i++) { const ph = (b * 1.6 + i * .4) % 1; if (ph < .25) ringPx(g, (i * 71 + 30) % SW, level - 2, 2 + ph * 16, '#ffd1e4'); }
+    cenizaPato(g, 226, level - 20, 'laugh', NOW);
+  }
+  if (b > 1.9 && b < 3) shout(g, '¡BLUB!', 150, 112, (b - 1.9) * 1.5);
+  if (b > .2 && cenizaOnce(S, 'blub')) sfx('czBlub', { pitch: .6 });
+  if (b > 1.9 && cenizaOnce(S, 'quack')) sfx('czQuack');
+  cenizaWords(g, 'boss', t, 150, 6, 144, 38);
+}
+// ---- ¡MÁS DIFÍCIL!: the moon turns red, her hat glows, the bats come out
+function cenizaLevelFx(g, S, t) {
+  const b = t * S.bpm / 60, k = clamp(b / 1.1, 0, 1);
+  g.drawImage(cenizaRoomBg(), 0, 0);
+  g.globalAlpha = .5 * clamp(b / .6, 0, 1); rect(g, 0, 0, SW, SH, '#12081f'); g.globalAlpha = 1;
+  // the window: the night goes crimson, the moon grows full and red
+  const mx = 40, my = 40;
+  for (let r = 34; r > 18; r -= 4) { g.globalAlpha = .07 * k; disc(g, mx, my, r + Math.sin(b * 4) * 2, '#ff3a4e'); } g.globalAlpha = 1;
+  disc(g, mx, my, 19, INK); disc(g, mx, my, 18, RAMP.wood[2]); disc(g, mx, my, 15, '#2a0a18'); disc(g, mx, my, 14, mixHex('#232a5e', '#3a0a1e', k));
+  const mr = lerp(6, 9, k); disc(g, mx + 3, my - 3, mr, mixHex('#fff2c0', '#ff3a4e', k)); disc(g, mx + 1, my - 5, mr * .5, mixHex('#ffffff', '#ff8a96', k));
+  if (k < .9) disc(g, mx + 6, my - 5, mr * (1 - k) * .9, mixHex('#232a5e', '#3a0a1e', k));
+  rect(g, mx - 1, my - 18, 2, 36, RAMP.wood[1]); rect(g, mx - 18, my - 1, 36, 2, RAMP.wood[1]);
+  // red light pours in
+  g.globalAlpha = .12 * k; polyPx(g, [[mx + 10, my - 8], [mx + 16, my + 12], [180, SH], [96, SH]], '#ff3a4e'); g.globalAlpha = 1;
+  // bats wheel round the moon
+  for (let i = 0; i < 4; i++) { const an = b * 1.6 + i * TAU / 4, bx = mx + Math.cos(an) * (30 + i * 4), by = my + Math.sin(an) * 18; if (typeof cenizaBatSpr === 'function') drawS(g, cenizaBatSpr(fl(b * 8 + i) % 2), bx, by, {}); else if (typeof cardBat === 'function') cardBat(g, bx, by, b + i, .9); }
+  // Ceniza powers up: her hat glows and sparks
+  const hx = 156, hy = 94, pulse = 1 + Math.sin(b * 8) * .15;
+  for (let r = 3; r >= 1; r--) { g.globalAlpha = .14 * k; disc(g, hx, hy, (10 + r * 7) * pulse, r % 2 ? '#bf95e9' : '#5bd18b'); } g.globalAlpha = 1;
+  cenizaDraw(g, 150, 176, 'angry', t);
+  for (let i = 0; i < 6; i++) { const an = b * 3 + i * TAU / 6, r = 18 + Math.sin(b * 5 + i) * 3; drawStar(g, hx + Math.cos(an) * r, hy + Math.sin(an) * r * .6, 2 * k, i % 2 ? '#fff27a' : '#94dcbc', an); }
+  if (b > .9 && cenizaOnce(S, 'hat')) sfx('czMagic', { pitch: .8 });
+  if (b > .9 && b < 2.4) shout(g, '¡LUNA ROJA!', 80, 76, (b - .9) * 1.4);
+  cenizaWords(g, 'level', t, 164, 8, 158, 40);
+}
+function cenizaSpecial(g, S, kind, t) {
+  if (typeof cardWord !== 'function') return false;
+  if (kind === 'speed') cenizaSpeedFx(g, S, t);
+  else if (kind === 'boss') cenizaBossFx(g, S, t);
+  else if (kind === 'level') cenizaLevelFx(g, S, t);
+  else return false;
+}
+// the bottom screen: a parchment ribbon, with a tiny drawing in purple ink
+function cenizaSpecialBot(g, S, kind, t) {
+  const lbl = CENIZA_LABELS[kind]; if (!lbl) return false;
+  const b = t * S.bpm / 60, k = E.outBack(clamp(b * 1.6, 0, 1)), w = txtW(lbl) + lbl.length + 44, x0 = rd(SW / 2 - w / 2), y = rd(3 - (1 - k) * 36);
+  const pts = []; for (let i = 0; i <= 6; i++) pts.push([x0 + (i % 2 ? -4 : 0), y + i * 4]); for (let i = 6; i >= 0; i--) pts.push([x0 + w + (i % 2 ? 4 : 0), y + i * 4]);
+  polyPx(g, pts.map(([x, yy]) => [x + (x < SW / 2 ? -1 : 1), yy + 1]), '#0e0b16'); polyPx(g, pts, kind === 'speed' ? '#f2e2b8' : '#f2d4d4');
+  hline(g, x0 + 3, x0 + w - 3, y + 2, '#fff8e6'); hline(g, x0 + 3, x0 + w - 3, y + 22, '#dcc08a');
+  const ix = x0 + 13, iy = y + 12, ink = '#5a3396';
+  if (kind === 'speed') { rect(g, ix - 2, iy - 7, 4, 4, ink); disc(g, ix, iy + 2, 5, ink); disc(g, ix, iy + 3, 3, '#c8f04a'); }
+  else if (kind === 'boss') { ellipsePx(g, ix, iy + 2, 7, 5, ink); rect(g, ix - 7, iy - 3, 14, 2, ink); for (const dx of [-3, 1, 4]) disc(g, ix + dx, iy - 6 + (dx % 2), 1.6, '#ff4060'); }
+  else { disc(g, ix, iy, 6, '#c0182e'); disc(g, ix + 2, iy - 2, 5, kind === 'level' ? '#f2d4d4' : '#f2e2b8'); }
+  txt(g, lbl, x0 + 26 + (w - 30) / 2, y + 8, kind === 'speed' ? ink : '#8c1d30', { align: 'c', bold: true });
+}
+
 // ---------------------------------------------------------------- the stage -
 defStage({
   id: 'ceniza', name: 'CENIZA', sub: '«Magia… y mucha espuma»', verb: '¡ARRASTRA!', mech: 'drag', bpm: 116,
@@ -486,7 +663,7 @@ defStage({
     top: cenizaRoomTop, bot: cenizaRoomBot, frame: 'gothic', life: cenizaLife, lifeY: 136, lifeSpacing: 34, miniLife: cenizaMiniLife,
     counter: { x: SW / 2, y: 7 }, mini: cenizaMini, portal: { x: 64, y: 34, w: 128, h: 88 },
     staticCols: [RAMP.purple[1], RAMP.purple[2]], playCols: [RAMP.purple[1], RAMP.purple[2]], cardCol: RAMP.purple,
-    counterFill: ['#ffffff', '#e5d3fa', '#bf95e9'],
+    counterFill: ['#ffffff', '#e5d3fa', '#bf95e9'], special: cenizaSpecial, specialBot: cenizaSpecialBot,
   },
 });
 

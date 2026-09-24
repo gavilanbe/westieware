@@ -301,6 +301,7 @@ function rizosPoseFor(S) {
 }
 function rizosRoomTop(g, S) {
   const t = S.pt || 0, beat = S.pb || 0, rt = S.reactT || 0;
+  rizosAnnPrewarm(); // one neon letter per frame, ready before the first announcement
   g.drawImage(rizosClubBack(), 0, 0);
   rizosBeams(g, NOW, beat);
   rizosFloatBubbles(g, NOW, 9, 146);
@@ -389,10 +390,230 @@ function rizosPlayTop(g, S) {
   rizosMini(g, 0, 0, S.g.state === 'play' ? 'watch' : S.g.state === 'won' ? 'win' : 'lose', S);
 }
 
+// ---------------------------------------------------------------- announcements
+// ¡MÁS RÁPIDO! · ¡JUEGO DEL JEFE! · ¡MÁS DIFÍCIL! the Club Champú way (room.special).
+// The neon faces come from the title-card lettering in cards.js, which loads
+// after the stages, so they are built on first use.
+let RIZOS_ANN = null;
+function rizosAnnFaces() {
+  if (RIZOS_ANN) return RIZOS_ANN;
+  const neon = (id, tube, line, rgb) => ({
+    on: Object.assign({}, CARD_RIZOS_ON, { id: id + 'On', tube, line, glow: [.6, .34, .17, .07].map(a => 'rgba(' + rgb + ',' + a + ')') }),
+    off: Object.assign({}, CARD_RIZOS_OFF, { id: id + 'Off', tube: tube.map((c, i) => mixHex(c, '#12062a', .7 + i * .02)) }),
+  });
+  const faces = { speed: { on: CARD_RIZOS_ON, off: CARD_RIZOS_OFF }, boss: neon('rizosRed', ['#ff2a3d', '#ff8a95', '#fff0f2'], '#4a0b12', '255,42,61'), level: neon('rizosCyan', ['#22c8dc', '#9ff4ff', '#f0feff'], '#08384a', '34,200,220') };
+  const words = { speed: [['¡MÁS RÁPIDO!', 214]], boss: [['¡JUEGO', 160], ['DEL JEFE!', 186]], level: [['¡MÁS DIFÍCIL!', 212]] };
+  const A = { warm: [] };
+  for (const k in words) A[k] = words[k].map(([w, maxW]) => {
+    const on = cardFit(w, maxW, faces[k].on), off = cardFit(w, maxW, faces[k].off);
+    A.warm.push([w, on], [w, off]);
+    return { w, on, off };
+  });
+  return (RIZOS_ANN = A);
+}
+// letters buzz on one by one, then an old tube drops out now and then
+function rizosAnnWord(g, W, x, y, t, t0, o = {}) {
+  const lit = i => { const on = t0 + i * (o.step || .06); if (t < on) return false; if (t < on + .22) return hash2(fl(t * 30), i, 9) > .42; return (t * (o.buzz || 1.3) + i * .37) % 3.1 >= (o.gap || .06); };
+  return cardWord(g, W.w, x, y, i => lit(i) ? W.on : W.off, o.anim ? { anim: o.anim } : {});
+}
+function rizosAnnPrewarm() { if (typeof cardPrewarm === 'function' && typeof CARD_RIZOS_ON !== 'undefined') cardPrewarm(rizosAnnFaces().warm); }
+// a marquee board with chasing bulbs (w×h centred on x, top at y)
+function rizosMarquee(g, x, y, w, h, beat, bulb = '#fff27a') {
+  panel(g, x - w / 2, y, w, h, '#130726', { r: 7, line: INK }); panel(g, x - w / 2 + 4, y + 4, w - 8, h - 8, '#1b0b34', { r: 5, line: '#3b1a6a' });
+  const per = [], L = x - w / 2 + 3, R = x + w / 2 - 3, T = y + 2.5, B = y + h - 2.5;
+  for (let xx = L + 5; xx <= R - 5; xx += 8) per.push([xx, T]); for (let yy = T + 8; yy <= B - 5; yy += 8) per.push([R, yy]);
+  for (let xx = R - 5; xx >= L + 5; xx -= 8) per.push([xx, B]); for (let yy = B - 8; yy >= T + 5; yy -= 8) per.push([L, yy]);
+  per.forEach(([bx, by], i) => { const on = (i + fl(beat * 2)) % 3 === 0; disc(g, bx, by, 2, INK); disc(g, bx, by, 1.4, on ? bulb : mixHex(bulb, '#130726', .72)); if (on) px(g, bx - 1, by - 1, '#ffffff'); });
+}
+// a green seven-segment digit (the club's BPM counter), 7×13
+const RIZOS_SEG = ['1111110', '0110000', '1101101', '1111001', '0110011', '1011011', '1011111', '1110000', '1111111', '1111011'];
+function rizosSeg(g, x, y, d, on = '#5bff9a', off = '#123a22') {
+  const m = RIZOS_SEG[d] || '0000000', seg = [[1, 0, 5, 1], [6, 1, 1, 5], [6, 7, 1, 5], [1, 12, 5, 1], [0, 7, 1, 5], [0, 1, 1, 5], [1, 6, 5, 1]];
+  seg.forEach(([sx, sy, w, h], i) => rect(g, x + sx, y + sy, w, h, m[i] === '1' ? on : off));
+}
+function rizosSegNum(g, x, y, n, on, off) { const s = String(Math.max(0, rd(n))).padStart(3, ' '); [...s].forEach((c, i) => rizosSeg(g, x + i * 9, y, c === ' ' ? -1 : +c, on, off)); }
+// the DJ deck across the bottom of the screen (brushed metal, knobs, a crossfader)
+function rizosDeckSlab() {
+  return mdl('rizosDeckSlab', () => {
+    const c = mkCanvas(SW, 88), g = c.g;
+    rect(g, 0, 0, SW, 88, INK); bandsV(g, 0, 2, SW, 86, ['#3a3350', '#2c2640', '#221d33', '#1a1628']);
+    rect(g, 0, 1, SW, 1, '#8f88a8'); rect(g, 0, 2, SW, 1, '#5f5883');
+    for (let y = 6; y < 88; y += 3) for (let x = (y * 7) % 11; x < SW; x += 11) px(g, x, y, '#3d3656');
+    // the mixer strip on the right: two knobs, level meters, a crossfader
+    rect(g, 166, 50, 84, 34, INK); rect(g, 167, 51, 82, 32, '#15111f');
+    for (const kx of [178, 198]) { disc(g, kx, 62, 5, INK); disc(g, kx, 62, 4, '#6f7a92'); px(g, kx, 59, '#ffffff'); }
+    rect(g, 210, 70, 34, 4, INK); rect(g, 211, 71, 32, 2, '#3d3656'); rect(g, 222, 67, 8, 10, INK); rect(g, 223, 68, 6, 8, '#cfd6e8');
+    return c;
+  });
+}
+// the turntable: platter with strobe dots, the record, a pink star label, the arm
+function rizosPlatter(g, x, y, spin, blur) {
+  disc(g, x, y, 42, INK); disc(g, x, y, 41, '#8f98b8'); disc(g, x, y, 39, '#5f6485');
+  for (let i = 0; i < 36; i++) { const a = i / 36 * TAU + spin * .5; px(g, x + Math.cos(a) * 40, y + Math.sin(a) * 40, i % 2 ? '#dfe4f2' : '#3a3350'); }
+  disc(g, x, y, 36, '#1b1627'); for (let r = 13; r < 35; r += 2) ringPx(g, x, y, r, r % 4 ? '#2b2540' : '#40395e');
+  // motion: light streaks sweeping round the grooves
+  g.globalAlpha = .22 + blur * .3;
+  for (let q = 0; q < 4; q++) { const a0 = spin + q * TAU / 4; for (let a = 0; a < .9 * blur + .2; a += .06) px(g, x + Math.cos(a0 - a) * (18 + q * 4), y + Math.sin(a0 - a) * (18 + q * 4), '#ffffff'); }
+  g.globalAlpha = 1;
+  disc(g, x, y, 11, INK); disc(g, x, y, 10, '#ff3d8b');
+  polyPx(g, rizosStarPts(x, y, 7, 3, spin), '#fff4fa'); disc(g, x, y, 1.5, INK);
+  // tone arm resting in the groove
+  disc(g, x + 50, y - 36, 5, INK); disc(g, x + 50, y - 36, 4, '#cfd6e8');
+  thickLine(g, x + 50, y - 36, x + 30, y - 10, 1.6, INK); thickLine(g, x + 50, y - 36, x + 30, y - 10, .8, '#dfe4f2');
+  rect(g, x + 26, y - 12, 6, 4, INK); rect(g, x + 27, y - 11, 4, 2, '#8f98b8');
+}
+// ¡MÁS RÁPIDO!: close-up on the decks, the pitch fader rides up, the record winds up
+function rizosAnnSpeed(g, S, t) {
+  const A = rizosAnnFaces(), beat = t * (S.bpm || 124) / 60, d = S.def;
+  g.drawImage(rizosClubBack(), 0, 0);
+  rizosBeams(g, NOW * 2.4, beat * 2);
+  for (let i = 0; i < 12; i++) { const y = 60 + (i * 23) % 44, x = SW - ((t * (430 + (i % 4) * 90) + i * 61) % (SW + 60)); rect(g, x, y, 18 + (i % 3) * 12, 1, i % 3 ? 'rgba(255,255,255,.55)' : RIZOS_NEON.cyan); }
+  // Rizos behind the decks, bobbing double-time
+  const bob = Math.abs(Math.sin(beat * Math.PI * 2)) * 3;
+  drawS(g, rizosHead('grin'), 128, 82 - bob, { rot: Math.sin(beat * Math.PI) * .06 });
+  g.drawImage(rizosDeckSlab(), 0, 112);
+  rizosPlatter(g, 62, 156, t * (6 + t * 24), Math.min(1, t * 1.4));
+  // the pitch fader: its knob rides from 0 to +8
+  const fx = 132, fk = E.outBack(clamp((t - .1) / .35, 0, 1)), ky = rd(lerp(155, 127, fk));
+  rect(g, fx - 2, 122, 5, 66, INK); rect(g, fx - 1, 123, 3, 64, '#0b0418');
+  for (let i = 0; i <= 8; i++) { const yy = 124 + i * 7; hline(g, fx - 7, fx - 4, yy, '#8f88a8'); hline(g, fx + 5, fx + 8, yy, '#8f88a8'); }
+  tiny(g, '+8', fx + 12, 122, RIZOS_NEON.cyan); tiny(g, '0', fx + 12, 152, '#8f88a8'); tiny(g, '-8', fx + 12, 180, '#8f88a8');
+  if (fk > 0 && fk < 1) { g.globalAlpha = .5; rect(g, fx - 7, ky + 4, 15, 155 - ky, RIZOS_NEON.cyan); g.globalAlpha = 1; }
+  rect(g, fx - 8, ky - 3, 17, 8, INK); rect(g, fx - 7, ky - 2, 15, 6, '#cfd6e8'); hline(g, fx - 6, fx + 6, ky, INK); hline(g, fx - 6, fx + 6, ky - 2, '#ffffff');
+  // the BPM counter rolls up to the new tempo
+  const nb = (d.bpm || 124) * (1 + .13 * S.speed), ob = (d.bpm || 124) * (1 + .13 * Math.max(0, S.speed - 1)), rk = clamp((t - .2) / .5, 0, 1);
+  panel(g, 170, 118, 78, 34, '#0b0418', { r: 4, line: '#3d3656' });
+  tiny(g, 'BPM', 178, 124, RIZOS_NEON.cyan);
+  const blink = rk >= 1 && fl(t * 6) % 2 === 0;
+  rizosSegNum(g, 204, 123, lerp(ob, nb, E.outC(rk)), blink ? '#b8ffcf' : '#5bff9a');
+  tiny(g, 'PITCH +' + rd(13 * S.speed) + '%', 178, 139, '#ff9fcb');
+  // the marquee drops in and the neon buzzes on
+  const mk = E.outBack(clamp(t / .3, 0, 1)), my = rd(lerp(-60, 4, mk));
+  rizosMarquee(g, SW / 2, my, 244, 50, beat);
+  rizosAnnWord(g, A.speed[0], 124, my + 12, t, .14);
+  // strobes on the off-beats while it winds up
+  if (beat < 2.2 && (beat * 2) % 1 < .16) { g.globalAlpha = .22; rect(g, 0, 0, SW, SH, '#ffffff'); g.globalAlpha = 1; }
+}
+// La Gran Maraña's silhouette: a mountain of snarled curls (220×190, drawn once)
+function rizosMaranaShadow() {
+  return mdl('rizosMaranaShadow', () => {
+    const c = mkCanvas(230, 196), g = c.g, cx = 115;
+    const lumps = []; for (let i = 0; i < 26; i++) { const a = Math.PI + i / 25 * Math.PI, rr = 84 + hash2(i, 3) * 18; lumps.push([cx + Math.cos(a) * rr, 190 + Math.sin(a) * rr * 1.72, 16 + hash2(i, 4) * 12]); }
+    for (let i = 0; i < 70; i++) { const a = hash2(i, 5) * TAU, rr = hash2(i, 6) * 150; lumps.push([cx + Math.cos(a) * rr * .56, 190 - Math.abs(Math.sin(a)) * rr, 18]); }
+    // frizz sticking out of the edge
+    for (let i = 0; i < 60; i++) { const a = Math.PI + i / 59 * Math.PI, r0 = 96 + hash2(i, 7) * 12, r1 = r0 + 8 + hash2(i, 8) * 12; linePx(g, cx + Math.cos(a) * r0, 190 + Math.sin(a) * r0 * 1.72, cx + Math.cos(a + .05) * r1, 190 + Math.sin(a + .05) * r1 * 1.72, '#2a0612'); }
+    for (const [x, y, r] of lumps) disc(g, x, y, r + 1, '#050008');
+    for (const [x, y, r] of lumps) disc(g, x, y, r, '#1a030c');
+    // tangled loops glinting inside
+    for (let i = 0; i < 16; i++) { const x0 = cx + (hash2(i, 9) - .5) * 150, y0 = 60 + hash2(i, 10) * 120, r = 5 + hash2(i, 11) * 7; let lx = null, ly = null; for (let a = 0; a < 5.5; a += .35) { const px0 = x0 + Math.cos(a) * r, py0 = y0 + Math.sin(a) * r * .8 + a * 1.5; if (lx != null) linePx(g, lx, ly, px0, py0, i % 3 ? '#3a0a18' : '#5a1428'); lx = px0; ly = py0; } }
+    return c;
+  });
+}
+// ¡JUEGO DEL JEFE!: the club goes red, the tangle rises behind the floor, Rizos freezes
+function rizosAnnBoss(g, S, t) {
+  const A = rizosAnnFaces(), beat = t * (S.bpm || 124) / 60;
+  g.drawImage(rizosClubBack(), 0, 0);
+  g.globalAlpha = Math.min(.6, t * 1.8); rect(g, 0, 0, SW, SH, '#5a0012'); g.globalAlpha = 1;
+  // red spots searching the room
+  for (let i = 0; i < 2; i++) { const ox = i ? 236 : 20, a = Math.PI / 2 + Math.sin(t * 1.6 + i * 2.2) * .6, L = 250; g.globalAlpha = .16; polyPx(g, [[ox, 8], [ox + Math.cos(a - .12) * L, 8 + Math.sin(a - .12) * L], [ox + Math.cos(a + .12) * L, 8 + Math.sin(a + .12) * L]], '#ff2a3d'); g.globalAlpha = 1; }
+  // the shadow rises and looms, breathing
+  const rk = E.outC(clamp(t / 1.1, 0, 1)), sy = rd(lerp(290, 178, rk) + Math.sin(t * 2.4) * 2);
+  drawS(g, rizosMaranaShadow(), 158, sy, { ax: .5, ay: 1 });
+  // knots crackle on its flanks, its eyes open
+  if (rk > .6) { rizosDrawKnot(g, 214, sy - 70, .9, t, 3, true); rizosDrawKnot(g, 238, sy - 26, .75, t, 7, true); }
+  const ek = clamp((t - .95) / .2, 0, 1), blink = (t % 2.4) > 2.28 ? .15 : 1;
+  if (ek > 0) for (const s of [-1, 1]) {
+    const ex = 164 + s * 20, ey = sy - 96, h = Math.max(1, 6 * ek * blink);
+    polyPx(g, [[ex - 11 * s, ey - h], [ex + 9 * s, ey - h * .2 - 3], [ex + 7 * s, ey + h * .6], [ex - 9 * s, ey + h * .5]], INK);
+    polyPx(g, [[ex - 9 * s, ey - h + 1], [ex + 7 * s, ey - h * .2 - 2], [ex + 5 * s, ey + h * .5 - 1], [ex - 7 * s, ey + h * .4 - 1]], '#ffe14f');
+    if (h > 3) disc(g, ex + s, ey - 1, 1.6, '#c0102a');
+  }
+  // the floor lights up red only
+  rizosDanceFloor(g, 162, beat, 4); g.globalAlpha = .55; rect(g, 0, 162, SW, 30, '#5a0012'); g.globalAlpha = 1;
+  // Rizos, frozen in the corner, glasses popping off
+  rizosDraw(g, 60, 196 + Math.round(Math.sin(t * 40) * .6), 'boss');
+  // the broken red sign
+  const wk = E.outBack(clamp((t - .15) / .3, 0, 1));
+  g.save(); g.translate(0, rd((1 - wk) * -70));
+  rizosAnnWord(g, A.boss[0], 150, 8, t, .2, { buzz: 2.2, gap: .18 }); // clear of the pause button
+  rizosAnnWord(g, A.boss[1], 138, 40, t, .45, { buzz: 1.9, gap: .14 });
+  g.restore();
+  if (fl(t * 11) % 29 === 0) { g.globalAlpha = .35; rect(g, 0, 0, SW, SH, '#05000a'); g.globalAlpha = 1; }
+}
+// ¡MÁS DIFÍCIL!: the difficulty board jumps and Rizos' afro pumps up, pop by pop
+function rizosAnnLevel(g, S, t) {
+  const A = rizosAnnFaces(), beat = t * (S.bpm || 124) / 60, lv = Math.max(1, Math.min(3, S.level || 2));
+  g.drawImage(rizosClubBack(), 0, 0);
+  g.globalAlpha = .3; rect(g, 0, 0, SW, SH, '#0b3a5a'); g.globalAlpha = 1;
+  rizosBeams(g, NOW * 1.6, beat);
+  rizosFloatBubbles(g, NOW, 10, 150);
+  rizosDanceFloor(g, 156, beat, 4);
+  // the afro pumps three times; curls fly off at every pump
+  const pumps = [.3, .6, .9], done = pumps.filter(p => t >= p).length;
+  let sc = 1; pumps.forEach((p, i) => { if (t >= p) sc += .12 * (i === done - 1 ? spring(t - p, 3, 9) : 1); });
+  const B = rizosBodyBase('ready'), X = 128 - 48, Y = 178 - 128;
+  shadowOval(g, 128, 178, 26, 3, .55);
+  g.drawImage(B.body, X, Y);
+  drawS(g, rizosHead(done >= 3 ? 'joy' : 'grin'), X + 48, Y + 72, { s: sc, ay: .85, rot: Math.sin(beat * Math.PI) * .04 });
+  g.drawImage(B.arms, X, Y);
+  const hy = Y + 72 - 44 * sc;
+  pumps.forEach((p, i) => { const k = t - p; if (k < 0 || k > .7) return; for (let j = 0; j < 7; j++) { const a = -Math.PI * (.1 + j / 6 * .8) + i, r = 40 * sc + k * 70, x = 128 + Math.cos(a) * r, y = hy + Math.sin(a) * r * .8; g.globalAlpha = 1 - k / .7; for (let q = 0; q < 2.6; q += .45) px(g, x + Math.cos(q + a) * 3, y + Math.sin(q + a) * 3, j % 2 ? RIZOS_FUR[4] : RIZOS_FUR[2]); g.globalAlpha = 1; } });
+  // the difficulty board on the wall: it jolts on every pump and lights one more ball
+  const jolt = pumps.reduce((m, p) => Math.max(m, t >= p && t < p + .18 ? (1 - (t - p) / .18) * 4 : 0), 0);
+  const bx0 = 190, by0 = rd(92 - jolt);
+  panel(g, bx0 - 36, by0 - 14, 72, 34, '#0b0418', { r: 5, line: '#22c8dc' });
+  tiny(g, 'DIFICULTAD', bx0, by0 - 8, '#9ff4ff', { align: 'c' });
+  for (let i = 0; i < 3; i++) {
+    const bx = bx0 - 16 + i * 16, by = by0 + 9, on = i < lv - 1 || (i === lv - 1 && t > .9);
+    if (on) { rizosDiscoBall(g, bx, by, 5, NOW + i, { noChain: true }); if (i === lv - 1 && t < 1.4) for (let q = 0; q < 6; q++) { const a = q / 6 * TAU + t * 6, rr = 8 + (t - .9) * 18; drawStar(g, bx + Math.cos(a) * rr, by + Math.sin(a) * rr, 2, '#9ff4ff'); } }
+    else { disc(g, bx, by, 5, INK); disc(g, bx, by, 4, '#2a1052'); }
+  }
+  // cyan neon across the top
+  const mk = E.outBack(clamp(t / .3, 0, 1)), my = rd(lerp(-50, 2, mk));
+  rizosAnnWord(g, A.level[0], 120, my + 6, t, .12);
+}
+function rizosSpecial(g, S, kind, t) {
+  if (typeof cardWord !== 'function' || typeof CARD_RIZOS_ON === 'undefined') return false;
+  if (kind === 'speed') rizosAnnSpeed(g, S, t);
+  else if (kind === 'boss') rizosAnnBoss(g, S, t);
+  else if (kind === 'level') rizosAnnLevel(g, S, t);
+  else return false;
+}
+// the bottom-screen strip: a neon tube sign in the colour of the announcement
+const RIZOS_ANN_LBL = { speed: ['¡El DJ sube el pitch!', '#ff3d8b'], boss: ['¡Llega La Gran Maraña!', '#ff2a3d'], level: ['¡Crece el afro… y el reto!', '#22c8dc'] };
+function rizosSpecialBot(g, S, kind, t) {
+  const L = RIZOS_ANN_LBL[kind]; if (!L) return false;
+  const [label, col] = L, k = E.outBack(clamp(t * 3, 0, 1)), y = rd(6 - (1 - k) * 34), w = Math.max(150, txtW(label) + 34);
+  g.globalAlpha = .35; panel(g, SW / 2 - w / 2 - 3, y - 3, w + 6, 24, '#000000', { r: 7, line: '#000000' }); g.globalAlpha = 1;
+  panel(g, SW / 2 - w / 2, y, w, 18, '#130726', { r: 6, line: col });
+  ringRect(g, SW / 2 - w / 2 + 2, y + 2, w - 4, 14, 1, mixHex(col, '#130726', .5));
+  const on = t > .1 && (t * 1.7) % 2.3 > .05;
+  txt(g, label, SW / 2, y + 5, on ? mixHex(col, '#ffffff', .55) : mixHex(col, '#130726', .55), { align: 'c', bold: true, out: on ? mixHex(col, '#130726', .45) : null });
+  for (const sx of [-1, 1]) { const bx = SW / 2 + sx * (w / 2 - 7); disc(g, bx, y + 9, 2, INK); disc(g, bx, y + 9, 1.4, fl(t * 6) % 2 ? '#fff27a' : '#5a3d14'); }
+}
+
 // ---------------------------------------------------------------- music -----
 // disco-funk: four on the floor, octave bass, string stabs, clavinet plucks
 const RIZOS_DRUM = 'k h o h k+c h o h k h o h k+c h o h';
 const RIZOS_SONGS = {
+  // the announcements: a funk run winding up, a sinister disco stab, a key change
+  jingles: {
+    speed: { spb: 4, tracks: [
+      { i: 'pluck', v: .7, n: 'A4 C5 D5 E5 G5 A5 C6 D6 E6 G6 A6! - - . . .' },
+      { i: 'brass', v: .55, n: '. . A4+C5+E5 . . . A4+C5+E5 . . . A4+C5+E5 . E5+A5+C6! - . .' },
+      { i: 'bass', v: .85, n: 'A2 A3 A2 A3 A2 A3 A2 A3 A2 A3 A2 A3 A2! - . .' },
+      { i: 'd', v: .85, n: 'k z c z k z c z k z c z k+x - . .' }] },
+    boss: { spb: 4, tracks: [
+      { i: 'brass', v: .75, n: 'A3 - - . A3 - - . C4 - - . D#4! - - -' },
+      { i: 'pad', v: .45, n: 'A2+E3 - - - - - - - D#3+A3 - - - - - - -' },
+      { i: 'bass', v: .9, n: 'A1 . A1 A2 . A1 . A2 A1 . A1 A2 . D#2 D#2 D#2' },
+      { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+    level: { spb: 4, tracks: [
+      { i: 'pluck', v: .7, n: 'A4 C#5 E5 A5 B4 D#5 F#5 B5 C#5 F5 G#5 C#6! - - . .' },
+      { i: 'bell', v: .5, n: '. . . . . . . . . . . . C#6 - E6 -' },
+      { i: 'bass', v: .85, n: 'A2 . A3 . B2 . B3 . C#3 . C#4 . C#3! - . .' },
+      { i: 'd', v: .85, n: 'k h o h k h o h k c c c k+x - . .' }] },
+  },
   card: { spb: 4, tracks: [
     { i: 'brass', v: .6, n: 'A4 . . A4 . . C5 . D5 - E5 - . . . . G5 - E5 . D5 . C5 . A4! - - - . . . .' },
     { i: 'pad', v: .5, n: 'A3+C4+E4 - - - - - - - D3+F3+A3 - - - - - - - E3+G3+B3 - - - - - - - A3+C4+E4 - - - . . . .' },
@@ -427,6 +648,7 @@ defStage({
   intro: 'rizos_in', outro: 'rizos_out',
   room: {
     top: rizosRoomTop, bot: rizosRoomBot, frame: 'disco', life: rizosLife, miniLife: rizosMiniLife, lifeY: 140, lifeSpacing: 34,
+    special: rizosSpecial, specialBot: rizosSpecialBot,
     counter: { x: SW / 2, y: 5 }, counterFill: ['#ffffff', '#ffd1e4', '#ff5d9e'], mini: rizosMini, playTop: rizosPlayTop, portal: { x: 64, y: 26, w: 128, h: 96 },
     staticCols: ['#2a1052', '#4a2590'], playCols: ['#2a1052', '#3b1a6a'], cardCol: ['#1d0b3d', '#2a1052', '#3b1a6a', '#5a2a9a', '#8f6cff'],
   },

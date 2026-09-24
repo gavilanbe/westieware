@@ -107,6 +107,7 @@ function runPerfTest() {
 function runStageTest() {
   BOTIN.on = true; RNG = mulberry32(+(QS.get('seed') || 5));
   const id = QS.get('id') || 'anahi', secs = +(QS.get('secs') || 240), rep = { id, snaps: [] };
+  if (QS.has('replay')) SAVE.cleared[id] = 1; // play it as an already-cleared stage (endless, harder, faster)
   go(STG, { id, story: false });
   let last = '';
   for (let i = 0; i < secs * 60; i++) {
@@ -173,7 +174,10 @@ function runAudioTest() {
     try { const pl = playSong(song, { bpm: 120, vol: .01 }); stopSong(pl, .01); rep.songs++; } catch (e) { rep.errors.push(name + ': ' + e.message); }
   };
   for (const k in JINGLE) check('JINGLE.' + k, JINGLE[k]);
-  for (const id of STAGE_ORDER) { const d = STAGES[id]; if (d.songs) for (const k in d.songs) check(id + '.' + k, d.songs[k], ['win', 'lose', 'next', 'ready'].includes(k) ? 2 : 0); }
+  for (const id of STAGE_ORDER) { const d = STAGES[id]; if (d.songs) for (const k in d.songs) {
+    if (k === 'jingles') { for (const j in d.songs.jingles) check(id + '.jingles.' + j, d.songs.jingles[j], 4); continue; } // the themed announcements: 4 beats each
+    check(id + '.' + k, d.songs[k], ['win', 'lose', 'next', 'ready'].includes(k) ? 2 : 0);
+  } }
   for (const id of MG_ORDER) { const d = MG[id]; if (d.song) { try { const g = mgNew(id, 1, 120); check('mg.' + id, d.song(g), d.boss ? 0 : d.beats); } catch (e) { rep.errors.push('mg.' + id + ': ' + e.message); } } }
   for (const id in CUTS) { const c = CUTS[id]; if (c.song) check('cut.' + id, c.song); (c.shots || []).forEach((s, i) => { if (s.song) check('cut.' + id + '#' + i, s.song); }); }
   stopAllMusic(.01);

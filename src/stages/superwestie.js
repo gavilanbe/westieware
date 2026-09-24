@@ -1,8 +1,8 @@
 // ============================================================================
 //  FINAL — SÚPER KEIKO · ¡TODO!  (Wario-Man homage)
 //  Keiko (Anahí's westie) eats the whole "Pack de Chuches" and becomes Súper
-//  Keiko. Every microgame of every stage, faster and faster, then the boss the
-//  user dreamt up in his parody video: ¡PREPARA EL PERRO!
+//  Keiko. Every microgame of every stage, faster and faster, then the boss:
+//  El Monstruo de Barro (washing it reveals Nube, lost in the sewers).
 //  + the extra modes unlocked after the ending: MEZCLA MAESTRA and A UN PELO.
 // ============================================================================
 'use strict';
@@ -116,6 +116,7 @@ function barcelonaNight(g, t) {
 }
 function heroRoomTop(g, S) {
   const t = S.pt || 0, rt = S.reactT || 0;
+  if (typeof cardPrewarm === 'function') cardPrewarm(swAnnWords(S.def.id === 'mezcla')); // the announcements' letters, one per frame
   barcelonaNight(g, NOW);
   let x = 128, y = 98, rot = 0, mood = 'happy', flip = false;
   const r = S.react;
@@ -173,6 +174,197 @@ function mudMonsterModel(f) {
   });
 }
 function drawMudMonster(g, x, y, t, s = 1) { drawS(g, mudMonsterModel(fl(t * 3) % 2), x, y, { s, sy: s * (1 + Math.sin(t * 4) * .03) }); }
+// ---------------------------------------------------------------- announcements
+// ¡MÁS RÁPIDO! · ¡JUEGO DEL JEFE! · ¡MÁS DIFÍCIL!, as comic-book splash panels:
+// Súper Keiko zooming through speed lines, the Mud Monster bursting out of the
+// sewer, a new chapter with her cape snapping. Mezcla Maestra gets a mixtape.
+// Lettering: the comic faces of her title card (src/cards.js, read at run time).
+let SW_FACES = null;
+function swFaces() {
+  return SW_FACES || (SW_FACES = {
+    mud: { id: 'swMud', u: 2.4, r: 2.6, slant: .2, gap: .7, fill: ['#f2d49a', '#b8894f', '#7a5226'], line: INK, rim: 2, sx: 3, sy: 4, shadow: ['#4a2f14', '#2a1a0a'], hi: '#fff2c0' },
+    sfx: { id: 'swSfx', u: 1.9, r: 2.1, slant: .3, gap: .6, fill: ['#ffffff', '#b3f3ff', '#63a0ef'], line: INK, rim: 2, sx: 2, sy: 3, shadow: '#1c3aa8' },
+    glorgh: { id: 'swGlorgh', u: 1.7, r: 1.9, slant: -.15, gap: .6, fill: ['#e8ffc9', '#9cff6b', '#4fa83a'], line: INK, rim: 2, sx: 2, sy: 2, shadow: '#1f4a1a' },
+  });
+}
+const SW_ANN_WORDS = {};
+function swAnnWords(mix) {
+  const k = mix ? 'mix' : 'hero'; if (SW_ANN_WORDS[k]) return SW_ANN_WORDS[k];
+  const F = swFaces();
+  return (SW_ANN_WORDS[k] = mix ? [['¡MÁS RÁPIDO!', i => cardMixFace(i, 0)]] : [
+    ['¡MÁS RÁPIDO!', cardFit('¡MÁS RÁPIDO!', 214, CARD_HERO_FACE)], ['¡ZOOM!', cardFit('¡ZOOM!', 92, F.sfx)],
+    ['¡JUEGO', cardFit('¡JUEGO', 160, F.mud)], ['DEL JEFE!', cardFit('DEL JEFE!', 210, F.mud)], ['¡GLORGH!', cardFit('¡GLORGH!', 80, F.glorgh)],
+    ['¡MÁS DIFÍCIL!', cardFit('¡MÁS DIFÍCIL!', 228, CARD_HERO_FACE)], ['¡FLAP!', cardFit('¡FLAP!', 64, CARD_HERO_SMALL)]]);
+}
+function swPanelFrame(g) { ringRect(g, 0, 0, SW, SH, 2, '#ffffff'); ringRect(g, 2, 2, SW - 4, SH - 4, 3, INK); }
+// a jagged comic burst (SFX balloon), centred at (x, y)
+function swBurst(g, x, y, rx, ry, n, fill, t, seed = 0) {
+  const pts = []; for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * TAU + seed, k = i % 2 ? .62 : 1 + (hash2(i, seed * 9 | 0, 5) - .5) * .25 + Math.sin(t * 12 + i) * .03; pts.push([x + Math.cos(a) * rx * k, y + Math.sin(a) * ry * k]); }
+  polyPx(g, pts.map(([a, b]) => [a + 2, b + 2]), INK); polyPx(g, pts.map(([a, b]) => [x + (a - x) * 1.06, y + (b - y) * 1.08]), INK); polyPx(g, pts, fill);
+}
+function swAnnSpeedBg() {
+  return mdl('sw:annSpeedBg', () => {
+    const c = mkCanvas(SW, SH), g = c.g;
+    bandsV(g, 0, 0, SW, SH, ['#fff7ae', '#ffec94', '#ffdf6e', '#ffc94a', '#ffab52']);
+    for (let y = 2; y < SH; y += 6) for (let x = ((y / 6) % 2) * 3 + 2; x < SW; x += 6) { const v = x / SW * .45 + y / SH * .75; if (v > .6) disc(g, x, y, Math.min(2.2, (v - .6) * 5), '#ec8a3a'); }
+    return c;
+  });
+}
+function swAnnSpeed(g, S, t) {
+  g.drawImage(swAnnSpeedBg(), 0, 0);
+  for (let i = 0; i < 16; i++) { const y = 52 + i * 8 + (i % 3) * 2, len = 30 + (i * 37 % 60), x = SW - ((t * 820 + i * 131) % (SW + 160)); rect(g, x, y, len, i % 4 === 0 ? 2 : 1, i % 3 ? '#ffffff' : '#ec5e5e'); }
+  const W = swAnnWords(false);
+  // ¡ZOOM! bursts where she took off
+  const zk = spring(t - .3, 2.6, 7);
+  if (zk > 0) { g.save(); g.translate(64, 84); g.rotate(-.14); g.scale(zk, zk); swBurst(g, 0, 0, 58, 30, 14, '#ec5e5e', t, 1); swBurst(g, 0, 0, 48, 23, 14, '#ffdf4f', t, 1.2); cardWord(g, W[1][0], 0, -12, W[1][1]); g.restore(); }
+  // Súper Keiko shoots across with afterimages
+  const fk = E.outQuint(clamp(t / .55, 0, 1)), kx = lerp(-80, 156, fk) + (t > .55 ? Math.sin(t * 5) * 4 : 0), ky = 132 + Math.sin(t * 11) * 2;
+  // motion streaks trail her, plus a single ghost of where she just was
+  for (let j = 0; j < 8; j++) { const yy = rd(ky - 20 + j * 6), len = rd((36 + (j * 23 % 50)) * (1.6 - fk * .6)); rect(g, rd(kx - 44 - len), yy, len, j % 3 === 0 ? 2 : 1, j % 2 ? '#ffffff' : '#fff27a'); }
+  g.globalAlpha = .22; drawSuperWestie(g, kx - 30, ky, NOW * 2 - .1, { lift: 1 }); g.globalAlpha = 1;
+  drawSuperWestie(g, kx, ky, NOW * 2, { lift: 1 });
+  const nk = t - .12; if (nk > 0) cardWord(g, W[0][0], 122, 20, W[0][1], { anim: i => cardAnimSlam(nk, i, { from: 2.2, stagger: .04 }) });
+  swPanelFrame(g);
+}
+function swAnnBossBg() {
+  return mdl('sw:annBossBg', () => {
+    const c = mkCanvas(SW, SH), g = c.g;
+    bandsV(g, 0, 0, SW, 130, ['#0b0c2a', '#141848', '#1f1d52', '#2b2458']);
+    for (let x = -4; x < SW; x += 42) { const h = 70 + hash2(x + 9, 3) * 30; rect(g, x, 130 - h, 40, h, '#1b1742'); rect(g, x, 130 - h, 40, 2, '#2a2450'); for (let wy = 130 - h + 8; wy < 124; wy += 12) for (let wx = x + 5; wx < x + 36; wx += 10) rect(g, wx, wy, 5, 7, hash2(wx, wy) < .4 ? '#ffd87a' : '#2a2450'); }
+    fillPat(g, panotPat(), 0, 130, SW, 34); g.globalAlpha = .6; rect(g, 0, 130, SW, 34, '#140c2a'); g.globalAlpha = 1;
+    rect(g, 0, 164, SW, 3, '#5b5a66'); rect(g, 0, 167, SW, 25, '#2a2838'); for (let x = 0; x < SW; x += 24) rect(g, x, 184, 12, 2, '#6b6977');
+    ellipsePx(g, 128, 176, 23, 8, INK); ellipsePx(g, 128, 176, 21, 6.5, '#0b0810');
+    return c;
+  });
+}
+function swAnnBoss(g, S, t) {
+  g.drawImage(swAnnBossBg(), 0, 0);
+  const W = swAnnWords(false), F = swFaces();
+  // green sewer light pouring out of the hole
+  const gl = .5 + .5 * Math.sin(t * 7);
+  g.globalAlpha = .1 + .06 * gl; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * .28; polyPx(g, [[118, 176], [138, 176], [128 + Math.cos(a - .1) * 170, 176 + Math.sin(a - .1) * 170], [128 + Math.cos(a + .1) * 170, 176 + Math.sin(a + .1) * 170]], '#9cff6b'); } g.globalAlpha = 1;
+  // the manhole cover rattles, then flies off
+  const lt = t - .15;
+  if (lt < 1.4) {
+    const lx = lt < 0 ? 128 + (hash2(fl(t * 40), 3) - .5) * 3 : 128 + lt * 90, ly = lt < 0 ? 175 : 175 - (lt * 300 - lt * lt * 420), rot = lt < 0 ? 0 : lt * 9;
+    g.save(); g.translate(rd(lx), rd(ly)); g.rotate(rot); ellipsePx(g, 0, 0, 21, 7, INK); ellipsePx(g, 0, 0, 20, 6, '#5b5a66'); for (let i = -14; i <= 14; i += 4) hline(g, i - 1, i + 1, 0, '#44424f'); g.restore();
+  }
+  // the Mud Monster heaves itself up out of the sewer
+  const mk = E.outBack(clamp((t - .28) / .6, 0, 1)), my = rd(lerp(236, 122, mk));
+  g.save(); g.beginPath(); g.rect(0, 0, SW, 177); g.clip(); drawMudMonster(g, 128 + Math.sin(t * 5) * 2, my, NOW, .85); g.restore();
+  ellipsePx(g, 128, 177, 21, 4, '#0b0810'); for (let a = 0; a <= Math.PI; a += .06) { px(g, 128 + Math.cos(a) * 23, 176 + Math.sin(a) * 8, INK); px(g, 128 + Math.cos(a) * 22, 176 + Math.sin(a) * 7, '#5b5a66'); }
+  // mud splats flying out and landing on the pavement
+  const st = t - .38;
+  if (st > 0) for (let j = 0; j < 10; j++) {
+    const a = -Math.PI / 2 + (hash2(j, 1, 7) - .5) * 2.6, v = 110 + hash2(1, j, 7) * 130, tt = Math.min(st, 1.4);
+    const x = 128 + Math.cos(a) * v * tt, y = 168 + Math.sin(a) * v * tt + 280 * tt * tt;
+    if (y < 170) { disc(g, x, y, 4 + (j % 3), INK); disc(g, x, y, 3 + (j % 3), '#7a5226'); px(g, x - 1, y - 1, '#b8894f'); }
+    else { const land = (-Math.sin(a) * v + Math.sqrt(Math.sin(a) * Math.sin(a) * v * v + 4 * 280 * 2)) / (2 * 280), lx = 128 + Math.cos(a) * v * land; ellipsePx(g, clamp(lx, 8, SW - 8), 170 + (j % 3) * 5, 6 + (j % 3), 2, '#5b3a1d'); }
+  }
+  // ¡GLORGH!
+  const gk = spring(t - .62, 2.6, 7);
+  if (gk > 0) { g.save(); g.translate(196, 106); g.rotate(.12); g.scale(gk, gk); swBurst(g, 0, 0, 44, 22, 12, '#4fa83a', t, 2); swBurst(g, 0, 0, 36, 16, 12, '#1f4a1a', t, 2.3); cardWord(g, W[4][0], 0, -9, W[4][1]); g.restore(); }
+  // Súper Keiko in an inset panel, frowning behind her mask
+  const ik = spring(t - .8, 2.4, 6);
+  if (ik > 0) {
+    g.save(); g.translate(40, 150); g.scale(ik, ik);
+    disc(g, 0, 0, 31, INK); disc(g, 0, 0, 29, '#ffdf4f'); for (let y = -26; y < 28; y += 5) for (let x = -26 + ((y / 5 | 0) % 2) * 2; x < 28; x += 5) if (x * x + y * y < 700) px(g, x, y, '#ffb84a');
+    g.beginPath(); g.arc(0, 0, 28, 0, TAU); g.clip();
+    const head = mdl('sw:grrHead', () => { const c = mkCanvas(64, 66); c.g.drawImage(keikoHead('grr'), 0, 0); swKeikoMask(c.g, 0, 0); return c; });
+    g.drawImage(head, -32, -26);
+    g.restore();
+  }
+  // the title, in mud that drips
+  const nk = t - .18;
+  if (nk > 0) {
+    cardWord(g, W[2][0], 128, 8, W[2][1], { anim: i => cardAnimSlam(nk, i, { from: 2, stagger: .05 }) });
+    const boxes = cardWord(g, W[3][0], 128, 38, W[3][1], { anim: i => cardAnimSlam(nk - .2, i, { from: 2, stagger: .05 }) });
+    const dk = t - 1.05;
+    if (dk > 0) for (const b of boxes) if (b.i % 2 === 0) { const x = rd(b.cx), y0 = 38 + 10 * b.u + 4, len = Math.min(9, dk * 14) * (.6 + hash2(b.i, 4) * .6); thickLine(g, x, y0, x, y0 + len, 1.3, '#7a5226'); disc(g, x, y0 + len + 1, 1.8, '#7a5226'); }
+  }
+  swPanelFrame(g);
+}
+function swAnnLevelBg() {
+  return mdl('sw:annLevelBg', () => {
+    const c = mkCanvas(SW, SH), g = c.g;
+    bandsV(g, 0, 0, SW, SH, ['#0b0c2a', '#141848', '#231f5e', '#3b2a6e', '#4a2f76']);
+    for (let y = 2; y < SH; y += 6) for (let x = ((y / 6) % 2) * 3 + 2; x < SW; x += 6) { const v = y / SH; if (v > .55) disc(g, x, y, Math.min(1.8, (v - .55) * 4), '#5a3a8e'); }
+    for (let i = 0; i < 30; i++) px(g, hash2(i, 21) * SW, hash2(21, i) * 110, i % 4 ? '#9fa8ff' : '#ffffff');
+    return c;
+  });
+}
+function swAnnLevel(g, S, t) {
+  g.drawImage(swAnnLevelBg(), 0, 0);
+  const W = swAnnWords(false);
+  // her cape sweeps across the whole panel and snaps
+  const ck = E.outBack(clamp(t / .3, 0, 1)), amp = 8 + 16 * Math.max(0, 1 - Math.abs(t - .32) * 3), ox = (1 - ck) * 280, top = [], bot = [];
+  for (let i = 0; i <= 18; i++) { const k = i / 18, x = 280 - k * 310 + ox, w = Math.sin(NOW * 8 - k * 6) * amp * (.3 + k); top.push([x, 30 + k * 18 + w]); bot.push([x, 128 + k * 34 + w * 1.25]); }
+  const poly = top.concat(bot.slice().reverse());
+  polyPx(g, poly.map(([a, b]) => [a + 2, b + 3]), INK); polyPx(g, poly.map(([a, b]) => [a - 1, b - 1]), INK); polyPx(g, poly, RAMP.green[2]);
+  for (let i = 1; i < 18; i += 3) linePx(g, top[i][0], top[i][1] + 3, bot[i + 1][0], bot[i + 1][1] - 3, RAMP.green[1]);
+  for (let i = 0; i < 18; i++) { linePx(g, top[i][0], top[i][1] + 1, top[i + 1][0], top[i + 1][1] + 1, RAMP.green[3]); thickLine(g, bot[i][0], bot[i][1] - 1, bot[i + 1][0], bot[i + 1][1] - 1, .8, RAMP.gold[3]); }
+  const cx = (top[7][0] + bot[7][0]) / 2, cy = (top[7][1] + bot[7][1]) / 2; disc(g, cx, cy, 9, INK); disc(g, cx, cy, 8, RAMP.gold[3]); disc(g, cx - 2, cy - 2, 4, RAMP.gold[4]); txt(g, 'W', cx, cy - 4, RAMP.green[1], { align: 'c', bold: true });
+  // ¡FLAP!
+  const fk = spring(t - .26, 2.8, 7);
+  if (fk > 0 && t < 1.6) { g.save(); g.translate(46, 150); g.rotate(-.2); g.scale(fk, fk); swBurst(g, 0, 0, 34, 16, 10, '#ffffff', t, 3); cardWord(g, W[6][0], 0, -9, W[6][1]); g.restore(); }
+  // the hero strikes a pose; the chapter caption; the title; one star per difficulty step
+  const hk = E.outBack(clamp((t - .35) / .4, 0, 1)); drawS(g, heroPortrait(), rd(lerp(SW + 70, 204, hk)), 192, { ax: .5, ay: 1 });
+  const bk = E.outBack(clamp((t - .08) / .3, 0, 1)), bw = txtW('…y la cosa se complica') + 12, bx = rd(lerp(-bw - 10, 8, bk));
+  rect(g, bx - 1, 7, bw + 2, 17, INK); rect(g, bx, 8, bw, 15, '#fff7ae'); txt(g, '…y la cosa se complica', bx + 6, 12, INK);
+  const nk = t - .2; if (nk > 0) cardWord(g, W[5][0], 118, 60, W[5][1], { anim: i => cardAnimSlam(nk, i, { from: 2.2, stagger: .04 }) });
+  for (let i = 0; i < 3; i++) { const sk = spring(t - .7 - i * .12, 2.6, 6); if (sk <= 0) continue; const on = i < (S.level || 1), x = 62 + i * 24; g.save(); g.translate(x, 116); g.scale(sk, sk); drawStar(g, 0, 0, 10, INK); drawStar(g, 0, 0, 8, on ? RAMP.gold[3] : '#3b2a6e'); if (on) drawStar(g, -1, -1, 4, RAMP.gold[4]); g.restore(); }
+  swPanelFrame(g);
+}
+// Mezcla Maestra: a mixtape speeding up, sticker letters bouncing on the beat
+function swAnnMix(g, S, t) {
+  const bt = t * (S.bpm || 120) / 60, off = (t * 90) % 132;
+  for (let i = -4; i < 16; i++) { const x = i * 22 + off; polyPx(g, [[x, 0], [x + 22, 0], [x - 44, SH], [x - 66, SH]], CARD_MIX_COLS[((i % 6) + 6) % 6]); }
+  g.globalAlpha = .45; rect(g, 0, 6, SW, 44, INK); g.globalAlpha = 1;
+  // the record spins faster and faster under the tonearm
+  const vk = E.outBack(clamp(t / .4, 0, 1)), vx = rd(lerp(-60, 78, vk)), vy = 128, a = t * (7 + t * 9);
+  disc(g, vx, vy, 49, INK); disc(g, vx, vy, 47, '#1d1424'); for (let r = 20; r < 46; r += 4) ringPx(g, vx, vy, r, '#2b2540');
+  for (const q of [a, a + Math.PI]) { thickLine(g, vx + Math.cos(q) * 22, vy + Math.sin(q) * 22, vx + Math.cos(q + .5) * 42, vy + Math.sin(q + .5) * 42, .8, '#5a5490'); }
+  disc(g, vx, vy, 16, INK); disc(g, vx, vy, 15, '#ff5d9e'); disc(g, vx + Math.cos(a) * 8, vy + Math.sin(a) * 8, 3, '#ffd1e4'); disc(g, vx, vy, 2, '#fff8e6');
+  thickLine(g, 150, 70, vx + 30, vy - 22, 1.6, INK); thickLine(g, 150, 70, vx + 30, vy - 22, .8, RAMP.steel[4]); disc(g, 150, 70, 6, INK); disc(g, 150, 70, 5, RAMP.steel[3]); rect(g, vx + 26, vy - 26, 8, 6, INK);
+  // the tempo sticker
+  const tk = spring(t - .45, 2.6, 6);
+  if (tk > 0) { g.save(); g.translate(200, 128); g.rotate(-.18); g.scale(tk, tk); disc(g, 0, 0, 27, INK); disc(g, 0, 0, 25, '#ffffff'); disc(g, 0, 0, 22, '#ffdf4f'); txt(g, 'x' + (1 + .13 * (S.speed || 0)).toFixed(2).replace('.', ','), 0, -6, INK, { align: 'c', bold: true }); tiny(g, 'TEMPO', 0, 6, INK, { align: 'c' }); g.restore(); }
+  const W = swAnnWords(true), nk = t - .1;
+  if (nk > 0) cardWord(g, W[0][0], 122, 16, W[0][1], { anim: i => { const e = cardAnimDrop(nk, i, { stagger: .05, h: -40 }); if (!e.s) return e; e.dy = (e.dy || 0) - Math.abs(Math.sin((bt * .5 + i * .13) * Math.PI)) * 4; return e; } });
+  ringRect(g, 0, 0, SW, SH, 3, '#ffffff'); ringRect(g, 3, 3, SW - 6, SH - 6, 1, INK);
+}
+function swSpecial(g, S, kind, t) {
+  if (S.def.id === 'mezcla' && kind === 'speed') swAnnMix(g, S, t);
+  else if (kind === 'speed') swAnnSpeed(g, S, t);
+  else if (kind === 'boss') swAnnBoss(g, S, t);
+  else if (kind === 'level') swAnnLevel(g, S, t);
+  else return false;
+}
+// bottom screen: a comic caption box sliding in
+function swSpecialBot(g, S, kind, t) {
+  const lbl = S.def.id === 'mezcla' ? '¡Sube el tempo de la mezcla!' : { speed: '¡Súper Keiko pisa el acelerador!', boss: '¡Algo sale de la alcantarilla!', level: '¡Agárrate bien la capa!' }[kind];
+  if (!lbl) return false;
+  const k = E.outBack(clamp(t * 3, 0, 1)), w = txtW(lbl) + 16, x = rd(SW / 2 - w / 2 - (1 - k) * 220), y = 6;
+  rect(g, x - 1, y - 1, w + 2, 20, INK); rect(g, x, y, w, 18, '#fff7ae'); rect(g, x, y + 15, w, 3, '#ffdf4f'); txt(g, lbl, x + w / 2, y + 5, INK, { align: 'c' });
+}
+HERO_SONGS.jingles = {
+  speed: { spb: 4, tracks: [
+    { i: 'p25', v: .7, n: 'C5 D5 E5 F5 G5 A5 B5 C6 D6 E6 F6 G6 C7! - - .' },
+    { i: 'brass', v: .6, n: 'C4 . . . E4 . . . G4 . . . C5! - - -' },
+    { i: 'bass', v: .9, n: 'C3 . C3 . C3 . C3 . C3 C3 C3 C3 C3! - . .' },
+    { i: 'd', v: .85, n: 'k . s . k . s . k s k s k+x - z .' }] },
+  boss: { spb: 4, tracks: [
+    { i: 'brass', v: .8, n: 'C3 - - . C3 - - . Db3 - - . G2! - - -' },
+    { i: 'sub', v: .7, n: 'C2 - - - C2 - - - Db2 - - - G1 - - -' },
+    { i: 'squeak', v: .3, n: '. . G5 . . . Ab5 . . . G5 . . . C5 .' },
+    { i: 'd', v: .9, n: 'k . . T k . . T k . T T T T k+x .' }] },
+  level: { spb: 4, tracks: [
+    { i: 'brass', v: .75, n: 'G4 - C5 - E5 - G5 - E5 - G5 - C6! - - -' },
+    { i: 'bell', v: .5, n: '. . . . . . . . . . . . C6 E6 G6 C7' },
+    { i: 'bass', v: .85, n: 'C3 . G2 . C3 . G2 . C3 . G2 . C3! - . .' },
+    { i: 'd', v: .85, n: 'k . h . s . h . k . s s k+x - . .' }] },
+};
+
 defStage({
   id: 'superwestie', name: 'SÚPER KEIKO', sub: '«¡Por un Eixample sin greñas!»', verb: '¡TODO!', mech: 'mix', bpm: 126,
   games: () => allStoryGames(), boss: 'barro', bossAt: 20, speedAt: [5, 10, 15],
@@ -181,7 +373,7 @@ defStage({
   face: () => mdl('heroFaceK', () => { const c = mkCanvas(64, 66); c.g.drawImage(keikoHead('wink'), 0, 0); swKeikoMask(c.g, 0, 0); return faceCrop(c, 12, 6, 40, 42); }),
   rim: '#ffdf4f', cardCols: ['#141848', '#231f5e'], nameFill: ['#ffffff', '#b3d9ff', '#63a0ef'], tip: 'Todos los microjuegos… ¡y el Monstruo de Barro!',
   songs: HERO_SONGS, intro: 'superwestie_in', outro: 'superwestie_out', creditsOnClear: true,
-  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 },
+  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, special: swSpecial, specialBot: swSpecialBot,
     mini: (g, x, y, st) => drawSuperWestie(g, 44, SH - 22, NOW, { mood: st === 'lose' ? 'sad' : 'happy' }), bossLabel: '¡Sale de la alcantarilla!',
     portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#231f5e', '#3b2a6e'], playCols: ['#141848', '#231f5e'], cardCol: RAMP.purple },
 });
@@ -207,14 +399,14 @@ defStage({
   games: () => allStoryGames(), boss: null, speedEvery: 5, unlockBy: 'superwestie',
   portrait: () => heroPortrait(), face: () => modeIcon('mix'), rim: '#bf95e9', cardCols: ['#3d2066', '#5a3396'], tip: '¿Hasta dónde llegas?',
   songs: HERO_SONGS,
-  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#3d2066', '#5a3396'], playCols: ['#3d2066', '#5a3396'], cardCol: RAMP.purple },
+  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, special: swSpecial, specialBot: swSpecialBot, portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#3d2066', '#5a3396'], playCols: ['#3d2066', '#5a3396'], cardCol: RAMP.purple },
 });
 defStage({
   id: 'unpelo', name: 'A UN PELO', sub: '«Una vida. Nivel 2. Sin piedad»', verb: '¡TODO!', mech: 'mix', bpm: 128, endless: true, lives: 1, startLevel: 2, noSpeed: true,
   games: () => allStoryGames(), boss: null, unlockBy: 'superwestie',
   portrait: () => heroPortrait(), face: () => modeIcon('hair'), rim: '#ff5d5d', cardCols: ['#5a0f1e', '#7c1830'], tip: 'Un fallo y se acabó',
   songs: HERO_SONGS,
-  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#5a0f1e', '#7c1830'], playCols: ['#5a0f1e', '#7c1830'], cardCol: RAMP.red },
+  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, special: swSpecial, specialBot: swSpecialBot, portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#5a0f1e', '#7c1830'], playCols: ['#5a0f1e', '#7c1830'], cardCol: RAMP.red },
 });
 
 // ---------------------------------------------------------------- story -----

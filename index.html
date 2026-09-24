@@ -95,12 +95,15 @@ const T = TOPC.g, B = BOTC.g, TL = TALLC.g;
 
 // ---------------------------------------------------------------- save ----
 const SAVE_KEY = 'westieware-save-v1';
+// bump SAVE_V when a new version should start everyone from scratch (v2: the
+// round-3 game — characters must arrive one by one, the first visit must end)
+const SAVE_V = 2;
 function defaultSave() {
-  return { v: 1, prologue: false, cleared: {}, best: {}, seen: {}, bestMg: {}, unlockSeen: {}, toys: {}, opts: { sound: 1, layout: 'auto' }, plays: 0 };
+  return { v: SAVE_V, prologue: false, cleared: {}, best: {}, seen: {}, bestMg: {}, unlockSeen: {}, toys: {}, opts: { sound: 1, layout: 'auto' }, plays: 0 };
 }
 function loadSave() {
   if (QS.has('nosave') || TESTING) return defaultSave();
-  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) { const d = defaultSave(); return Object.assign(d, s, { opts: Object.assign(d.opts, s.opts || {}) }); } } catch (e) { }
+  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === SAVE_V) { const d = defaultSave(); return Object.assign(d, s, { opts: Object.assign(d.opts, s.opts || {}) }); } } catch (e) { }
   return defaultSave();
 }
 let SAVE = loadSave();
@@ -2283,6 +2286,7 @@ function segCross(a, b, c, d) { const o = (p, q, r) => Math.sign((q[0] - p[0]) *
 const STAGES = {}, STAGE_ORDER = [];
 function defStage(def) { STAGES[def.id] = def; STAGE_ORDER.push(def.id); }
 const LIVES = 4;
+const SPEED_MAX = 8; // speed tiers: tempo × (1 + .13 × tier), so the top is about twice the start
 
 // ---------------------------------------------------------------- global jingles
 const JINGLE = {
@@ -2395,7 +2399,8 @@ const STG = {
       const d = S.def;
       if (S.nextIsBoss) S.special = 'boss';
       else if (S.levelUp) { S.special = 'level'; S.levelUp = false; }
-      else if (result !== null && !d.noSpeed && (d.speedEvery ? this.countSinceBoss() % d.speedEvery === 0 && S.speed < 6 : (d.speedAt || [4, 7]).includes(this.countSinceBoss()))) S.special = 'speed';
+      else if (S.speedUp) { S.special = 'speed'; S.speedUp = false; }
+      else if (result !== null && !d.noSpeed && S.speed < SPEED_MAX && (d.speedEvery ? this.countSinceBoss() % d.speedEvery === 0 && S.speed < 6 : (d.speedAt || [4, 7]).includes(this.countSinceBoss()))) S.special = 'speed';
     }
     if (QS.get('force') && result !== null && S.lives > 0) S.special = QS.get('force'); // debug captures
     S.len = S.special ? 8 : 4;
@@ -2407,9 +2412,9 @@ const STG = {
     playSong(result === true ? songs.win : result === false ? songs.lose : (songs.ready || songs.win), { bpm: S.bpm, at: t0 });
     // a speed-up takes effect on beat 2, exactly when its jingle starts
     let nbpm = S.bpm;
-    if (S.special === 'speed') { S.speed++; nbpm = (S.def.bpm || 120) * (1 + .13 * S.speed); S.bpmAt2 = nbpm; }
+    if (S.special === 'speed') { S.speed = Math.min(SPEED_MAX, S.speed + 1); nbpm = (S.def.bpm || 120) * (1 + .13 * S.speed); S.bpmAt2 = nbpm; }
     const bd2 = 60 / nbpm;
-    if (S.special) playSong(JINGLE[S.special], { bpm: nbpm, at: t0 + 2 * bd });
+    if (S.special) playSong((songs.jingles && songs.jingles[S.special]) || JINGLE[S.special], { bpm: nbpm, at: t0 + 2 * bd });
     playSong(songs.next, { bpm: nbpm, at: t0 + 2 * bd + (S.special ? 4 * bd2 : 0) });
     // choose the next microgame now so the portal can peek at it
     this.prepareNext();
@@ -2497,7 +2502,8 @@ const STG = {
       S.bossCount = S.count + 1;
       if (won) {
         if (S.first) { S.count++; this.stageClear(); return; }
-        S.level = Math.min(3, S.level + 1); S.speed = 0; S.bpm = S.def.bpm || 120; S.levelUp = true;
+        if (S.level < 3) { S.level++; S.speed = 0; S.bpm = S.def.bpm || 120; S.levelUp = true; }
+        else S.speedUp = true; // top difficulty: no reset, the tempo just keeps climbing
         if (S.lives < S.maxLives) S.lives++;
       } else S.nextIsBoss = true; // the boss comes back until it's beaten
     } else {
@@ -2635,6 +2641,8 @@ const STG = {
   },
   drawSpecialTop(g, S) {
     const t = (S.pb - 2) * this.beatDur; if (t < 0) return;
+    // every character brings its own ¡MÁS RÁPIDO! / ¡JUEGO DEL JEFE! / ¡MÁS DIFÍCIL! (room.special)
+    const R = S.def.room; if (R.special && R.special(g, S, S.special, t) !== false) return;
     if (S.special === 'speed') {
       // speed lines + brush lettering + Keiko cheering from below
       for (let i = 0; i < 18; i++) { const y = (i * 37 + fl(t * 400) * 3) % SH, x = (i * 71 + fl(t * 900)) % (SW + 60) - 30; rect(g, SW - x, y, 26 + (i % 3) * 10, 1, '#ffffff'); }
@@ -2646,11 +2654,12 @@ const STG = {
       const kk = spring(t - .35, 2.2, 6); if (kk > 0) drawS(g, keikoBossHead(), 196, 128, { s: kk, rot: -.1 + Math.sin(t * 3) * .04 });
       drawBrushWords(g, ['¡JUEGO', 'DEL JEFE!'], 102, 46, t);
     } else if (S.special === 'level') {
-      this.drawBanner(g, '¡NIVEL ' + S.level + '!', t, ['#ffffff', '#d2f5e4', '#5bb593']);
+      this.drawBanner(g, '¡MÁS DIFÍCIL!', t, ['#ffffff', '#d2f5e4', '#5bb593']);
     }
   },
   drawSpecialBot(g, S) {
     const t = (S.pb - 2) * this.beatDur; if (t < 0 || S.pb > 6) return;
+    if (S.def.room.specialBot && S.def.room.specialBot(g, S, S.special, t) !== false) return;
     const R = S.def.room, SPEED_LBL = { tap: '¡Más ritmo, más tijera!', rub: '¡A frotar a toda mecha!', cut: '¡Tijeras a tope!', draw: '¡Tiza a toda velocidad!', drag: '¡Rapidito, rapidito!', spin: '¡Más vueltas, más rápido!', mix: '¡Todo a la vez!' };
     const lbl = S.special === 'speed' ? (R.speedLabel || SPEED_LBL[S.def.mech] || SPEED_LBL.tap) : S.special === 'boss' ? (R.bossLabel || '¡Se acerca algo gordo!') : (R.levelLabel || '¡Más difícil todavía!');
     const k = E.outBack(clamp(t * 3, 0, 1));
@@ -3416,6 +3425,28 @@ const ANAHI_SONGS = {
     { i: 'bass', v: .9, n: 'C3 . C3 Eb3 . C3 F3 . G3 . Bb2 . C3 . . . Ab2 . Ab2 C3 . Ab2 Bb2 . G2 . G2 B2 . D3 G2 .' },
     { i: 'p12', v: .35, n: 'C6 . Eb6 . C6 . Eb6 . C6 . Eb6 . G6 . Eb6 . Ab5 . C6 . Ab5 . C6 . B5 . D6 . G6 . D6 .' },
     { i: 'd', v: .85, n: 'k . h s . k s h k . h s k s s s k . h s . k s h k . h s k s s+x s' }] },
+  // the three announcements, each 4 beats long, played at the new tempo
+  jingles: {
+    // her vibraphone motif in fast-forward, bass pumping, a snare roll into the crash
+    speed: { spb: 4, tracks: [
+      { i: 'vib', v: .75, n: 'C5 E5 G5 C6 D5 F5 A5 D6 E5 G5 B5 E6 G6! - - .' },
+      { i: 'p25', v: .42, n: 'C4 . E4 . G4 . C5 . D5 . F#5 . G5! - - .' },
+      { i: 'bass', v: .85, n: 'C3 C3 G2 G2 C3 C3 G2 G2 C3 C3 D3 D3 E3! - - .' },
+      { i: 'd', v: .85, n: 'k h s h k h s h k s s s k+x - . .' }] },
+    // the shop's door bell (ding-dong), then brass and toms: Lady Di has arrived
+    boss: { spb: 4, tracks: [
+      { i: 'bell', v: .75, n: 'E6 - C6 - . . . . . . . . . . . .' },
+      { i: 'brass', v: .7, n: '. . . . C4 - - . Eb4 - - . F#4! - - -' },
+      { i: 'vib', v: .45, n: '. . . . G5 . G5 . Bb5 . Bb5 . C6! - - -' },
+      { i: 'bass', v: .9, n: '. . . . C2 . C2 . C2 . C2 . F#2! - - -' },
+      { i: 'd', v: .9, n: '. . . . T . . T T . T T T T k+x .' }] },
+    // rolling up her sleeves: a slow climb that lands on a bright chord
+    level: { spb: 4, tracks: [
+      { i: 'vib', v: .75, n: 'G4 . C5 . E5 . G5 . C6 . E6 . G6+C7! - - -' },
+      { i: 'bell', v: .5, n: '. . . . . . . . . . . . C7 - E7 -' },
+      { i: 'bass', v: .85, n: 'C3 . . . E3 . . . G3 . . . C4! - - -' },
+      { i: 'd', v: .8, n: 'k . . . k . . . k . s s k+x - . .' }] },
+  },
 };
 
 // the hanging oval plate that holds the counter
@@ -3429,6 +3460,7 @@ const ANA_REACT = { ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', ov
 // the salon: Anahí behind the grooming table, Keiko on top of it, the counter
 // hanging from the ceiling in its gilt oval
 function anahiRoomTop(g, S) {
+  anahiPrewarm();
   g.drawImage(salonBackdrop(), 0, 0);
   wallClock(g, 168, 38, 600 + NOW * 30);
   counterPlate(g, SW / 2, 8);
@@ -3472,6 +3504,205 @@ function anahiMini(g, x, y, st, S) {
   drawAnahiFull(g, 34, SH + 84 - (st === 'win' ? 5 : 0), st === 'win' ? 'thumbs' : st === 'lose' ? 'sad' : 'idle', S.pt, { k: .6 });
 }
 
+// ---------------------------------------------------------------- announcements
+// Anahí's own ¡MÁS RÁPIDO! / ¡JUEGO DEL JEFE! / ¡MÁS DIFÍCIL! (room.special):
+// the salon in fast-forward, Lady Di's red-carpet arrival four minutes before
+// the 12:00 show, and Anahí getting serious. Her gold Roman capitals (the face
+// of her title card) on green-and-gold plaques; never the generic overlay.
+const ANAHI_SAY_MAX = { speed: 214, boss: 226, level: 214 };
+const ANAHI_SAY = { speed: '¡MÁS RÁPIDO!', boss: '¡JUEGO DEL JEFE!', level: '¡MÁS DIFÍCIL!' };
+function anahiSayFace(kind) { return cardFit(ANAHI_SAY[kind], ANAHI_SAY_MAX[kind], CARD_ANAHI_FACE); }
+// warm the heavy pictures once and rasterise the lettering a glyph per frame, during ordinary interludes
+function anahiPrewarm() {
+  if (typeof cardFit !== 'function') return;
+  if (!anahiPrewarm.done) {
+    anahiPrewarm.done = true;
+    for (const f of [() => anahiSprite('speed', .6), () => anahiSprite('boss', .6, 'gasp'), () => anahiSprite('pro', .62, 'focus'),
+      () => keikoSide(.46, 'stand', 'wow'), () => keikoSide(.5, 'wag', 'happy'), () => keikoSide(.5, 'stand', 'normal'), () => cardSalonBg(),
+      () => { if (typeof prepDog === 'function') prepDog('scruffy', .56, 'grumpy'); }]) warm(f);
+  }
+  cardPrewarm(Object.keys(ANAHI_SAY).map(k => [ANAHI_SAY[k], anahiSayFace(k)]));
+}
+// the plaque: gilt frame, green (or red velvet) field, rivets, a gold rule
+function anahiPlaque(g, cx, y, w, h, red) {
+  const Au = RAMP.gold, F = red ? ['#3d0610', '#6b0f1e', '#8e1a2c', '#b3263c'] : RAMP.green;
+  const x = rd(cx - w / 2);
+  panel(g, x, y, w, h, Au[2], { r: 6, line: INK }); panel(g, x + 3, y + 3, w - 6, h - 6, F[2], { r: 4, line: Au[1] });
+  rect(g, x + 6, y + 5, w - 12, 2, F[3]); hline(g, x + 8, x + w - 9, y + h - 6, F[1]);
+  for (const [px0, py0] of [[x + 7, y + 7], [x + w - 8, y + 7], [x + 7, y + h - 8], [x + w - 8, y + h - 8]]) { disc(g, px0, py0, 1.5, INK); px(g, px0, py0, Au[4]); }
+}
+// a big wall clock with a gilt rim (minutes as the clock's time, sec 0–60 for the red hand)
+function anahiBigClock(g, x, y, r, minutes, sec, glow) {
+  const Au = RAMP.gold;
+  if (glow) { g.globalAlpha = .25 + .2 * glow; disc(g, x, y, r + 7, '#ff5d5d'); g.globalAlpha = 1; }
+  disc(g, x, y, r + 3, INK); disc(g, x, y, r + 2, Au[2]); disc(g, x - 1, y - 1, r + 1, Au[3]); disc(g, x, y, r, INK); disc(g, x, y, r - 1, '#fffaf0'); disc(g, x - 2, y - 2, r - 5, '#ffffff');
+  for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, rr = r - 3; if (i % 3 === 0) rect(g, rd(x + Math.cos(a) * rr) - 1, rd(y + Math.sin(a) * rr) - 1, 2, 2, INK); else px(g, x + Math.cos(a) * rr, y + Math.sin(a) * rr, INK); }
+  const h = minutes / 60 * TAU / 12 - Math.PI / 2, m = minutes / 60 * TAU - Math.PI / 2;
+  thickLine(g, x, y, x + Math.cos(h) * r * .5, y + Math.sin(h) * r * .5, 1.1, INK); thickLine(g, x, y, x + Math.cos(m) * r * .8, y + Math.sin(m) * r * .8, .7, INK);
+  if (sec != null) { const a = sec / 60 * TAU - Math.PI / 2; linePx(g, x, y, x + Math.cos(a) * r * .85, y + Math.sin(a) * r * .85, '#e23b4e'); }
+  disc(g, x, y, 1.6, '#e23b4e');
+}
+// a tuft of white fur
+function anahiTuft(g, x, y, r) { disc(g, x, y, r + 1, '#9896a4'); disc(g, x, y, r, '#ffffff'); disc(g, x + r * .6, y + r * .3, r * .7, '#ffffff'); px(g, x - r * .4, y - r * .4, '#f6f1ee'); }
+// the words on their plaque, entrance by kind
+function anahiSay(g, kind, cx, y, t, beat) {
+  const st = anahiSayFace(kind), word = ANAHI_SAY[kind];
+  const anim = kind === 'speed' ? (i => { const a = cardAnimSlide(t - .1, i, { stagger: .025, from: 70, rot: -.2 }); if (a.s !== 0 && beat < .14) a.dy = -1; return a; })
+    : kind === 'boss' ? (i => cardAnimDrop(t - .22, i, { stagger: .03, h: -30 }))
+      : (i => cardAnimSlam(t - .2, i, { stagger: .05, from: 2.4 }));
+  cardWord(g, word, cx, y, st, { anim });
+}
+
+// ¡MÁS RÁPIDO!: the salon in fast-forward
+function anahiSpeedScene(g, S, t) {
+  const b = t * (S.bpm || 118) / 60, beat = b % 1, sh = beat < .1 ? (fl(t * 60) % 2 ? 1 : -1) : 0;
+  g.drawImage(salonBackdrop(), sh, 0);
+  // the tape rolls: pale bars climbing up the screen, like a VCR in fast-forward
+  for (let i = 0; i < 3; i++) { const y = SH - ((t * 240 + i * 74) % (SH + 24)); g.globalAlpha = .16; rect(g, 0, y, SW, 3, '#ffffff'); g.globalAlpha = .08; rect(g, 0, y + 3, SW, 6, '#ffffff'); g.globalAlpha = 1; }
+  // the big clock whirring on the green wall
+  anahiBigClock(g, 30, 100, 16, 600 + t * 170, (t * 900) % 60);
+  // Keiko on the table, fur blowing off her in tufts
+  groomTable(g, 132, 124, 72);
+  drawS(g, keikoSide(.62, 'wag', 'happy'), 126 + (fl(t * 24) % 2), 122, { ax: .5, ay: 1 });
+  for (let i = 0; i < 11; i++) { const p = (t * 1.5 + i * .137) % 1, x = 116 - p * 118 - (i % 3) * 7, y = 94 + (i % 4) * 5 - Math.sin(p * Math.PI) * 26; anahiTuft(g, x, y, Math.max(1, 3 - p * 2)); }
+  // Anahí at double speed: two ghosts trail her, the scissors never stop
+  drawS(g, anahiSprite('speed', .6), 192 + 14, 170, { ax: .5, ay: 1, alpha: .2 });
+  drawS(g, anahiSprite('speed', .6), 192 + 7, 170, { ax: .5, ay: 1, alpha: .35 });
+  drawAnahiFull(g, 192 + sh, 170, 'speed', S.pt || t, { snip: true });
+  if (fl(t * 12) % 2 === 0) { const a = t * 20; drawStar(g, 172 + Math.cos(a) * 3, 104 + Math.sin(a) * 3, 2.5, '#ffffff'); }
+  // speed lines racing right to left
+  for (let i = 0; i < 14; i++) { const y = 58 + (i * 23) % 92, x = SW - ((t * 520 + i * 97) % (SW + 80)); rect(g, x, y, 22 + (i % 3) * 12, 1, 'rgba(255,255,255,.85)'); }
+  // ▶▶ and the new tempo in the corner, blinking like a VCR display
+  if (fl(t * 4) % 2 === 0) { for (const dx of [0, 7]) polyPx(g, [[8 + dx, 170], [15 + dx, 175], [8 + dx, 180]], '#ffffff'); txt(g, 'x' + (1 + .13 * (S.speed || 1)).toFixed(1), 25, 172, '#ffffff', { out: INK }); }
+  // the plaque slides in from the left and jolts on every beat
+  const pk = E.outBack(clamp(t / .3, 0, 1));
+  g.save(); g.translate(rd(lerp(-270, 0, pk)), beat < .1 ? 1 : 0);
+  anahiPlaque(g, 128, 6, 242, 46);
+  anahiSay(g, 'speed', 128, 17, t, beat);
+  g.restore();
+}
+// ¡JUEGO DEL JEFE!: Lady Di's grand arrival, four minutes before the show
+function anahiBossScene(g, S, t) {
+  const b = t * (S.bpm || 118) / 60, beat = b % 1, Au = RAMP.gold;
+  g.drawImage(salonBackdrop(), 0, 0);
+  // the lights go down…
+  g.globalAlpha = Math.min(.66, t * 2.2); rect(g, 0, 0, SW, SH, '#0b0612'); g.globalAlpha = 1;
+  // …a red carpet rolls out from the door…
+  const ck = E.outC(clamp((t - .1) / .55, 0, 1)), cx0 = rd(lerp(SW + 8, 92, ck));
+  if (ck > 0) {
+    rect(g, cx0, 165, SW - cx0, 15, INK); rect(g, cx0, 166, SW - cx0, 13, '#9e1b2d'); rect(g, cx0, 167, SW - cx0, 2, '#c93a4c'); hline(g, cx0, SW, 166, Au[3]); hline(g, cx0, SW, 178, Au[2]);
+    if (ck < 1) { ellipsePx(g, cx0, 172, 5, 8, INK); ellipsePx(g, cx0, 172, 4, 7, '#c93a4c'); ellipsePx(g, cx0, 172, 1.5, 3, '#6b0f1e'); }
+  }
+  // …and a spotlight picks her out
+  const sk = clamp((t - .35) / .2, 0, 1);
+  if (sk > 0) { g.globalAlpha = .2 * sk; polyPx(g, [[160, 50], [184, 50], [220, 178], [124, 178]], '#fff7ae'); g.globalAlpha = .32 * sk; ellipsePx(g, 172, 176, 48, 6, '#fff7ae'); g.globalAlpha = 1; }
+  // the clock: 11:59, the red hand creeping towards twelve
+  const pulse = beat < .2 ? 1 : 0;
+  anahiBigClock(g, 222, 76, 15, 11 * 60 + 59, 48 + Math.min(11.5, t * 4), pulse);
+  panel(g, 204, 96, 36, 12, INK, { r: 2, line: '#44424f' }); txt(g, fl(t * 2) % 2 ? '11 59' : '11:59', 222, 99, '#ff5d5d', { align: 'c' });
+  // the door bell rings
+  const bw = t < 1.2 ? Math.sin(t * 30) * .5 * (1 - t / 1.2) : 0;
+  g.save(); g.translate(198, 62); g.rotate(bw); vline(g, 0, -6, -2, INK); polyPx(g, [[-5, 6], [-4, -1], [0, -3], [4, -1], [5, 6]], INK); polyPx(g, [[-4, 5], [-3, 0], [0, -2], [3, 0], [4, 5]], Au[3]); px(g, -1, 1, Au[4]); disc(g, 0, 7, 1.5, Au[2]); g.restore();
+  if (t < 1.1) { const k = spring(t, 3, 8); g.save(); g.translate(150, 66); g.scale(k, k); panel(g, -37, -8, 74, 15, '#ffffff', { r: 4 }); polyPx(g, [[32, -2], [44, -5], [36, 3]], '#ffffff'); txt(g, '¡DING DONG!', 0, -4, INK, { align: 'c', bold: true }); g.restore(); }
+  // Lady Di struts in along the carpet: a champion, and an absolute mess
+  const lk = clamp((t - .45) / .85, 0, 1), lx = lerp(296, 176, E.outC(lk)), strut = lk < 1 ? Math.abs(Math.sin(t * 10)) * 2 : Math.abs(Math.sin(t * 3)) * .6;
+  if (typeof prepDog === 'function') {
+    drawS(g, prepDog('scruffy', .56, 'grumpy'), lx, 175 - strut, { ax: .5, ay: 1 });
+    if (typeof prepLadyBow === 'function') { g.save(); g.translate(rd(lx + 6), rd(175 - strut - 51)); g.rotate(.45); prepLadyBow(g, 0, 0, .7); g.restore(); }
+    if (lk >= 1) for (let i = 0; i < 4; i++) { const a = t * 2 + i * TAU / 4; drawStar(g, lx + Math.cos(a) * 34, 142 + Math.sin(a) * 14, 1.5 + (i % 2), '#fff7ae'); }
+  }
+  // Anahí gasps; Keiko peeks out from behind her
+  drawS(g, keikoSide(.46, 'stand', 'wow'), 92, 178, { ax: .5, ay: 1 });
+  drawAnahiFull(g, 50, 180, 'boss', S.pt || t, { ex: 'gasp' });
+  if (t > .5 && t < 1.8) { const k = spring(t - .5, 3, 8); g.save(); g.translate(78, 56); g.scale(k, k); txt(g, '¡¿LADY DI?!', 0, 0, '#fff4dc', { align: 'c', out: INK, bold: true }); g.restore(); }
+  // the plaque: red velvet in a gilt frame, dropping on its chains
+  const pk = clamp(t / .35, 0, 1), drop = (1 - E.outBack(pk)) * -70, sw = Math.sin(t * 7) * .05 * Math.exp(-t * 1.8);
+  g.save(); g.translate(128, drop); g.rotate(sw);
+  if (typeof cardChain === 'function') { cardChain(g, -90, -6, -100, 8); cardChain(g, 90, -6, 100, 8); }
+  anahiPlaque(g, 0, 4, 246, 44, true);
+  anahiSay(g, 'boss', 0, 15, t, beat);
+  g.restore();
+}
+// her eyes, close up, drawn big and crisp for the cut-in (no giant sprite to render)
+function anahiEyeBand(g, t) {
+  const C2 = ANA_C, cy = 82;
+  // long hair framing the face, the face, the swept fringe
+  rect(g, 0, 62, SW, 40, C2.hair[1]);
+  for (let x = 2; x < SW; x += 7) vline(g, x, 62, 102, (x * 7) % 3 ? C2.hair[2] : C2.hair[0]);
+  polyPx(g, [[70, 102], [66, 76], [80, 62], [176, 62], [190, 76], [186, 102]], C2.skin[1]);
+  for (let y = 64; y < 102; y += 2) hline(g, 72, 184, y, C2.skin[1]);
+  polyPx(g, [[64, 62], [192, 62], [192, 70], [176, 68], [166, 73], [150, 67], [136, 72], [118, 66], [100, 71], [86, 66], [64, 74]], C2.hair[1]);
+  for (let i = 0; i < 9; i++) linePx(g, 70 + i * 14, 62, 76 + i * 14, 69 - (i % 2) * 2, C2.hair[2]);
+  // determined brows, sloping in
+  thickLine(g, 84, 74, 110, 80, 1.4, C2.brow); thickLine(g, 146, 80, 172, 74, 1.4, C2.brow);
+  // the eyes: dark, lashes, two glints each
+  for (const ex0 of [90, 154]) {
+    rect(g, ex0 - 1, 83, 16, 2, C2.eye); panel(g, ex0, 84, 12, 14, C2.eye, { r: 3, line: C2.eye });
+    rect(g, ex0 + 2, 86, 4, 4, '#ffffff'); rect(g, ex0 + 8, 93, 2, 2, '#ffffff'); rect(g, ex0 + 1, 96, 10, 1, '#3a3446');
+  }
+  // blush and the nose
+  ellipsePx(g, 82, 100, 7, 2.5, C2.blush); ellipsePx(g, 174, 100, 7, 2.5, C2.blush); px(g, 129, 99, C2.skin[0]); px(g, 128, 100, C2.skin[0]);
+  // a gold glint runs across her right eye
+  const gk = (t * 2.2) % 1; if (gk < .35) drawStar(g, 166, 88, 4 * Math.sin(gk / .35 * Math.PI), '#fffbe0', t * 4);
+}
+// ¡MÁS DIFÍCIL!: Anahí gets serious
+function anahiLevelScene(g, S, t) {
+  const b = t * (S.bpm || 118) / 60, beat = b % 1, Au = RAMP.gold;
+  // her card's damask, darker, with gold rays turning behind her (a white flash as it cuts in)
+  g.drawImage(cardSalonBg(), 0, 0);
+  g.globalAlpha = .45; rect(g, 0, 0, SW, SH, '#04150f'); g.globalAlpha = 1;
+  g.globalAlpha = .16; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + t * .5; polyPx(g, [[128, 118], [128 + Math.cos(a - .07) * 300, 118 + Math.sin(a - .07) * 300], [128 + Math.cos(a + .07) * 300, 118 + Math.sin(a + .07) * 300]], Au[3]); } g.globalAlpha = 1;
+  if (t < .16) { g.globalAlpha = 1 - t / .16; rect(g, 0, 0, SW, SH, '#ffffff'); g.globalAlpha = 1; }
+  // calm first; then, eyes narrowed, the scissors go up
+  const serious = t > .75, pop = serious ? spring(t - .75, 2.6, 7) : 1;
+  g.save(); g.translate(128, 192); g.scale(1, pop);
+  if (serious) drawAnahiFull(g, 0, 0, 'pro', S.pt || t, { k: .62, ex: 'focus', ts: 2 }); else drawAnahiFull(g, 0, 0, 'idle', S.pt || t);
+  g.restore();
+  if (serious) {
+    // the blade glints: ¡ting!
+    const gk = t - .95;
+    if (gk > 0 && gk < .5) { const r = 7 * Math.sin(gk / .5 * Math.PI); drawStar(g, 93, 80, r, '#fffbe0', gk * 3); drawStar(g, 93, 80, r * .5, '#ffffff', -gk * 3); }
+    if (gk > 0 && S._anaTing !== S.count) { S._anaTing = S.count; sfx('sparkle'); }
+  }
+  // Keiko, bottom right, getting serious too
+  drawS(g, keikoSide(.5, serious ? 'wag' : 'stand', serious ? 'happy' : 'normal'), 218, 188, { ax: .5, ay: 1, flip: true });
+  // the eye cut-in: a gilt-edged band with her eyes, close up, sliding across
+  const ek = t - .25;
+  if (ek > 0 && ek < .95) {
+    const inK = E.outC(clamp(ek / .18, 0, 1)), outK = E.inQ(clamp((ek - .75) / .2, 0, 1)), dx = rd((1 - inK) * -SW + outK * SW);
+    g.save(); g.translate(dx, 0);
+    rect(g, 0, 60, SW, 44, INK);
+    anahiEyeBand(g, t);
+    for (let i = 0; i < 8; i++) { const y = 64 + (i * 11) % 36, x = (i * 67 + t * 700) % (SW + 40) - 40; if (x < 60 || x > 190) rect(g, x, y, 24, 1, 'rgba(231,195,95,.5)'); }
+    hline(g, 0, SW, 61, Au[3]); hline(g, 0, SW, 102, Au[3]); hline(g, 0, SW, 60, Au[1]); hline(g, 0, SW, 103, Au[1]);
+    g.restore();
+  }
+  // the words slam onto a plaque
+  const pk = E.outBack(clamp(t / .25, 0, 1));
+  if (pk > 0) { g.save(); g.translate(128, 30); g.scale(pk, pk); anahiPlaque(g, 0, -24, 236, 46); anahiSay(g, 'level', 0, -13, t, beat); g.restore(); }
+}
+function anahiSpecial(g, S, kind, t) {
+  if (typeof cardWord !== 'function') return false;
+  if (kind === 'speed') anahiSpeedScene(g, S, t);
+  else if (kind === 'boss') anahiBossScene(g, S, t);
+  else if (kind === 'level') anahiLevelScene(g, S, t);
+  else return false;
+  return true;
+}
+// the bottom-screen label: a little green-and-gold plaque with an icon
+function anahiSpecialBot(g, S, kind, t) {
+  const lbl = kind === 'speed' ? '¡Más ritmo, más tijera!' : kind === 'boss' ? '¡Lady Di, lista a las 12:00!' : kind === 'level' ? 'Cuidado, calma… ¡y más detalle!' : null;
+  if (!lbl) return false;
+  const k = E.outBack(clamp(t * 3, 0, 1)), w = txtW(lbl) + 34, x = rd(SW / 2 - w / 2), y = rd(6 - (1 - k) * 36), Au = RAMP.gold;
+  panel(g, x, y, w, 22, Au[2], { r: 4, line: INK }); panel(g, x + 2, y + 2, w - 4, 18, kind === 'boss' ? '#6b0f1e' : RAMP.green[2], { r: 3, line: Au[1] });
+  txt(g, lbl, x + 20 + (w - 24) / 2, y + 7, '#fff4dc', { align: 'c' });
+  const ix = x + 12, iy = y + 11;
+  if (kind === 'speed') { for (const dx of [-4, 1]) polyPx(g, [[ix + dx, iy - 4], [ix + dx + 5, iy], [ix + dx, iy + 4]], Au[3]); }
+  else if (kind === 'boss') { polyPx(g, [[ix - 4, iy + 4], [ix - 3, iy - 2], [ix, iy - 4], [ix + 3, iy - 2], [ix + 4, iy + 4]], Au[3]); disc(g, ix, iy + 5, 1.2, Au[2]); }
+  else if (typeof cardShears === 'function') drawS(g, cardShears(), ix, iy, { s: 1 });
+  return true;
+}
+
 defStage({
   id: 'anahi', name: 'ANAHÍ', sub: '«Cuidado, calma y detalle»', verb: '¡TOCA!', mech: 'tap', bpm: 118,
   games: ['pulgas', 'unas', 'foto', 'helado', 'burbujas', 'topos', 'seca', 'modelo', 'empareja'], boss: 'prepara', bossAt: 10, speedAt: [4, 7],
@@ -3484,6 +3715,7 @@ defStage({
   room: {
     top: anahiRoomTop, bot: anahiRoomBot, frame: 'mirror', life: anahiLife, lifeY: 141, lifeSpacing: 34,
     counter: { x: SW / 2, y: 7 }, mini: anahiMini, portal: { x: 64, y: 24, w: 128, h: 96 }, bossLabel: '¡Lady Di, lista para las 12:00!',
+    special: anahiSpecial, specialBot: anahiSpecialBot,
     staticCols: [RAMP.green[1], RAMP.green[2]], playCols: [RAMP.green[2], RAMP.green[3]], cardCol: RAMP.green,
   },
 });
@@ -3546,8 +3778,8 @@ VOICES.bigotes = { base: 50, scale: [0, 3, 5, 7, 10, 12], inst: 'p50', len: .055
 // ---------------------------------------------------------------- head ------
 // brow: 'n' normal, 'up' raised (joy/shock), 'dn' knitted (focus), 'sad'
 const BIGOTES_BROWS = { n: [.22, 0], up: [-.1, -2.5], dn: [.5, 1.5], sad: [-.45, 1] };
-function bigotesHeadBase(brow = 'n', soot = 0) {
-  return mdl('bigotes:bigHead:' + brow + soot, () => {
+function bigotesHeadBase(brow = 'n', soot = 0, bare = false) {
+  return mdl('bigotes:bigHead:' + brow + soot + (bare ? 'b' : ''), () => {
     const SP = soot ? RAMP.bigotesSalt.map(c => mixHex(c, '#0b0810', .55)) : RAMP.bigotesSalt;
     const BD = soot ? RAMP.bigotesBeard.map(c => mixHex(c, '#2b2540', .5)) : RAMP.bigotesBeard;
     const [ba, bdy] = BIGOTES_BROWS[brow] || BIGOTES_BROWS.n;
@@ -3571,9 +3803,10 @@ function bigotesHeadBase(brow = 'n', soot = 0) {
       { f: earL, ramp: EAR, z: 1.5, th: 4, tex: speck }, { f: earR, ramp: EAR, z: 1.5, th: 4, tex: speck },
       { f: skull, ramp: SP, z: 1, th: 13, tex: (x, y) => speck(x, y) + t1(x, y) },
       { f: cheeks, ramp: SP, z: 1.2, th: 8, tex: speck },
-      { f: strap, ramp: RAMP.wood, z: 1.55, th: 2 },
-      { f: gL, ramp: RAMP.gold, z: 1.7, th: 3 }, { f: gR, ramp: RAMP.gold, z: 1.7, th: 3 },
-      { f: lL, ramp: RAMP.bigotesLens, z: 1.8, th: 3, gloss: true, edge: false }, { f: lR, ramp: RAMP.bigotesLens, z: 1.8, th: 3, gloss: true, edge: false },
+      ...(bare ? [] : [
+        { f: strap, ramp: RAMP.wood, z: 1.55, th: 2 },
+        { f: gL, ramp: RAMP.gold, z: 1.7, th: 3 }, { f: gR, ramp: RAMP.gold, z: 1.7, th: 3 },
+        { f: lL, ramp: RAMP.bigotesLens, z: 1.8, th: 3, gloss: true, edge: false }, { f: lR, ramp: RAMP.bigotesLens, z: 1.8, th: 3, gloss: true, edge: false }]),
       { f: muzzle, ramp: SP, z: 2, th: 6, tex: speck },
       { f: beard, fs: beardS, ramp: BD, z: 2.6, th: 7, tex: tb },
       { f: browL, fs: browLs, ramp: BD, z: 2.8, th: 4, tex: tb }, { f: browR, fs: browRs, ramp: BD, z: 2.8, th: 4, tex: tb },
@@ -3584,9 +3817,9 @@ function bigotesHeadBase(brow = 'n', soot = 0) {
 }
 // expressions: normal, joy (laughing), shock, focus, sad, soot (singed), wink, mad
 const BIGOTES_EX = { normal: 'n', joy: 'up', laugh: 'up', shock: 'up', focus: 'dn', sad: 'sad', soot: 'sad', wink: 'n', mad: 'dn', talk: 'n', eureka: 'up' };
-function bigotesHead(ex = 'normal') {
-  return mdl('bigotes:bigHeadEx:' + ex, () => {
-    const soot = ex === 'soot' ? 1 : 0, base = bigotesHeadBase(BIGOTES_EX[ex] || 'n', soot), c = mkCanvas(base.width, base.height), g = c.g;
+function bigotesHead(ex = 'normal', bare = false) {
+  return mdl('bigotes:bigHeadEx:' + ex + (bare ? ':b' : ''), () => {
+    const soot = ex === 'soot' ? 1 : 0, base = bigotesHeadBase(BIGOTES_EX[ex] || 'n', soot, bare), c = mkCanvas(base.width, base.height), g = c.g;
     g.drawImage(base, 0, 0);
     const K = '#0b0810', br = BIGOTES_BROWS[BIGOTES_EX[ex] || 'n'][1], ey = 25 + Math.max(0, br * .6);
     const eye = (x, kind, side) => {
@@ -3835,6 +4068,7 @@ PORTAL_FRAMES.bigotesLab = function (g, x, y, w, h, beat) {
 const BIGOTES_REACT = { ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' };
 function bigotesRoomTop(g, S) {
   const t = NOW, beat = S.pb || 0, rt = S.reactT || 0;
+  if (typeof cardPrewarm === 'function') cardPrewarm(bigotesAnnWords()); // the announcements' letters, one per frame
   g.drawImage(bigotesLabBackdrop(), 0, 0);
   // flasks bubbling on the shelves
   [['#5bd18b', 204, 50], ['#ff93bf', 218, 50], ['#63a0ef', 233, 50], ['#ffdf4f', 246, 50], ['#bf95e9', 208, 84], ['#ff9f4f', 226, 84], ['#5bd18b', 242, 84]].forEach(([col, x, y], i) => bigotesFlask(g, x, y, col, t, i));
@@ -3936,6 +4170,23 @@ const BIGOTES_SONGS = {
     { i: 'd', v: .85, n: 'k . . s k . s h k . . s k . s s k . . s k . s h T . T . T T T+x T' }] },
 };
 
+BIGOTES_SONGS.jingles = {
+  speed: { spb: 4, tracks: [
+    { i: 'organ', v: .6, n: 'A4 B4 C5 D5 E5 F5 G#5 A5 B5 C6 D6 E6 A6! - - .' },
+    { i: 'bass', v: .85, n: 'A2 . A2 . E2 . E2 . A2 A2 A2 A2 A2! - . .' },
+    { i: 'd', v: .85, n: 'r . r . r r r r r r r r k+x - z .' }] },
+  boss: { spb: 4, tracks: [
+    { i: 'p50', v: .45, n: 'A5 F5 A5 F5 A5 F5 A5 F5 A5 F5 A5 F5 A5! - - -' },
+    { i: 'brass', v: .75, n: 'D3 - - . D3 - - . F3 - - . G#3! - - -' },
+    { i: 'organ', v: .35, n: 'D4+F4+G#4 - - . D4+F4+G#4 - - . D4+F4+B4 - - . D4+G#4+B4! - - -' },
+    { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+  level: { spb: 4, tracks: [
+    { i: 'organ', v: .55, n: 'A4 C5 E5 A5 B4 D5 F#5 B5 C#5 E5 G#5 C#6! - - . .' },
+    { i: 'bell', v: .5, n: '. . . . . . . . . . . . E6 - A6 -' },
+    { i: 'bass', v: .85, n: 'A2 . A2 . B2 . B2 . C#3 . C#3 . A2! - . .' },
+    { i: 'd', v: .85, n: 'k . z . k . z . k . s s k+x - . .' }] },
+};
+
 // ---------------------------------------------------------------- story -----
 function bigotesLabTall(g, t, o = {}) {
   // a tall view of the lab: roof + sky above (top screen), lab below
@@ -4015,6 +4266,160 @@ defCut('bigotes_out', {
   ],
 });
 
+// ---------------------------------------------------------------- announcements
+// ¡MÁS RÁPIDO! · ¡JUEGO DEL JEFE! · ¡MÁS DIFÍCIL!, told in Don Bigotes' own lab:
+// a pressure console that rises into the red, the Supersónico 3000 waking up
+// under the warning beacons, and OVERCLOCK: goggles down, moustache curling.
+// Lettering: the brass face of his title card (src/cards.js, read at run time).
+let BIGOTES_WARN = null;
+function bigotesWarnFace() { return BIGOTES_WARN || (BIGOTES_WARN = Object.assign({}, CARD_BRASS_FACE, { id: 'bigWarn', fill: ['#fff0a6', '#ff9f4f', '#e23b4e'], hi: '#fffbe0', lo: '#7c1830', shadow: '#3a0a14' })); }
+// every word the three announcements write, in the exact (fitted) faces they use
+let BIGOTES_ANN_WORDS = null;
+function bigotesAnnWords() {
+  return BIGOTES_ANN_WORDS || (BIGOTES_ANN_WORDS = [['¡MÁS RÁPIDO!', cardFit('¡MÁS RÁPIDO!', 164, CARD_BRASS_FACE)], ['¡JUEGO', cardFit('¡JUEGO', 200, bigotesWarnFace())], ['DEL JEFE!', cardFit('DEL JEFE!', 224, bigotesWarnFace())], ['¡MÁS DIFÍCIL!', cardFit('¡MÁS DIFÍCIL!', 222, CARD_BRASS_FACE)]]);
+}
+// the riveted pressure console that rises from the bench (256 x 92)
+function bigotesAnnConsole() {
+  return mdl('bigotes:annConsole', () => {
+    const c = mkCanvas(SW, 92), g = c.g, S = RAMP.steel;
+    rect(g, 0, 6, SW, 86, INK); rect(g, 0, 8, SW, 84, S[2]); rect(g, 0, 8, SW, 2, S[4]); rect(g, 0, 10, SW, 1, S[3]);
+    for (let y = 14; y < 92; y += 3) hline(g, 0, SW, y, 'rgba(255,255,255,.07)');
+    // hazard trim along the top edge
+    rect(g, 0, 0, SW, 7, '#ffd23f'); for (let x = -8; x < SW; x += 12) polyPx(g, [[x, 0], [x + 6, 0], [x + 12, 7], [x + 6, 7]], INK); rect(g, 0, 6, SW, 1, INK);
+    // the gauge bezel, a dark window for the lamps, rivets
+    disc(g, 40, 50, 33, INK); disc(g, 40, 50, 32, S[1]); disc(g, 40, 50, 31, S[3]);
+    rect(g, 82, 58, 166, 18, INK); rect(g, 83, 59, 164, 16, '#0b1a12'); for (let x = 85; x < 246; x += 4) vline(g, x, 60, 73, '#0f2419');
+    for (const [x, y] of [[6, 14], [SW - 7, 14], [6, 84], [SW - 7, 84], [80, 14], [80, 84]]) { disc(g, x, y, 2.5, INK); disc(g, x, y, 1.8, S[3]); px(g, x - 1, y - 1, S[4]); }
+    // two steam vents in the top edge
+    for (const vx of [96, 228]) { rect(g, vx - 9, 8, 18, 6, INK); for (let i = -6; i <= 6; i += 3) vline(g, vx + i, 9, 12, S[0]); }
+    tiny(g, 'PRESION', 40, 76, INK, { align: 'c' });
+    return c;
+  });
+}
+// the pressure dial: green, amber, red (face only; the needle is live)
+function bigotesAnnGauge() {
+  return mdl('bigotes:annGauge', () => {
+    const r = 28, c = mkCanvas(64, 64), g = c.g, cx = 32, cy = 32;
+    disc(g, cx, cy, r + 1, RAMP.gold[1]); disc(g, cx, cy, r, RAMP.gold[3]); disc(g, cx, cy, r - 2, '#fffaf0');
+    for (let i = 0; i <= 60; i++) { const v = i / 60, a = Math.PI * .75 + v * Math.PI * 1.5; disc(g, cx + Math.cos(a) * (r - 6), cy + Math.sin(a) * (r - 6), 2.2, v < .55 ? '#5bd18b' : v < .78 ? '#ffb020' : '#e23b4e'); }
+    for (let i = 0; i <= 10; i++) { const a = Math.PI * .75 + i / 10 * Math.PI * 1.5; linePx(g, cx + Math.cos(a) * (r - 3), cy + Math.sin(a) * (r - 3), cx + Math.cos(a) * (r - 9), cy + Math.sin(a) * (r - 9), INK); }
+    px(g, cx - 9, cy - 16, '#ffffff'); px(g, cx - 10, cy - 15, '#ffffff'); px(g, cx - 11, cy - 13, '#ffffff');
+    return c;
+  });
+}
+function bigotesAnnSpeed(g, S, t) {
+  const bt = t * (S.bpm || 120) / 60;
+  // cyan streaks through the lab above
+  for (let i = 0; i < 10; i++) { const y = 6 + i * 10, x = SW - ((t * 560 + i * 71) % (SW + 90)); rect(g, x, y, 16 + (i % 3) * 12, 1, i % 2 ? '#b3f3ff' : '#ffffff'); }
+  const k = E.outBack(clamp(t / .34, 0, 1)), shake = t > .3 && t < .7 ? (hash2(fl(t * 50), 5) - .5) * 3 * (1 - (t - .3) / .4) : 0;
+  const y0 = rd(lerp(SH + 4, 102, k) + shake);
+  // steam from the vents
+  for (const vx of [96, 228]) for (let j = 0; j < 5; j++) { const q = (t * 1.7 + j * .2) % 1; if (t < .3) continue; const r = 3 + q * 9; disc(g, vx + Math.sin(j * 2 + t * 3) * 5, y0 + 6 - q * 44, r + 1, `rgba(120,128,150,${.5 * (1 - q)})`); disc(g, vx + Math.sin(j * 2 + t * 3) * 5, y0 + 6 - q * 44, r, `rgba(236,240,248,${.85 * (1 - q)})`); }
+  g.drawImage(bigotesAnnConsole(), 0, y0);
+  // the needle leaps into the red and shivers there
+  const vt = clamp((t - .18) / .5, 0, 1), v = .22 + .86 * E.outBack(vt) + (vt >= 1 ? Math.sin(t * 46) * .025 : 0);
+  const gx = 40, gy = y0 + 50; g.drawImage(bigotesAnnGauge(), gx - 32, gy - 32);
+  const a = Math.PI * .75 + clamp(v, 0, 1.12) * Math.PI * 1.5;
+  thickLine(g, gx, gy, gx + Math.cos(a) * 23, gy + Math.sin(a) * 23, 1.2, '#e23b4e'); disc(g, gx, gy, 3.5, INK); disc(g, gx, gy, 2.2, RAMP.gold[3]);
+  if (v > .9 && fl(t * 10) % 2 === 0) { disc(g, gx + 26, gy - 26, 5, INK); disc(g, gx + 26, gy - 26, 4, '#ff4060'); px(g, gx + 25, gy - 27, '#ffffff'); }
+  // the word, stamped in brass on the console
+  const words = bigotesAnnWords(), nk = t - .24;
+  if (nk > 0) cardWord(g, words[0][0], 166, y0 + 20, words[0][1], { anim: i => cardAnimSlam(nk, i, { from: 1.8, stagger: .045 }) });
+  // one lamp per speed step; the newest one blinks
+  const n = Math.max(1, S.speed || 1);
+  for (let i = 0; i < 8; i++) {
+    const x = 94 + i * 20, y = y0 + 67, on = i < n, fresh = i === n - 1 && fl(bt * 4) % 2 === 0;
+    if (on) { g.globalAlpha = .35; disc(g, x, y, 7, fresh ? '#ffffff' : '#fff27a'); g.globalAlpha = 1; }
+    disc(g, x, y, 5, INK); disc(g, x, y, 4, on ? (fresh ? '#ffffff' : '#fff27a') : '#2b3a33'); if (on) px(g, x - 1, y - 2, '#ffffff');
+  }
+  txt(g, 'x' + (1 + .13 * (S.speed || 0)).toFixed(2).replace('.', ','), 248, y0 + 80, '#7fe0d6', { align: 'r' });
+  // a piston thumping in time on the right
+  const py = y0 - 4 - Math.abs(Math.sin(bt * Math.PI)) * 12;
+  rect(g, 244, py, 6, y0 - py + 6, INK); rect(g, 245, py + 1, 4, y0 - py + 5, RAMP.steel[4]); rect(g, 240, py - 4, 14, 5, INK); rect(g, 241, py - 3, 12, 3, RAMP.bigotesCopper[3]);
+}
+function bigotesAnnBoss(g, S, t) {
+  // the lab goes dark and red; two beacons sweep it
+  g.globalAlpha = Math.min(.8, t * 2.5); rect(g, 0, 0, SW, SH, '#12060c'); g.globalAlpha = .12 + .1 * Math.max(0, Math.sin(t * 9)); rect(g, 0, 0, SW, SH, '#ff2040'); g.globalAlpha = 1;
+  for (const [bx, ph] of [[16, 0], [240, Math.PI]]) {
+    const a = t * 5 + ph;
+    g.globalAlpha = .2; polyPx(g, [[bx, 104], [bx + Math.cos(a - .22) * 260, 104 + Math.sin(a - .22) * 260], [bx + Math.cos(a + .22) * 260, 104 + Math.sin(a + .22) * 260]], '#ff5d5d'); g.globalAlpha = 1;
+  }
+  // the Secador Supersónico 3000 rises from below, humming harder and harder
+  const k = E.outBack(clamp((t - .1) / .55, 0, 1)), jit = t > .5 ? (hash2(fl(t * 60), 9) - .5) * Math.min(3, (t - .5) * 3) : 0;
+  const mx = rd(118 + jit), my = rd(lerp(SH + 130, 200, k));
+  bigotesMachineBig(g, mx, my, 1, t * (1.5 + t * 3));
+  // blasts of hot air out of the nozzle
+  const nx = mx + 86, ny = my - 63;
+  if (k > .9) for (let i = 0; i < 4; i++) { const q = (t * 2.4 + i / 4) % 1, x0 = nx + q * 60; for (let j = 0; j < 8; j++) px(g, x0 + j * 2, ny - 8 + i * 5 + Math.sin(j * .9 + t * 20 + i) * 2, i % 2 ? '#ffb020' : '#ffdf8a'); }
+  // Don Bigotes, startled, bottom left
+  const hk = spring(t - .45, 2.4, 6); if (hk > 0) { drawS(g, bigotesHead('shock'), 34, 168, { s: hk }); if (fl(t * 3) % 2 === 0) { disc(g, 58, 146, 2, '#63a0ef'); px(g, 57, 145, '#ffffff'); } }
+  // beacons on the walls, under the plate
+  for (const [bx, ph] of [[16, 0], [240, Math.PI]]) {
+    const a = t * 5 + ph, on = Math.cos(a) > 0;
+    rect(g, bx - 9, 108, 18, 6, INK); rect(g, bx - 8, 109, 16, 4, RAMP.steel[2]);
+    ellipsePx(g, bx, 104, 9, 8, INK); ellipsePx(g, bx, 104, 8, 7, on ? '#ff4060' : '#a0182e'); ellipsePx(g, bx + Math.cos(a) * 4, 102, 3, 3, '#ffd1dc');
+  }
+  // the red-hot brass letters on a riveted plate that drops in
+  const pk = E.outBack(clamp(t / .3, 0, 1)), py = rd(lerp(-90, 44, pk)), words = bigotesAnnWords();
+  g.save(); g.translate(128, py);
+  rect(g, -112, -38, 224, 76, INK); rect(g, -111, -37, 222, 74, RAMP.steel[3]); rect(g, -111, -37, 222, 2, RAMP.steel[4]);
+  for (let x = -111; x < 111; x += 12) polyPx(g, [[x, 30], [x + 6, 30], [x + 12, 37], [x + 6, 37]], fl((x + 111) / 12) % 2 ? '#ffd23f' : INK);
+  for (const [x, y] of [[-105, -31], [105, -31]]) { disc(g, x, y, 2.5, INK); disc(g, x, y, 1.8, RAMP.steel[2]); }
+  const nk = t - .2;
+  if (nk > 0) { cardWord(g, words[1][0], 0, -33, words[1][1], { anim: i => cardAnimSlam(nk, i, { from: 1.9, stagger: .05 }) }); cardWord(g, words[2][0], 0, -3, words[2][1], { anim: i => cardAnimSlam(nk - .18, i, { from: 1.9, stagger: .05 }) }); }
+  g.restore();
+}
+function bigotesAnnLevel(g, S, t) {
+  // blueprint paper, arcs crackling
+  rect(g, 0, 0, SW, SH, '#1f4aa0');
+  const off = fl(t * 30) % 12;
+  for (let x = -12; x < SW + 12; x += 12) vline(g, x + off, 0, SH, '#2a5ab0');
+  for (let y = -12; y < SH + 12; y += 12) hline(g, 0, SW, y + off, '#2a5ab0');
+  ringPx(g, 128, 120, 70, '#3a6fc8'); ringPx(g, 128, 120, 52, '#3a6fc8'); tiny(g, 'FIG. 9', 74, SH - 10, '#8fb8ff');
+  // the close-up: goggles come down, the moustache curls up
+  const hk = E.outBack(clamp((t - .04) / .4, 0, 1)), hx = 128, hy = rd(lerp(SH + 130, 186, hk)), X0 = hx - 64, Y0 = hy - 124;
+  for (let i = 0; i < 3; i++) { const seed = fl(t * 12) + i * 31; let x0 = hx + (i - 1) * 50, y0 = Y0 + 20; for (let s2 = 0; s2 < 5; s2++) { const x1 = x0 + (hash2(seed, s2) - .5) * 18, y1 = y0 - 8 - hash2(s2, seed) * 6; thickLine(g, x0, y0, x1, y1, 1, '#4fb8e8'); linePx(g, x0, y0, x1, y1, '#ffffff'); x0 = x1; y0 = y1; } }
+  drawS(g, bigotesHead('focus', true), hx, hy, { s: 2, ay: 1 });
+  // the moustache tips wind up into curls
+  const ck = clamp((t - .55) / .5, 0, 1);
+  if (ck > 0) for (const sd of [-1, 1]) {
+    const cx0 = hx + sd * 30, cy0 = Y0 + 82, turns = ck * 2.3 * Math.PI;
+    let px0 = cx0, py0 = cy0;
+    for (let a = 0; a <= turns; a += .18) { const r = 9 - a * 1.1, x1 = cx0 + sd * (10 + Math.cos(a) * r), y1 = cy0 - 6 - Math.sin(a) * r; thickLine(g, px0, py0, x1, y1, 2.2, INK); px0 = x1; py0 = y1; }
+    px0 = cx0; py0 = cy0;
+    for (let a = 0; a <= turns; a += .18) { const r = 9 - a * 1.1, x1 = cx0 + sd * (10 + Math.cos(a) * r), y1 = cy0 - 6 - Math.sin(a) * r; thickLine(g, px0, py0, x1, y1, 1.3, RAMP.bigotesBeard[3]); px0 = x1; py0 = y1; }
+  }
+  // the goggles: from his forehead down over his eyes (clack!)
+  const gk = E.outBack(clamp((t - .3) / .22, 0, 1)), gy = rd(lerp(Y0 + 25, Y0 + 53, gk)), glow = gk >= 1 ? .5 + .5 * Math.sin(t * 12) : 0;
+  rect(g, X0 + 26, gy - 3, 76, 6, INK); rect(g, X0 + 27, gy - 2, 74, 4, RAMP.wood[2]); rect(g, X0 + 27, gy - 2, 74, 1, RAMP.wood[3]);
+  for (const lx of [X0 + 50, X0 + 78]) {
+    if (glow > 0) { g.globalAlpha = .25 * glow; disc(g, lx, gy, 17, '#7fe0d6'); g.globalAlpha = 1; }
+    disc(g, lx, gy, 12, INK); disc(g, lx, gy, 11, RAMP.gold[2]); disc(g, lx - 1, gy - 1, 10, RAMP.gold[3]);
+    disc(g, lx, gy, 8, RAMP.bigotesLens[1]); disc(g, lx - 1, gy - 1, 7, RAMP.bigotesLens[2 + (glow > .5 ? 1 : 0)]);
+    linePx(g, lx - 5, gy - 2, lx - 2, gy - 5, '#ffffff'); px(g, lx + 3, gy + 3, RAMP.bigotesLens[4]);
+  }
+  // the word, and OVERCLOCK blinking on a red LED strip
+  const words = bigotesAnnWords(), nk = t - .12;
+  if (nk > 0) cardWord(g, words[3][0], 124, 16, words[3][1], { anim: i => cardAnimSlam(nk, i, { from: 1.8, stagger: .045 }) });
+  if (t > .6) { const on = fl(t * 4) % 2 === 0; rect(g, 176, 156, 74, 18, INK); rect(g, 177, 157, 72, 16, '#1a0610'); if (on) txt(g, 'OVERCLOCK', 213, 161, '#ff4060', { align: 'c', bold: true }); }
+  // one bulb per difficulty step
+  for (let i = 0; i < 3; i++) drawS(g, bigotesBulbSpr(i < (S.level || 1) ? 'on' : 'off'), 18 + i * 20, 186, { ay: 1 });
+}
+function bigotesSpecial(g, S, kind, t) {
+  if (kind === 'speed') bigotesAnnSpeed(g, S, t);
+  else if (kind === 'boss') bigotesAnnBoss(g, S, t);
+  else if (kind === 'level') bigotesAnnLevel(g, S, t);
+  else return false;
+}
+// bottom screen: a brass plate with the line of the moment
+function bigotesSpecialBot(g, S, kind, t) {
+  const lbl = { speed: '¡Presión al máximo!', boss: '¡Arranca el Supersónico 3000!', level: 'Modo OVERCLOCK: ¡más difícil!' }[kind]; if (!lbl) return false;
+  const k = E.outBack(clamp(t * 3, 0, 1)), w = Math.max(150, txtW(lbl) + 30), x = rd(SW / 2 - w / 2), y = rd(6 - (1 - k) * 34);
+  rect(g, x, y, w, 20, INK); rect(g, x + 1, y + 1, w - 2, 18, RAMP.gold[3]); rect(g, x + 1, y + 1, w - 2, 2, RAMP.gold[4]); rect(g, x + 1, y + 17, w - 2, 2, RAMP.gold[1]);
+  for (const rx of [x + 6, x + w - 7]) { disc(g, rx, y + 10, 2.2, INK); disc(g, rx, y + 10, 1.5, RAMP.gold[1]); }
+  txt(g, lbl, SW / 2, y + 6, INK, { align: 'c', bold: kind === 'boss' });
+}
+
 // ---------------------------------------------------------------- the stage --
 defStage({
   id: 'bigotes', name: 'DON BIGOTES', sub: '«¡La ciencia del secado!»', verb: '¡GIRA!', mech: 'spin', bpm: 122,
@@ -4029,6 +4434,7 @@ defStage({
   intro: 'bigotes_in', outro: 'bigotes_out',
   room: {
     top: bigotesRoomTop, bot: bigotesRoomBot, frame: 'bigotesLab', life: bigotesLife, miniLife: bigotesMiniLife, lifeY: 150, lifeSpacing: 34,
+    special: bigotesSpecial, specialBot: bigotesSpecialBot,
     counter: { x: SW / 2, y: 22 }, counterFill: ['#ffffff', '#b8ffcf', '#5bd18b'], mini: bigotesMini, playTop: bigotesPlayTop,
     portal: { x: 64, y: 24, w: 128, h: 92 },
     staticCols: [RAMP.bigotesWall[1], RAMP.bigotesWall[2]], cardCol: RAMP.teal,
@@ -4082,6 +4488,25 @@ const CENIZA_SONGS = {
     { i: 'pluck', v: .45, n: 'D6 A5 F5 A5 D6 A5 F5 A5 E6 A5 G5 A5 E6 A5 G5 A5 F6 D6 Bb5 D6 F6 D6 Bb5 D6 E6 C#6 A5 C#6 E6 C#6 A5 C#6' },
     { i: 'bass', v: .9, n: 'D2 . D3 . D2 . D3 . A1 . A2 . A1 . A2 . Bb1 . Bb2 . Bb1 . Bb2 . A1 . A2 . C#2 . E2 .' },
     { i: 'd', v: .85, n: 'k . s h k k s h k . s h k s s s k . s h k k s h k . s h k s s+x s' }] },
+};
+
+// the announcements' own jingles (4 beats, D minor): a harpsichord dash, the boiling organ, the blood moon
+CENIZA_SONGS.jingles = {
+  speed: { spb: 4, tracks: [
+    { i: 'pluck', v: .75, n: 'D5 E5 F5 G5 A5 Bb5 C#6 D6 E6 F6 G6 A6 D7! - - .' },
+    { i: 'organ', v: .5, n: 'D4+F4+A4 - - - . . . . A3+C#4+E4 - - - D4+F4+A4! - - .' },
+    { i: 'bass', v: .85, n: 'D3 . D3 . D3 . D3 . A2 A2 A2 A2 D3! - . .' },
+    { i: 'd', v: .8, n: 'k w s w k w s w k s s s k+x - . .' }] },
+  boss: { spb: 4, tracks: [
+    { i: 'organ', v: .75, n: 'D3+F3+A3 - - . D3+F3+A3 - - . C#3+E3+G3 - - . D3+F3+Bb3! - - -' },
+    { i: 'pluck', v: .45, n: 'D6 A5 F5 A5 D6 A5 F5 A5 E6 A5 G5 A5 F6! - - .' },
+    { i: 'bass', v: .9, n: 'D2 - - . D2 - - . A1 - - . Bb1! - - -' },
+    { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+  level: { spb: 4, tracks: [
+    { i: 'organ', v: .6, n: 'D4+F4+A4 . . . E4+G4+Bb4 . . . F4+A4+C5 . . . C#4+E4+A4! - - .' },
+    { i: 'bell', v: .5, n: '. . . . . . . . . . . . A6 - D7 -' },
+    { i: 'bass', v: .85, n: 'D3 . D3 . G2 . G2 . F2 . F2 . A2! - . .' },
+    { i: 'd', v: .8, n: 'k . w . k . w . k . s s k+x - . .' }] },
 };
 
 // ---------------------------------------------------------------- voices ----
@@ -4395,6 +4820,7 @@ function cenizaPoseFor(S) {
   return pose;
 }
 function cenizaRoomTop(g, S) {
+  if (S.phase === 'inter') cenizaPrewarm();
   const t = S.pt || 0, rt = S.reactT || 0, pose = cenizaPoseFor(S);
   g.drawImage(cenizaRoomBg(), 0, 0);
   // candles flicker on the shelves
@@ -4431,8 +4857,6 @@ function cenizaRoomTop(g, S) {
     }
     if (rt < .8) shout(g, '¡PUF!', 112, 64, rt);
   }
-  if (pose === 'speed') for (let i = 0; i < 6; i++) { const yy = 96 + i * 10, xx = (i * 53 + fl(t * 300)) % 60; rect(g, 196 + xx * .4, yy, 14, 1, '#ffffff'); }
-  if (boss && fl(NOW * 8) % 2) { g.globalAlpha = .12; rect(g, 0, 0, SW, SH, '#ff4060'); g.globalAlpha = 1; }
 }
 // velvet tablecloth with gold stars and moons + the shelf that holds the flasks
 function cenizaBotBg() {
@@ -4527,6 +4951,165 @@ PORTAL_FRAMES.gothic = function (g, x, y, w, h, beat) {
   cenizaCandle(g, x - b + 3, y + h + b + 1, NOW, 8); cenizaCandle(g, x + w + b - 3, y + h + b + 1, NOW + .4, 8);
 };
 
+// ---------------------------------------------------------------- announcements
+// Ceniza's own ¡MÁS RÁPIDO! / ¡JUEGO DEL JEFE! / ¡MÁS DIFÍCIL! (room.special):
+// a speed potion that bubbles over and a broom flight, the cauldron boiling over
+// and flooding the den, a blood moon and her hat glowing. Her gothic card face.
+const CENIZA_WORDS = { speed: ['¡MÁS', 'RÁPIDO!'], boss: ['¡JUEGO', 'DEL JEFE!'], level: ['¡MÁS', 'DIFÍCIL!'] };
+const CENIZA_LABELS = { speed: '¡Poción de velocidad!', boss: '¡El caldero se desborda!', level: '¡Luna roja: más difícil!' };
+let CENIZA_FACES = null; // built on first use: the card faces live in cards.js, later in the bundle
+function cenizaFaces() {
+  if (CENIZA_FACES) return CENIZA_FACES;
+  const F = CARD_WITCH_FACE;
+  CENIZA_FACES = {
+    speed: F,
+    boss: Object.assign({}, F, { id: 'czBoss', fill: ['#fff0f0', '#ff93bf', '#c0306a'], line2: '#ff4060', glow: ['rgba(255,64,96,.45)', 'rgba(255,64,96,.2)'] }),
+    level: Object.assign({}, F, { id: 'czRed', fill: ['#ffe8e8', '#ff9a9a', '#b3202e'], line2: '#ff5a6e', glow: ['rgba(255,90,110,.5)', 'rgba(120,20,40,.3)'] }),
+  };
+  return CENIZA_FACES;
+}
+function cenizaFitWord(kind, w) { return cardFit(w, kind === 'level' ? 164 : 190, cenizaFaces()[kind]); }
+function cenizaPrewarm() {
+  if (typeof cardPrewarm !== 'function' || cenizaPrewarm.done) return;
+  const list = []; for (const k in CENIZA_WORDS) for (const w of CENIZA_WORDS[k]) list.push([w, cenizaFitWord(k, w)]);
+  cardPrewarm(list);
+  if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) cenizaPrewarm.done = 1;
+}
+function cenizaOnce(S, key) { S._czOnce = S._czOnce || {}; const k = S.count + ':' + key; if (S._czOnce[k]) return false; S._czOnce[k] = 1; return true; }
+// the words condense out of smoke, like her name on the card
+function cenizaWords(g, kind, t, x1, y1, x2, y2) {
+  const nk = t - .1, [w1, w2] = CENIZA_WORDS[kind];
+  const smoke = (nk0) => i => { const lt = nk0 - i * .07; if (lt <= 0) return { s: 0 }; const k = E.outC(clamp(lt / .3, 0, 1)); return { s: lerp(1.5, 1, k), a: k, rot: (1 - k) * .3 }; };
+  if (nk > 0) {
+    const b1 = cardWord(g, w1, x1, y1, cenizaFitWord(kind, w1), { anim: smoke(nk) });
+    const b2 = cardWord(g, w2, x2, y2, cenizaFitWord(kind, w2), { anim: smoke(nk - .18) });
+    const col = kind === 'speed' ? 'rgba(148,220,188,.5)' : 'rgba(255,120,140,.5)';
+    b1.concat(b2).forEach((bx, i) => { const lt = nk - (i < b1.length ? i : i - b1.length) * .07 - (i < b1.length ? 0 : .18); if (lt > 0 && lt < .35) for (let q = 0; q < 4; q++) { const a = q / 4 * TAU + lt * 3; disc(g, bx.cx + Math.cos(a) * (6 + lt * 30), (i < b1.length ? y1 : y2) + 12 + Math.sin(a) * (4 + lt * 16), 3 - lt * 7, col); } });
+  }
+}
+// the speed potion: a tall flask with a lightning bolt on its label
+function cenizaSpeedFlask() {
+  return mdl('cz:speedFlask', () => {
+    const c = mkCanvas(34, 50), g = c.g, col = '#c8f04a', cd = '#6aa01a', cl = '#eaffb0';
+    disc(g, 17, 36, 13, INK); rect(g, 12, 6, 10, 20, INK);
+    disc(g, 17, 36, 12, '#dff4ff'); rect(g, 13, 7, 8, 20, '#dff4ff');
+    disc(g, 17, 38, 11, col); rect(g, 6, 29, 22, 2, '#dff4ff'); hline(g, 7, 27, 30, cl); disc(g, 21, 42, 5, cd);
+    rect(g, 13, 14, 8, 13, col); vline(g, 14, 15, 26, cl);
+    px(g, 9, 30, '#ffffff'); vline(g, 8, 32, 38, '#ffffff'); vline(g, 14, 8, 12, '#ffffff');
+    rect(g, 11, 2, 12, 5, INK); rect(g, 12, 3, 10, 3, RAMP.wood[3]);
+    // the label: a yellow bolt on parchment
+    rect(g, 10, 33, 14, 11, INK); rect(g, 11, 34, 12, 9, '#fff4dc');
+    polyPx(g, [[18, 34], [13, 39], [16, 39], [14, 43], [20, 37], [17, 37], [19, 34]], '#ffdf4f'); linePx(g, 18, 34, 14, 43, '#c98a10');
+    return c;
+  });
+}
+// ---- ¡MÁS RÁPIDO!: the potion bubbles over, she hops on her broom and zooms round the den
+function cenizaSpeedFx(g, S, t) {
+  const b = t * S.bpm / 60;
+  g.drawImage(cenizaRoomBg(), 0, 0);
+  cenizaCandle(g, 200, 86, NOW, 9); cenizaCandle(g, 176, 52, NOW, 12, '#ffd1e4'); cenizaCandle(g, 248, 52, NOW, 8);
+  // the cauldron keeps boiling on the left
+  const cx0 = 64, cy0 = 164, cs = cenizaCauldron(1);
+  cenizaFire(g, cx0, cy0 + 2, NOW, 1); g.drawImage(cs, rd(cx0 - cs.width / 2), rd(cy0 - cs.height + 4)); cenizaPotion(g, cx0, cy0 - cs.height + 16, 24, 4.5, '#5bd18b', NOW, { boil: true, swirl: true });
+  // the speed potion on the right shakes… and bubbles over
+  const fx0 = 214, fy0 = 170, shakeF = b < .6 ? Math.sin(b * 70) * 1.5 : 0;
+  shadowOval(g, fx0, fy0, 14, 2.5, .4); drawS(g, cenizaSpeedFlask(), fx0 + shakeF, fy0, { ax: .5, ay: 1 });
+  if (b > .45) {
+    const k = clamp((b - .45) / .5, 0, 1), neckY = fy0 - 48;
+    for (let i = 0; i < 12; i++) { const q = (b * 1.4 + i * .23) % 1, an = -Math.PI / 2 + (hash2(i, 3) - .5) * 1.6, v = 30 + hash2(3, i) * 40; disc(g, fx0 + Math.cos(an) * v * q, neckY + Math.sin(an) * v * q + 60 * q * q, (3.5 - q * 2.5) * k, i % 3 ? '#c8f04a' : '#ffffff'); }
+    for (const [dx, h] of [[-9, 18], [8, 26], [-2, 12]]) { const L = h * k; rect(g, fx0 + dx - 1, neckY + 4, 3, L, '#c8f04a'); disc(g, fx0 + dx + .5, neckY + 4 + L, 2, '#c8f04a'); }
+    for (let i = 0; i < 5; i++) disc(g, fx0 - 6 + i * 3, neckY + 1 - Math.abs(Math.sin(b * 9 + i)) * 3 * k, 3, '#eaffb0');
+    if (cenizaOnce(S, 'fizz')) sfx('fizz');
+  }
+  // Ceniza: stirs, vanishes in a puff, two passes on the broom, lands back
+  const hopOff = 1.0, back = 3.1;
+  if (b < hopOff || b > back) { const land = b > back ? Math.max(0, 1 - (b - back) * 4) : 0; cenizaDraw(g, 150, 176, b > back ? 'win' : 'speed', t, { jump: land * 14 }); }
+  for (const at of [hopOff, back]) { const q = (b - at) / .5; if (q > 0 && q < 1) { g.globalAlpha = 1 - q; for (let i = 0; i < 7; i++) { const an = i / 7 * TAU; disc(g, 150 + Math.cos(an) * (8 + q * 22), 132 + Math.sin(an) * (6 + q * 16), 7 - q * 4, i % 2 ? '#bf95e9' : '#e5d3fa'); } g.globalAlpha = 1; } }
+  if (b > hopOff && cenizaOnce(S, 'magic')) sfx('czMagic');
+  const pass = (p0, p1, y, dir) => {
+    const q = (b - p0) / (p1 - p0); if (q <= 0 || q >= 1) return;
+    const x = dir > 0 ? lerp(-60, 320, q) : lerp(320, -60, q), yy = y + Math.sin(q * TAU) * 6, spr = typeof cenizaBroomSpr === 'function' ? cenizaBroomSpr(fl(b * 8) % 2) : null;
+    for (let i = 1; i <= 14; i++) { const tx = x - dir * i * 9, ty = yy + 6 + Math.sin(b * 12 + i) * 2; if (i % 3 === 0) drawStar(g, tx, ty, 2.4 - i * .1, '#fff27a', b * 5 + i); else disc(g, tx, ty, 2.2 - i * .12, i % 2 ? '#5bd18b' : '#94dcbc'); }
+    if (spr) { g.globalAlpha = .25; drawS(g, spr, x - dir * 18, yy, { flip: dir < 0 }); g.globalAlpha = .45; drawS(g, spr, x - dir * 9, yy, { flip: dir < 0 }); g.globalAlpha = 1; drawS(g, spr, x, yy, { flip: dir < 0 }); }
+    drawS(g, cenizaPatoSpr('grin'), x - dir * 40, yy + 12 + Math.sin(b * 14) * 3, { flip: dir < 0, rot: dir * .5, s: .8 });
+  };
+  pass(1.05, 1.85, 116, 1); pass(2.15, 2.95, 80, -1);
+  if (b > 1.05 && cenizaOnce(S, 'zoom1')) sfx('zoom'); if (b > 2.15 && cenizaOnce(S, 'zoom2')) sfx('zoom', { pitch: 1.2 });
+  for (let i = 0; i < 8; i++) { const y = 70 + i * 13, x = SW - ((i * 61 + b * 260) % (SW + 60)); if (b > 1 && b < 3) rect(g, x, y, 16 + (i % 3) * 6, 1, 'rgba(255,255,255,.6)'); }
+  cenizaWords(g, 'speed', t, 150, 6, 146, 38);
+}
+// ---- ¡JUEGO DEL JEFE!: the cauldron boils over and floods the den
+function cenizaBossFx(g, S, t) {
+  const b = t * S.bpm / 60;
+  g.drawImage(cenizaRoomBg(), 0, 0);
+  if (fl(NOW * 8) % 2) { g.globalAlpha = .12; rect(g, 0, 0, SW, SH, '#ff4060'); g.globalAlpha = 1; }
+  // the cauldron roars, spitting red potion
+  const cx0 = 92, cy0 = 164, cs = cenizaCauldron(1.15), rimY = cy0 - cs.height + 4 + 13.8, shk = Math.sin(b * 50) * (b < 2 ? 1.2 : .5);
+  cenizaFire(g, cx0, cy0 + 2, NOW, 1.5);
+  g.drawImage(cs, rd(cx0 - cs.width / 2 + shk), rd(cy0 - cs.height + 4));
+  cenizaPotion(g, cx0 + shk, rimY, 27.6, 5.2, '#ff4060', NOW, { boil: true });
+  for (let i = 0; i < 16; i++) { const q = (b * 1.2 + i * .19) % 1, an = -Math.PI / 2 + (hash2(i, 11) - .5) * 1.4, v = 50 + hash2(11, i) * 60; const x = cx0 + Math.cos(an) * v * q, y = rimY + Math.sin(an) * v * q + 90 * q * q; if (y < SH) disc(g, x, y, 4 - q * 3, i % 3 ? '#ff4060' : '#ff93bf'); }
+  // Ceniza wades in, aghast
+  cenizaDraw(g, 184, 176, 'boss', t);
+  // the flood rises
+  const level = lerp(SH + 6, 136, E.outQ(clamp((b - .35) / 1.5, 0, 1)));
+  if (level < SH) {
+    for (let x = 0; x < SW; x += 2) { const y = rd(level + Math.sin(x * .08 + b * 5) * 2 + Math.sin(x * .21 - b * 3) * 1.2); g.fillStyle = '#c0306a'; g.fillRect(x, y, 2, SH - y); g.fillStyle = '#ff5a8a'; g.fillRect(x, y, 2, 2); }
+    for (let i = 0; i < 10; i++) { const q = (b * .9 + i * .31) % 1, x = (i * 53 + 17) % SW, y = SH - q * (SH - level); ringPx(g, x, y, 1.5 + q * 2.5, '#ff93bf'); }
+    for (let i = 0; i < 6; i++) { const ph = (b * 1.6 + i * .4) % 1; if (ph < .25) ringPx(g, (i * 71 + 30) % SW, level - 2, 2 + ph * 16, '#ffd1e4'); }
+    cenizaPato(g, 226, level - 20, 'laugh', NOW);
+  }
+  if (b > 1.9 && b < 3) shout(g, '¡BLUB!', 150, 112, (b - 1.9) * 1.5);
+  if (b > .2 && cenizaOnce(S, 'blub')) sfx('czBlub', { pitch: .6 });
+  if (b > 1.9 && cenizaOnce(S, 'quack')) sfx('czQuack');
+  cenizaWords(g, 'boss', t, 150, 6, 144, 38);
+}
+// ---- ¡MÁS DIFÍCIL!: the moon turns red, her hat glows, the bats come out
+function cenizaLevelFx(g, S, t) {
+  const b = t * S.bpm / 60, k = clamp(b / 1.1, 0, 1);
+  g.drawImage(cenizaRoomBg(), 0, 0);
+  g.globalAlpha = .5 * clamp(b / .6, 0, 1); rect(g, 0, 0, SW, SH, '#12081f'); g.globalAlpha = 1;
+  // the window: the night goes crimson, the moon grows full and red
+  const mx = 40, my = 40;
+  for (let r = 34; r > 18; r -= 4) { g.globalAlpha = .07 * k; disc(g, mx, my, r + Math.sin(b * 4) * 2, '#ff3a4e'); } g.globalAlpha = 1;
+  disc(g, mx, my, 19, INK); disc(g, mx, my, 18, RAMP.wood[2]); disc(g, mx, my, 15, '#2a0a18'); disc(g, mx, my, 14, mixHex('#232a5e', '#3a0a1e', k));
+  const mr = lerp(6, 9, k); disc(g, mx + 3, my - 3, mr, mixHex('#fff2c0', '#ff3a4e', k)); disc(g, mx + 1, my - 5, mr * .5, mixHex('#ffffff', '#ff8a96', k));
+  if (k < .9) disc(g, mx + 6, my - 5, mr * (1 - k) * .9, mixHex('#232a5e', '#3a0a1e', k));
+  rect(g, mx - 1, my - 18, 2, 36, RAMP.wood[1]); rect(g, mx - 18, my - 1, 36, 2, RAMP.wood[1]);
+  // red light pours in
+  g.globalAlpha = .12 * k; polyPx(g, [[mx + 10, my - 8], [mx + 16, my + 12], [180, SH], [96, SH]], '#ff3a4e'); g.globalAlpha = 1;
+  // bats wheel round the moon
+  for (let i = 0; i < 4; i++) { const an = b * 1.6 + i * TAU / 4, bx = mx + Math.cos(an) * (30 + i * 4), by = my + Math.sin(an) * 18; if (typeof cenizaBatSpr === 'function') drawS(g, cenizaBatSpr(fl(b * 8 + i) % 2), bx, by, {}); else if (typeof cardBat === 'function') cardBat(g, bx, by, b + i, .9); }
+  // Ceniza powers up: her hat glows and sparks
+  const hx = 156, hy = 94, pulse = 1 + Math.sin(b * 8) * .15;
+  for (let r = 3; r >= 1; r--) { g.globalAlpha = .14 * k; disc(g, hx, hy, (10 + r * 7) * pulse, r % 2 ? '#bf95e9' : '#5bd18b'); } g.globalAlpha = 1;
+  cenizaDraw(g, 150, 176, 'angry', t);
+  for (let i = 0; i < 6; i++) { const an = b * 3 + i * TAU / 6, r = 18 + Math.sin(b * 5 + i) * 3; drawStar(g, hx + Math.cos(an) * r, hy + Math.sin(an) * r * .6, 2 * k, i % 2 ? '#fff27a' : '#94dcbc', an); }
+  if (b > .9 && cenizaOnce(S, 'hat')) sfx('czMagic', { pitch: .8 });
+  if (b > .9 && b < 2.4) shout(g, '¡LUNA ROJA!', 80, 76, (b - .9) * 1.4);
+  cenizaWords(g, 'level', t, 164, 8, 158, 40);
+}
+function cenizaSpecial(g, S, kind, t) {
+  if (typeof cardWord !== 'function') return false;
+  if (kind === 'speed') cenizaSpeedFx(g, S, t);
+  else if (kind === 'boss') cenizaBossFx(g, S, t);
+  else if (kind === 'level') cenizaLevelFx(g, S, t);
+  else return false;
+}
+// the bottom screen: a parchment ribbon, with a tiny drawing in purple ink
+function cenizaSpecialBot(g, S, kind, t) {
+  const lbl = CENIZA_LABELS[kind]; if (!lbl) return false;
+  const b = t * S.bpm / 60, k = E.outBack(clamp(b * 1.6, 0, 1)), w = txtW(lbl) + lbl.length + 44, x0 = rd(SW / 2 - w / 2), y = rd(3 - (1 - k) * 36);
+  const pts = []; for (let i = 0; i <= 6; i++) pts.push([x0 + (i % 2 ? -4 : 0), y + i * 4]); for (let i = 6; i >= 0; i--) pts.push([x0 + w + (i % 2 ? 4 : 0), y + i * 4]);
+  polyPx(g, pts.map(([x, yy]) => [x + (x < SW / 2 ? -1 : 1), yy + 1]), '#0e0b16'); polyPx(g, pts, kind === 'speed' ? '#f2e2b8' : '#f2d4d4');
+  hline(g, x0 + 3, x0 + w - 3, y + 2, '#fff8e6'); hline(g, x0 + 3, x0 + w - 3, y + 22, '#dcc08a');
+  const ix = x0 + 13, iy = y + 12, ink = '#5a3396';
+  if (kind === 'speed') { rect(g, ix - 2, iy - 7, 4, 4, ink); disc(g, ix, iy + 2, 5, ink); disc(g, ix, iy + 3, 3, '#c8f04a'); }
+  else if (kind === 'boss') { ellipsePx(g, ix, iy + 2, 7, 5, ink); rect(g, ix - 7, iy - 3, 14, 2, ink); for (const dx of [-3, 1, 4]) disc(g, ix + dx, iy - 6 + (dx % 2), 1.6, '#ff4060'); }
+  else { disc(g, ix, iy, 6, '#c0182e'); disc(g, ix + 2, iy - 2, 5, kind === 'level' ? '#f2d4d4' : '#f2e2b8'); }
+  txt(g, lbl, x0 + 26 + (w - 30) / 2, y + 8, kind === 'speed' ? ink : '#8c1d30', { align: 'c', bold: true });
+}
+
 // ---------------------------------------------------------------- the stage -
 defStage({
   id: 'ceniza', name: 'CENIZA', sub: '«Magia… y mucha espuma»', verb: '¡ARRASTRA!', mech: 'drag', bpm: 116,
@@ -4542,7 +5125,7 @@ defStage({
     top: cenizaRoomTop, bot: cenizaRoomBot, frame: 'gothic', life: cenizaLife, lifeY: 136, lifeSpacing: 34, miniLife: cenizaMiniLife,
     counter: { x: SW / 2, y: 7 }, mini: cenizaMini, portal: { x: 64, y: 34, w: 128, h: 88 },
     staticCols: [RAMP.purple[1], RAMP.purple[2]], playCols: [RAMP.purple[1], RAMP.purple[2]], cardCol: RAMP.purple,
-    counterFill: ['#ffffff', '#e5d3fa', '#bf95e9'],
+    counterFill: ['#ffffff', '#e5d3fa', '#bf95e9'], special: cenizaSpecial, specialBot: cenizaSpecialBot,
   },
 });
 
@@ -4957,6 +5540,7 @@ PORTAL_FRAMES.hermanasChalk = function (g, x, y, w, h, beat) {
 
 // ---------------------------------------------------------------- room ------
 function hermanasRoomTop(g, S) {
+  if (S.phase === 'inter') hermanasPrewarm();
   // build every pose the interlude will need in the background, once
   if (!hermanasRoomTop.warmed) { hermanasRoomTop.warmed = 1; for (const w of ['kira', 'nala']) for (const [p, m] of [['bow', 'happy'], ['jump', 'happy'], ['lie', 'sad'], ['run', 'focus'], ['stand', 'wow'], ['stand', 'normal'], ['jump', 'normal']]) warm(() => hermanasAussieSide(w, p, m)); }
   g.drawImage(hermanasBeachBg(), 0, 0);
@@ -4991,8 +5575,6 @@ function hermanasRoomTop(g, S) {
   drawS(g, hermanasAussieSide('nala', poseN, moodN), nx - runOff, gy - jumpN + bob, { ax: .5, ay: 1, flip: true });
   if (fbx != null) { shadowOval(g, fbx, gy - 2, 7, 1.5, .3); drawS(g, hermanasFrisbeeSpr(), fbx, fby, { rot: Math.sin(t * 6) * .2 }); }
   if (react === 'lose' || react === 'over') { const k = Math.min(1, rt * 3); drawS(g, hermanasFrisbeeSpr('#ff6b3d', 18), 128, lerp(80, 172, E.outBounce(k)), { rot: rt * 3 }); drawRainCloud(g, 128, 50 + (1 - k) * -30, rt); }
-  if (special === 'speed') { for (let i = 0; i < 8; i++) { const yy = 140 + i * 5, xx = (i * 67 + fl(t * 420)) % 300 - 20; rect(g, xx, yy, 18, 1, '#ffffff'); } }
-  if (special === 'boss') { const bk = ((S.pb - 2) * 60 / S.bpm) / 1.6; const gx = lerp(-40, 300, bk % 1), gy2 = 60 + Math.sin(bk * 9) * 10; drawS(g, hermanasGullSpr(fl(NOW * 10) % 3, true, 'smug'), gx, gy2); shadowOval(g, gx, 180, 12, 2, .35); }
   if (react === 'win' && rt < .6) for (let i = 0; i < 3; i++) drawHeart(g, 128 + (i - 1) * 16, 150 - rt * 40 - i * 4, '#ff4060', 1);
 }
 function hermanasRoomBot(g, S) { g.drawImage(hermanasBeachBotBg(), 0, 0); }
@@ -5020,6 +5602,190 @@ function hermanasPlayTop(g, S) {
   hermanasMini(g, 60, 140, S.g.state === 'play' ? 'watch' : S.g.state === 'won' ? 'win' : 'lose', S);
 }
 
+// ---------------------------------------------------------------- announcements
+// Kira & Nala's own ¡MÁS RÁPIDO! / ¡JUEGO DEL JEFE! / ¡MÁS DIFÍCIL! (room.special):
+// a wave they surf, the thief gull's shadow and her WANTED poster, a storm and
+// the lifeguard's red flag. Lettering: their surf face from the title card.
+const HERMANAS_WORDS = { speed: ['¡MÁS', 'RÁPIDO!'], boss: ['¡JUEGO', 'DEL JEFE!'], level: ['¡MÁS', 'DIFÍCIL!'] };
+const HERMANAS_LABELS = { speed: '¡Viene una ola gorda!', boss: '¡La gaviota ladrona ataca!', level: '¡Bandera roja: más difícil!' };
+let HERMANAS_FACES = null; // built on first use: the card faces live in cards.js, later in the bundle
+function hermanasFaces() {
+  if (HERMANAS_FACES) return HERMANAS_FACES;
+  const F = CARD_SURF_FACE;
+  HERMANAS_FACES = {
+    speed: F,
+    boss: Object.assign({}, F, { id: 'hnBoss', fill: ['#ffffff', '#ffd49b', '#ff6b3d'], line: '#2a0610', shadow: ['#c02d45', '#7c1830', '#3a0010'], hi: '#fff7ae' }),
+    level: Object.assign({}, F, { id: 'hnStorm', fill: ['#ffffff', '#d7e6f5', '#9fb4cc'], shadow: ['#4d5670', '#2b2540', '#141c47'], hi: '#ffffff' }),
+  };
+  return HERMANAS_FACES;
+}
+function hermanasFitWord(kind, w) { return cardFit(w, kind === 'boss' ? 132 : 200, hermanasFaces()[kind]); }
+// rasterise the letters ahead of time, one per frame (called from the room every frame)
+function hermanasPrewarm() {
+  if (typeof cardPrewarm !== 'function' || hermanasPrewarm.done) return;
+  const list = []; for (const k in HERMANAS_WORDS) for (const w of HERMANAS_WORDS[k]) list.push([w, hermanasFitWord(k, w)]);
+  cardPrewarm(list);
+  if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) hermanasPrewarm.done = 1;
+}
+// one-shot sounds inside a draw: once per announcement
+function hermanasOnce(S, key) { S._hnOnce = S._hnOnce || {}; const k = S.count + ':' + key; if (S._hnOnce[k]) return false; S._hnOnce[k] = 1; return true; }
+function hermanasBoard(col = '#ff6b3d') {
+  return mdl('hermanas:board' + col, () => {
+    const c = mkCanvas(34, 9), g = c.g;
+    ellipsePx(g, 17, 4.5, 16.5, 4, INK); ellipsePx(g, 17, 4, 15.5, 3, '#fff8e6'); ellipsePx(g, 16, 3.5, 13, 2, '#ffffff');
+    rect(g, 3, 4, 28, 1, col); rect(g, 3, 5, 28, 1, mixHex(col, '#000000', .3));
+    polyPx(g, [[25, 8], [29, 8], [27, 9]], INK);
+    return c;
+  });
+}
+// ---- ¡MÁS RÁPIDO!: a wall of water rises and the sisters surf its face
+function hermanasSpeedFx(g, S, t) {
+  const b = t * S.bpm / 60, H = 104 * E.outBack(clamp(b / .9, 0, 1)), xc = lerp(268, 190, E.outQ(clamp(b / 3.5, 0, 1))), base = 150, w = 92;
+  const crest = x => x <= xc ? base - H * Math.exp(-Math.pow((xc - x) / w, 2) * 1.5) : base - H * lerp(1, .78, clamp((x - xc) / 70, 0, 1));
+  g.drawImage(hermanasBeachBg(), 0, 0);
+  // wind lines across the sky
+  for (let i = 0; i < 11; i++) { const y = 10 + i * 11, x = SW - ((i * 53 + b * 190) % (SW + 90)); rect(g, x, y, 20 + (i % 3) * 9, 1, 'rgba(255,255,255,.75)'); }
+  // the water wall, column by column in depth bands
+  const bands = [[0, 2, '#ffffff'], [2, 6, '#c8ecff'], [6, 18, '#7cc6f5'], [18, 40, '#3d93d6'], [40, 80, '#2f7cc4'], [80, 999, '#1b4f8c']];
+  for (let x = 0; x < SW; x++) { const cy = rd(crest(x)); for (const [a0, z, col] of bands) { const y0 = cy + a0, y1 = Math.min(SH, cy + z); if (y1 > y0) { g.fillStyle = col; g.fillRect(x, y0, 1, y1 - y0); } } }
+  // streaks running up the face
+  for (let i = 0; i < 16; i++) { const q = (i * .37 + b * .8) % 1, x = rd(lerp(-10, xc - 8, (i * .61) % 1)), y = rd(crest(x) + 10 + q * 60); if (y < SH) hline(g, x, x + 7 + (i % 3) * 3, y, i % 2 ? '#9bd6f7' : '#5aaee6'); }
+  // the lip curls over, spitting spray
+  if (H > 30) {
+    const cy = crest(xc), k = clamp((H - 30) / 70, 0, 1);
+    const lip = [[xc + 6, cy - 1], [xc - 10, cy - 11 * k], [xc - 34 * k, cy - 8 * k], [xc - 46 * k, cy + 4 * k], [xc - 40 * k, cy + 12 * k], [xc - 28 * k, cy + 6 * k], [xc - 12, cy + 7]];
+    polyPx(g, lip.map(([x, y]) => [x - 1, y - 1]), '#ffffff'); polyPx(g, lip, '#c8ecff'); polyPx(g, lip.slice(2, 6).map(([x, y]) => [x + 3, y + 1]), '#9bd6f7');
+    for (let i = 0; i < 14; i++) { const q = (b * 1.7 + i * .29) % 1, an = -2.4 - hash2(i, 7) * 1.2, v = 26 + hash2(7, i) * 30; disc(g, xc - 40 * k + Math.cos(an) * v * q, cy + Math.sin(an) * v * q + 40 * q * q, 1.6 - q, '#ffffff'); }
+  }
+  // the sisters ride down the face ahead of the curl (facing left), well apart
+  const ek = E.outBack(clamp((b - .3) / .6, 0, 1));
+  if (ek > 0) for (const [who, dx, ph, col] of [['nala', 124, 1.7, '#e23b4e'], ['kira', 62, 0, '#3565cc']]) {
+    const x = xc - dx + (1 - ek) * 170, y = crest(x), sl = clamp(Math.atan2(crest(x + 5) - crest(x - 5), 10), -.55, .55), bob = Math.sin(b * TAU * .5 + ph) * 2;
+    for (let i = 1; i <= 5; i++) disc(g, x + 13 + i * 5, y + 1 + Math.sin(b * 9 + i) * 1.5, 2.3 - i * .3, '#ffffff');
+    drawS(g, hermanasBoard(col), x, y - 1 + bob, { ax: .5, ay: .8, rot: sl, flip: true });
+    drawS(g, hermanasAussieSide(who, 'run', 'happy', .55), x - 2, y - 3 + bob, { ax: .5, ay: 1, rot: sl * .8, flip: true });
+  }
+  // the words, in their surf face, blown in from the right
+  const nk = t - .12, [w1, w2] = HERMANAS_WORDS.speed;
+  if (nk > 0) {
+    cardWord(g, w1, 58, 8, hermanasFitWord('speed', w1), { anim: i => cardAnimSlide(nk, i, { from: 200, rot: -.5, stagger: .05 }) });
+    cardWord(g, w2, 96, 38, hermanasFitWord('speed', w2), { anim: i => cardAnimSlide(nk - .15, i, { from: 200, rot: -.5, stagger: .05 }) });
+  }
+  if (b > .3 && hermanasOnce(S, 'wave')) sfx('splash', { vol: .7, pitch: .8 });
+}
+// the thief's shadow on the sand: a huge gull shape flattened on the ground
+function hermanasGullShadow(g, x, y, s, b) {
+  const f = Math.sin(b * 9) * 6 * s;
+  g.globalAlpha = .45;
+  polyPx(g, [[x - 26 * s, y - 2 * s], [x - 6 * s, y - 5 * s - f * .4], [x + 2 * s, y - 2 * s], [x + 10 * s, y - 5 * s - f * .4], [x + 30 * s, y - 2 * s], [x + 8 * s, y + 2 * s], [x - 6 * s, y + 2 * s]], '#0e0b16');
+  ellipsePx(g, x + 2 * s, y, 12 * s, 3 * s, '#0e0b16'); ellipsePx(g, x + 14 * s, y - 1 * s, 4 * s, 2 * s, '#0e0b16');
+  g.globalAlpha = 1;
+}
+// SE BUSCA: the gull's wanted poster
+function hermanasWanted() {
+  return mdl('hermanas:wanted', () => {
+    const W = 100, Hh = 116, c = mkCanvas(W, Hh), g = c.g;
+    const edge = []; for (let i = 0; i <= 10; i++) edge.push([4 + i * 9.2, 4 + (i % 2 ? 1.5 : 0)]); for (let i = 0; i <= 12; i++) edge.push([W - 4 + (i % 2 ? -1.5 : 0), 4 + i * 9]); for (let i = 10; i >= 0; i--) edge.push([4 + i * 9.2, Hh - 4 - (i % 2 ? 1.5 : 0)]); for (let i = 12; i >= 0; i--) edge.push([4 + (i % 2 ? 1.5 : 0), 4 + i * 9]);
+    polyPx(g, edge.map(([x, y]) => [x + 1, y + 2]), '#5a2c1e'); polyPx(g, edge, '#f2e2b8');
+    for (let i = 0; i < 120; i++) px(g, 6 + hash2(i, 81) * (W - 12), 6 + hash2(81, i) * (Hh - 12), hash2(i, 5) < .5 ? '#e6d2a0' : '#fff4d6');
+    txt(g, 'SE BUSCA', W / 2, 9, '#7c1830', { align: 'c', bold: true });
+    hline(g, 12, W - 12, 20, '#7c1830');
+    rect(g, 26, 25, 48, 54, INK); rect(g, 27, 26, 46, 52, '#a8d8ff'); rect(g, 27, 62, 46, 16, '#f2d59a');
+    g.drawImage(hermanasGullStand('smug'), 31, 30);
+    txt(g, 'LA GAVIOTA', W / 2, 83, INK, { align: 'c', bold: true });
+    txt(g, 'LADRONA', W / 2, 93, INK, { align: 'c', bold: true });
+    tiny(g, 'RECOMPENSA: 1 FRISBI', W / 2, 105, '#7c1830', { align: 'c' });
+    disc(g, W / 2, 5, 3, INK); disc(g, W / 2, 5, 2, '#c8c6d3'); px(g, W / 2 - 1, 4, '#ffffff');
+    return c;
+  });
+}
+// ---- ¡JUEGO DEL JEFE!: the sky darkens, a shadow sweeps the beach, SE BUSCA
+function hermanasBossFx(g, S, t) {
+  const b = t * S.bpm / 60;
+  g.drawImage(hermanasBeachBg(), 0, 0);
+  g.globalAlpha = Math.min(.55, b * .7); rect(g, 0, 0, SW, SH, '#1b1030'); g.globalAlpha = 1;
+  const sk = clamp(b / 1.3, 0, 1); if (sk < 1) hermanasGullShadow(g, lerp(-90, 340, E.ioQ(sk)), 164, 2.6, b);
+  // the sisters freeze, looking up, trembling
+  const tr = b > .4 ? Math.sin(b * 40) * .8 : 0;
+  shadowOval(g, 46, 185, 20, 2.5, .45); shadowOval(g, 106, 185, 20, 2.5, .45);
+  drawS(g, hermanasAussieSide('kira', 'stand', 'wow', .62), 46 + tr, 184, { ax: .5, ay: 1 });
+  drawS(g, hermanasAussieSide('nala', 'stand', 'wow', .62), 106 - tr, 184, { ax: .5, ay: 1, flip: true });
+  if (b > .5 && b < 2.2) { txt(g, '!', 58, 126 - Math.min(1, (b - .5) * 4) * 6, '#ffffff', { align: 'c', out: INK, bold: true }); txt(g, '!', 96, 126 - Math.min(1, (b - .5) * 4) * 6, '#ffffff', { align: 'c', out: INK, bold: true }); }
+  // the poster drops on its nail and swings to rest
+  const pk = clamp((b - .9) / .55, 0, 1);
+  if (pk > 0) { const drop = (1 - E.outBounce(pk)) * -170, sw = Math.sin(b * 6) * .08 * Math.max(0, 1 - (b - 1.4) / 2.2); g.save(); g.translate(194, 44 + drop); g.rotate(sw); g.drawImage(hermanasWanted(), -50, -4); g.restore(); if (pk >= 1 && hermanasOnce(S, 'poster')) sfx('stamp'); }
+  // the words, in the storm-red surf face
+  const nk = t - .08, [w1, w2] = HERMANAS_WORDS.boss;
+  if (nk > 0) {
+    cardWord(g, w1, 70, 22, hermanasFitWord('boss', w1), { anim: i => cardAnimDrop(nk, i, { h: -40, stagger: .045 }) });
+    cardWord(g, w2, 74, 54, hermanasFitWord('boss', w2), { anim: i => cardAnimDrop(nk - .14, i, { h: -40, stagger: .045 }) });
+  }
+  // the gull herself crosses over everything with the frisbee, cackling
+  const gk = (b - 2.1) / 1.4; if (gk > 0 && gk < 1) { const gx = lerp(290, -60, gk), gy = 110 - Math.sin(gk * Math.PI) * 26; drawS(g, hermanasGullSpr(fl(b * 10) % 3, true, 'smug'), gx, gy, { flip: true }); if (gk > .15 && gk < .7) shout(g, '¡CRUAC!', gx + 8, gy - 28, (gk - .15) * 2); if (hermanasOnce(S, 'cruac')) sfx('hermanasCruac'); }
+}
+// the lifeguard's pole and flag (yellow, then red)
+function hermanasFlag(g, x, y, b, red) {
+  vline(g, x - 1, y, 162, INK); vline(g, x, y, 162, '#c8c6d3'); vline(g, x + 1, y, 162, '#9896a4'); disc(g, x, y - 1, 2, INK); disc(g, x, y - 1, 1.3, '#ffdf4f');
+  const col = red ? '#e23b4e' : '#ffdf4f', dark = red ? '#8c1d30' : '#c98a10', pts = [], n = 10, len = 34;
+  for (let i = 0; i <= n; i++) pts.push([x + 2 + i * len / n, y + 2 + Math.sin(b * 8 - i * .6) * (1 + i * .3)]);
+  for (let i = n; i >= 0; i--) pts.push([x + 2 + i * len / n, y + 22 + Math.sin(b * 8 - i * .6) * (1 + i * .3)]);
+  polyPx(g, pts.map(([a, c]) => [a + 1, c + 1]), INK); polyPx(g, pts, col);
+  for (let i = 1; i < n; i += 3) { const [a, c] = pts[i]; vline(g, a, c + 2, c + 18, dark); }
+}
+function hermanasStormCloud(g, x, y, i) {
+  const s = .8 + (i % 3) * .2;
+  for (const [dx, dy, r] of [[0, 4, 9], [10, 0, 12], [22, 4, 10], [12, 8, 9]]) disc(g, x + dx * s, y + dy * s + 1, r * s + 1, '#1b1627');
+  for (const [dx, dy, r] of [[0, 4, 9], [10, 0, 12], [22, 4, 10], [12, 8, 9]]) disc(g, x + dx * s, y + dy * s, r * s, '#4d5670');
+  disc(g, x + 8 * s, y - 2 * s, 6 * s, '#6a6580');
+}
+// ---- ¡MÁS DIFÍCIL!: storm clouds roll in, lightning, the flag turns red
+function hermanasLevelFx(g, S, t) {
+  const b = t * S.bpm / 60, dk = clamp(b / .8, 0, 1);
+  g.drawImage(hermanasBeachBg(), 0, 0);
+  g.globalAlpha = .5 * dk; rect(g, 0, 0, SW, SH, '#243248'); g.globalAlpha = 1;
+  // the sisters huddle under the umbrella, ears down
+  shadowOval(g, 48, 186, 22, 2.5, .45); shadowOval(g, 104, 186, 22, 2.5, .45);
+  drawS(g, hermanasAussieSide('kira', 'lie', 'sad', .6), 50, 186, { ax: .5, ay: 1 });
+  drawS(g, hermanasAussieSide('nala', 'lie', 'sad', .6), 104, 186, { ax: .5, ay: 1, flip: true });
+  for (let i = 0; i < 9; i++) hermanasStormCloud(g, lerp(-80, -10, E.outQ(dk)) + i * 32 + Math.sin(b * .9 + i) * 3, lerp(-40, 4 + (i % 3) * 9, E.outQ(dk)), i);
+  for (let i = 0; i < 44; i++) { const x = (i * 29 + b * 70) % (SW + 40) - 10, y = (i * 47 + b * 240) % SH; if (y > 18) linePx(g, x, y, x - 3, y + 7, 'rgba(200,220,255,.7)'); }
+  const red = b > 1.25;
+  hermanasFlag(g, 212, 64, b, red);
+  if (b > 1.18 && b < 1.5) {
+    const k = (1.5 - b) / .32; g.globalAlpha = k * .8; rect(g, 0, 0, SW, SH, '#ffffff'); g.globalAlpha = 1;
+    const bolt = [[150, 10], [138, 44], [150, 44], [132, 86], [158, 38], [146, 38], [160, 10]]; polyPx(g, bolt.map(([x, y]) => [x + 1, y + 1]), INK); polyPx(g, bolt, '#fff7ae');
+    if (hermanasOnce(S, 'thunder')) { sfx('boom', { vol: .6, pitch: .7 }); shake('top', 3, .3); }
+  }
+  if (red && b < 2.6) shout(g, '¡BANDERA ROJA!', 196, 46, (b - 1.25) * 1.6);
+  const f = hermanasFaces(), nk = t - .15, [w1, w2] = HERMANAS_WORDS.level, jolt = b > 1.2 && b < 1.6 ? Math.sin(b * 80) * 2 : 0;
+  if (nk > 0) {
+    cardWord(g, w1, 70 + jolt, 44, hermanasFitWord('level', w1), { anim: i => cardAnimDrop(nk, i, { stagger: .05 }) });
+    cardWord(g, w2, 96 + jolt, 76, hermanasFitWord('level', w2), { anim: i => cardAnimDrop(nk - .12, i, { stagger: .05 }) });
+  }
+}
+function hermanasSpecial(g, S, kind, t) {
+  if (typeof cardWord !== 'function') return false;
+  if (kind === 'speed') hermanasSpeedFx(g, S, t);
+  else if (kind === 'boss') hermanasBossFx(g, S, t);
+  else if (kind === 'level') hermanasLevelFx(g, S, t);
+  else return false;
+}
+// the bottom screen: a lifeguard's wooden board with the news in chalk
+function hermanasSpecialBot(g, S, kind, t) {
+  const lbl = HERMANAS_LABELS[kind]; if (!lbl) return false;
+  const b = t * S.bpm / 60, k = E.outBack(clamp(b * 1.6, 0, 1)), w = txtW(lbl) + lbl.length + 44, x0 = rd(SW / 2 - w / 2), y = rd(3 - (1 - k) * 36);
+  rect(g, x0 - 1, y - 1, w + 2, 26, INK); rect(g, x0, y, w, 24, RAMP.wood[3]); rect(g, x0, y, w, 1, RAMP.wood[4]); rect(g, x0, y + 23, w, 1, RAMP.wood[1]);
+  for (let i = 0; i < 4; i++) hline(g, x0 + 22 + i * 34, x0 + 38 + i * 34, y + 5 + (i % 3) * 7, RAMP.wood[2]);
+  for (const nx of [x0 + 3, x0 + w - 4]) { px(g, nx, y + 3, RAMP.steel[3]); px(g, nx, y + 20, RAMP.steel[3]); }
+  // a chalk pictogram: a wave, the gull, the red flag
+  const ix = x0 + 13, iy = y + 12, ch = '#ffffff';
+  if (kind === 'speed') { for (let i = 0; i < 9; i++) px(g, ix - 6 + i, iy + 3 - rd(Math.sin(i * .7) * 4), ch); px(g, ix + 2, iy - 3, ch); px(g, ix + 1, iy - 4, ch); }
+  else if (kind === 'boss') { linePx(g, ix - 7, iy - 1, ix - 2, iy + 2, ch); linePx(g, ix - 2, iy + 2, ix, iy, ch); linePx(g, ix, iy, ix + 2, iy + 2, ch); linePx(g, ix + 2, iy + 2, ix + 7, iy - 1, ch); }
+  else { vline(g, ix - 4, iy - 7, iy + 7, ch); rect(g, ix - 3, iy - 7, 9, 6, '#e23b4e'); }
+  const col = kind === 'boss' ? '#ffd49b' : kind === 'level' ? '#ffc2c2' : '#ffffff';
+  txt(g, lbl, x0 + 26 + (w - 30) / 2, y + 8, col, { align: 'c', out: RAMP.wood[0], bold: true });
+}
+
 // ---------------------------------------------------------------- music -----
 const HERMANAS_SONGS = {
   card: { spb: 4, tracks: [
@@ -5040,6 +5806,24 @@ const HERMANAS_SONGS = {
     { i: 'p25', v: .35, n: 'E5 . . . . . . . G5 . . . A5 . . . E5 . . . . . . . C6 . B5 . A5 . G5 .' },
     { i: 'bass', v: .9, n: 'E2 E2 E2 E2 E2 E2 E2 E2 C3 C3 C3 C3 D3 D3 D3 D3 E2 E2 E2 E2 E2 E2 E2 E2 C3 C3 D3 D3 E2 E2 B1 B1' },
     { i: 'd', v: .85, n: 'k h s h k h s h k h s h k s s s k h s h k h s h k h s h k s s+x s' }] },
+};
+
+// the announcements' own jingles (4 beats): surf rock, the gull's alarm, a storm
+HERMANAS_SONGS.jingles = {
+  speed: { spb: 4, tracks: [
+    { i: 'pluck', v: .75, n: 'E4 G#4 B4 E5 G#5 B5 E6 B5 G#5 E5 G#5 B5 E6! - - .' },
+    { i: 'kalimba', v: .45, n: '. . . . . . . . E5 . G#5 . B5! - - .' },
+    { i: 'bass', v: .85, n: 'E2 E2 E3 E2 E2 E2 E3 E2 A2 A2 A3 A2 E2! - . .' },
+    { i: 'd', v: .85, n: 'k h s h k h s h k s s s k+x - . .' }] },
+  boss: { spb: 4, tracks: [
+    { i: 'brass', v: .75, n: 'E3 - - . E3 - - . G3 - - . A#3! - - -' },
+    { i: 'squeak', v: .55, n: '. . . . . . . . B5 . A5 . . . . .' },
+    { i: 'bass', v: .85, n: 'E2 - - . E2 - - . G2 - - . A#2! - - -' },
+    { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+  level: { spb: 4, tracks: [
+    { i: 'pluck', v: .72, n: 'E5 D#5 D5 C#5 C5 B4 A#4 A4 E4 G4 A#4 C#5 E5! - - .' },
+    { i: 'bass', v: .85, n: 'E2 . E2 . D2 . D2 . C2 . C2 . B1! - . .' },
+    { i: 'd', v: .85, n: 'k . h . k . h . k . s s k+x - . x' }] },
 };
 
 // ---------------------------------------------------------------- voices ----
@@ -5120,7 +5904,7 @@ defStage({
   room: {
     top: hermanasRoomTop, bot: hermanasRoomBot, frame: 'hermanasChalk', life: hermanasLife, lifeY: 150, lifeSpacing: 36, miniLife: hermanasMiniLife,
     counter: { x: SW / 2, y: 7 }, counterFill: ['#ffffff', '#ffffff', '#fff2c0'], mini: hermanasMini, playTop: hermanasPlayTop, portal: { x: 64, y: 26, w: 128, h: 96 },
-    staticCols: ['#243029', '#2c3b35'], cardCol: RAMP.water,
+    staticCols: ['#243029', '#2c3b35'], cardCol: RAMP.water, special: hermanasSpecial, specialBot: hermanasSpecialBot,
   },
 });
 
@@ -5431,6 +6215,7 @@ function pomponLedScreen(g, S, t) {
 const POMPON_REACT = { ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' };
 function pomponRoomTop(g, S) {
   const t = S.pt || 0, beat = S.pb || 0, rt = S.reactT || 0;
+  pomponAnnPrewarm(); // one bubble letter per frame, ready before the first announcement
   g.drawImage(pomponArenaBg(), 0, 0);
   let pose = rt < 1.3 ? (POMPON_REACT[S.react] || 'sing') : (fl(beat / 2) % 2 ? 'sing' : 'idle');
   const special = S.phase === 'inter' && S.special && S.pb >= 2 ? S.special : null;
@@ -5520,8 +6305,158 @@ function pomponPlayTop(g, S) {
   pomponMini(g, 60, 140, S.g.state === 'play' ? 'watch' : S.g.state === 'won' ? 'win' : 'lose', S);
 }
 
+// ---------------------------------------------------------------- announcements
+// ¡MÁS RÁPIDO! · ¡JUEGO DEL JEFE! · ¡MÁS DIFÍCIL! the Palau Sant Guau way (room.special).
+// The bubble lettering is Pompón's title-card face from cards.js (loaded after the
+// stages), so the faces are built on first use.
+let POMPON_ANN = null;
+function pomponAnnFaces() {
+  if (POMPON_ANN) return POMPON_ANN;
+  const pink = CARD_POMPON_FACE;
+  const gold = Object.assign({}, CARD_POMPON_FACE, { id: 'pompGold', fill: ['#fffbe0', '#ffdf4f', '#e0a81e'], line2: '#5a2a00', shadow: '#2a1400' });
+  const cool = Object.assign({}, CARD_POMPON_FACE, { id: 'pompCool', fill: ['#ffffff', '#c9f3ff', '#7fd6ff'], line2: '#1a3a6b', shadow: '#0a1a3b' });
+  const A = { warm: [] };
+  for (const [k, w, maxW, st] of [['speed', '¡MÁS RÁPIDO!', 212, pink], ['boss', '¡JUEGO DEL JEFE!', 214, gold], ['level', '¡MÁS DIFÍCIL!', 212, cool], ['vs', 'VS', 60, gold]]) {
+    const f = cardFit(w, maxW, st); A[k] = { w, st: f }; A.warm.push([w, f]);
+  }
+  return (POMPON_ANN = A);
+}
+function pomponAnnPrewarm() { if (typeof cardPrewarm === 'function' && typeof CARD_POMPON_FACE !== 'undefined') cardPrewarm(pomponAnnFaces().warm); }
+// a word that drops in letter by letter and keeps bouncing on the beat
+function pomponAnnWord(g, W, x, y, t, t0, beat) {
+  const nk = t - t0; if (nk <= 0) return [];
+  return cardWord(g, W.w, x, y, W.st, { anim: i => { const a = cardAnimDrop(nk, i, { h: -40, stagger: .05 }); if (a.s !== 0 && nk > .6) a.dy = (a.dy || 0) - Math.max(0, Math.sin((beat + i * .12) * Math.PI)) * 2; return a; } });
+}
+// camera flashes popping in the crowd: a white star burst, sometimes lighting the room
+function pomponFlashes(g, t, rate, y0 = 146) {
+  let big = 0;
+  for (let k = 0; k < 3; k++) {
+    const n = fl(t * rate) - k, age = t * rate - fl(t * rate) + k; if (n < 0 || age > 1.4) continue;
+    const x = 12 + hash2(n, 11) * 232, y = y0 + hash2(n, 12) * 24, r = (1 - age / 1.4) * (6 + hash2(n, 13) * 4);
+    if (r < 1) continue;
+    for (const [dx, dy] of [[1, 0], [0, 1], [.7, .7], [.7, -.7]]) { linePx(g, x - dx * r * 1.6, y - dy * r * 1.6, x + dx * r * 1.6, y + dy * r * 1.6, '#ffffff'); }
+    disc(g, x, y, Math.max(1, r * .45), '#ffffff');
+    if (age < .12) big = Math.max(big, .14);
+  }
+  if (big) { g.globalAlpha = big; rect(g, 0, 0, SW, SH, '#ffffff'); g.globalAlpha = 1; }
+}
+// ¡MÁS RÁPIDO!: the concert speeds up, flashes pop, the LED ticker races
+function pomponAnnSpeed(g, S, t) {
+  const A = pomponAnnFaces(), beat = t * (S.bpm || 126) / 60, d = S.def;
+  g.drawImage(pomponArenaBg(), 0, 0);
+  pomponBeams(g, NOW * 2.6, 4, .2);
+  // music notes fly off her, faster and faster
+  for (let i = 0; i < 8; i++) { const p = (t * (1.1 + i * .08) + i * .13) % 1, side = i % 2 ? 1 : -1, x = 128 + side * (18 + p * 90), y = 104 - p * 60 + Math.sin(p * 9 + i) * 4; txt(g, '♪', x, y, ['#ff93bf', '#63e6ff', '#fff27a'][i % 3], { out: INK }); }
+  const hop = Math.abs(Math.sin(beat * Math.PI * 2)) * 4;
+  shadowOval(g, 128, 160, 16, 3, .6);
+  pomponDraw(g, 128, 160, 'speed', { jump: hop });
+  for (let i = 0; i < 5; i++) { const y = 70 + i * 16, w = 14 + (i % 2) * 10, x = (t * 520 + i * 70) % 300 - 40; rect(g, SW - x, y, w, 1, 'rgba(255,255,255,.6)'); }
+  pomponCrowd(g, 158, beat * 2, NOW * 1.8, 1.3);
+  pomponFlashes(g, t, 7);
+  // the title drops in over the lighting rig
+  pomponAnnWord(g, A.speed, 120, 8, t, .1, beat); // clear of the pause button
+  // the LED ticker races along the stage lip
+  const nb = rd((d.bpm || 126) * (1 + .13 * S.speed));
+  cardLedTicker(g, 176, '♥ ¡MÁS RÁPIDO! ♥ TEMPO ' + nb + ' BPM ', t * (2.2 + S.speed * .2), '#ff93bf');
+}
+// the darkness with holes where the spots fall (a canvas reused every frame)
+let POMPON_DARK = null;
+function pomponSpotCone(lx, tx) { return [[lx - 3, 14], [lx + 3, 14], [tx + 24, 156], [tx - 24, 156]]; }
+// ¡JUEGO DEL JEFE!: two spots hunt the stage, then pin Pompón and Vanesa: VS
+function pomponAnnBoss(g, S, t) {
+  const A = pomponAnnFaces(), beat = t * (S.bpm || 126) / 60, lock = E.outBack(clamp((t - .95) / .3, 0, 1));
+  g.drawImage(pomponArenaBg(), 0, 0);
+  const pk = lock > 0 ? 'angry' : 'boss';
+  pomponDraw(g, 76, 160, pk, {});
+  pomponDrawVanesa(g, 186, 160, 'smug', { flip: true });
+  pomponCrowd(g, 158, beat, NOW, .2);
+  // where each spot points: hunting, then locked on its artist
+  const xa = lerp(128 + Math.sin(t * 6.1) * 96 + Math.sin(t * 13) * 14, 76, lock), xb = lerp(128 + Math.sin(t * 5.3 + 2) * 96 + Math.sin(t * 11 + 1) * 14, 186, lock);
+  const L = POMPON_DARK || (POMPON_DARK = mkCanvas(SW, SH)), lg = L.g;
+  lg.clearRect(0, 0, SW, SH); lg.globalCompositeOperation = 'source-over'; lg.fillStyle = 'rgba(6,2,14,.82)'; lg.fillRect(0, 0, SW, SH);
+  lg.globalCompositeOperation = 'destination-out';
+  for (const [lx, tx] of [[40, xa], [216, xb]]) { polyPx(lg, pomponSpotCone(lx, tx), '#000000'); ellipsePx(lg, tx, 156, 26, 7, '#000000'); }
+  lg.globalCompositeOperation = 'source-over';
+  g.drawImage(L, 0, 0);
+  for (const [lx, tx, col] of [[40, xa, '#fff7ae'], [216, xb, '#c9a3ff']]) { g.globalAlpha = .13; polyPx(g, pomponSpotCone(lx, tx), col); g.globalAlpha = .3; ellipsePx(g, tx, 157, 26, 6, col); g.globalAlpha = 1; rect(g, lx - 4, 8, 9, 7, INK); rect(g, lx - 2, 14, 5, 2, col); }
+  // VS badge between them once the spots lock
+  if (lock > 0) {
+    g.save(); g.translate(131, 112); g.scale(lock, lock); g.rotate(Math.sin(t * 5) * .06);
+    cardBigStar(g, 0, 0, 22, t * .8, '#ff5d9e', '#ffffff'); cardBigStar(g, 0, 0, 16, t * .8, '#b3202e', '#ff5d9e');
+    cardWord(g, A.vs.w, 0, -11, A.vs.st);
+    g.restore();
+  }
+  // gold title, and the ribbon that names the fight
+  pomponAnnWord(g, A.boss, 120, 10, t, .25, beat);
+  const rk = E.outBack(clamp((t - 1.1) / .35, 0, 1));
+  if (rk > 0) {
+    g.save(); g.translate(SW / 2, 182); g.scale(rk, 1);
+    for (const sx of [-1, 1]) { polyPx(g, [[sx * 70, -7], [sx * 88, -9], [sx * 81, 0], [sx * 88, 9], [sx * 70, 7]], INK); polyPx(g, [[sx * 71, -6], [sx * 86, -8], [sx * 79, 0], [sx * 86, 8], [sx * 71, 6]], '#a3185a'); }
+    panel(g, -74, -9, 148, 18, '#ffdf4f', { r: 3, line: INK, hi: '#fffbe0', lo: '#e0a81e' });
+    txt(g, 'ESTILISMO DE GALA', 0, -4, '#5a2a00', { align: 'c', bold: true });
+    g.restore();
+  }
+}
+// ¡MÁS DIFÍCIL!: a key change — confetti, glowsticks up, notes climbing the steps
+function pomponAnnLevel(g, S, t) {
+  const A = pomponAnnFaces(), beat = t * (S.bpm || 126) / 60, lv = Math.max(1, Math.min(3, S.level || 2));
+  g.drawImage(pomponArenaBg(), 0, 0);
+  pomponBeams(g, NOW * 1.7, 4, .16, ['#ff82b4', '#63e6ff', '#fff27a', '#94ffb4']);
+  // the notes climb a staircase: the key goes up
+  for (let i = 0; i < 6; i++) {
+    const k = clamp((t - .2 - i * .1) / .25, 0, 1); if (k <= 0) continue;
+    for (const side of [-1, 1]) { const x = 128 + side * (40 + i * 13), y = 128 - i * 11 - (1 - E.outBack(k)) * 12; txt(g, '♪', x - 3, y - 6, ['#fff27a', '#ff93bf', '#63e6ff'][(i + (side > 0 ? 1 : 0)) % 3], { out: INK }); }
+  }
+  const jump = Math.abs(Math.sin(beat * Math.PI)) * 8;
+  shadowOval(g, 128, 160, 16 - jump * .4, 3, .6);
+  pomponDraw(g, 128, 160, 'win', { jump });
+  pomponCrowd(g, 158, beat, NOW * 1.5, 2.4);
+  // confetti from the rig
+  for (let i = 0; i < 46; i++) { const sp = 50 + hash2(i, 21) * 60, y = (t * sp + hash2(i, 22) * 200) % 210 - 12, x = (hash2(i, 23) * SW + Math.sin(t * 3 + i) * 8) % SW; if (t * sp + hash2(i, 22) * 200 < 12) continue; rect(g, x, y, 2 + (i % 2), 2, ['#ff5d9e', '#63e6ff', '#fff27a', '#94ffb4', '#ffffff'][i % 5]); }
+  // difficulty: one more bow lights up
+  panel(g, 176, 44, 72, 28, '#12061f', { r: 5, line: '#ff82b4' });
+  tiny(g, 'DIFICULTAD', 212, 49, '#ffd1e4', { align: 'c' });
+  for (let i = 0; i < 3; i++) { const bx = 196 + i * 16, by = 62, on = i < lv - 1 || (i === lv - 1 && t > .8); if (on) { const kk = i === lv - 1 ? spring(t - .8, 2.6, 7) : 1; g.save(); g.translate(bx, by); g.scale(kk, kk); pomponBowAt(g, 0, 0, .9); g.restore(); } else { pomponBowAt(g, bx, by, .9); g.globalAlpha = .7; disc(g, bx, by, 8, '#12061f'); g.globalAlpha = 1; } }
+  pomponAnnWord(g, A.level, 120, 8, t, .1, beat);
+}
+function pomponSpecial(g, S, kind, t) {
+  if (typeof cardWord !== 'function' || typeof CARD_POMPON_FACE === 'undefined') return false;
+  if (kind === 'speed') pomponAnnSpeed(g, S, t);
+  else if (kind === 'boss') pomponAnnBoss(g, S, t);
+  else if (kind === 'level') pomponAnnLevel(g, S, t);
+  else return false;
+}
+// the bottom-screen strip: a pink sash with hearts
+const POMPON_ANN_LBL = { speed: ['¡Sube el tempo del concierto!', '#ff5d9e'], boss: ['¡Estilismo de gala contra Vanesa!', '#e0a81e'], level: ['¡Cambio de tono! ¡Más difícil!', '#63a0ef'] };
+function pomponSpecialBot(g, S, kind, t) {
+  const L = POMPON_ANN_LBL[kind]; if (!L) return false;
+  const [label, col] = L, k = E.outBack(clamp(t * 3, 0, 1)), w = Math.max(160, txtW(label) + 40), y = rd(6 - (1 - k) * 34);
+  panel(g, SW / 2 - w / 2, y, w, 18, col, { r: 9, line: INK, hi: mixHex(col, '#ffffff', .45), lo: mixHex(col, INK, .3) });
+  for (const sx of [-1, 1]) { const hx = SW / 2 + sx * (w / 2 - 10), bob = Math.sin(t * 8 + sx) * 1; drawHeart(g, hx, y + 9 + bob, INK, 1.3); drawHeart(g, hx, y + 8 + bob, '#ffffff', 1); }
+  txt(g, label, SW / 2, y + 5, '#ffffff', { align: 'c', bold: true, out: mixHex(col, INK, .5) });
+  const sh = ((t * 90) % (w + 40)) - 20; g.globalAlpha = .35; rect(g, SW / 2 - w / 2 + sh, y + 2, 3, 14, '#ffffff'); g.globalAlpha = 1;
+}
+
 // ---------------------------------------------------------------- music -----
 const POMPON_SONGS = {
+  // the announcements: an idol-pop riser, a gala fanfare, the truck-driver key change
+  jingles: {
+    speed: { spb: 4, tracks: [
+      { i: 'bell', v: .65, n: 'E5 F#5 G#5 A5 B5 C#6 D#6 E6 F#6 G#6 A6 B6 C#7! - . .' },
+      { i: 'p12', v: .35, n: 'A4 C#5 E5 A5 A4 C#5 E5 A5 A4 C#5 E5 A5 A4! - . .' },
+      { i: 'bass', v: .85, n: 'A2 A3 A2 A3 A2 A3 A2 A3 E2 E3 E2 E3 A2! - . .' },
+      { i: 'd', v: .8, n: 'k c k c k c k c k c c c k+c+x - . .' }] },
+    boss: { spb: 4, tracks: [
+      { i: 'brass', v: .75, n: 'F#4 - - . F#4 - A4 - C#5 - - . F5! - - -' },
+      { i: 'bell', v: .45, n: '. . . . . . . . . . . . F6 - C#6 -' },
+      { i: 'bass', v: .9, n: 'F#2 . F#2 . F#2 . F#2 . D2 . D2 . C#2! - - -' },
+      { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+    level: { spb: 4, tracks: [
+      { i: 'bell', v: .6, n: 'A5 C#6 E6 A6 A5 C#6 E6 A6 B5 D#6 F#6 B6! - - . .' },
+      { i: 'p12', v: .35, n: '. . . . . . . . B4 D#5 F#5 B5 B4! - . .' },
+      { i: 'bass', v: .85, n: 'A2 . A3 . A2 . A3 . B2 . B3 . B2! - . .' },
+      { i: 'd', v: .85, n: 'k . c . k . c . k c c c k+x - . .' }] },
+  },
   card: { spb: 4, tracks: [
     { i: 'bell', v: .7, n: 'A5 . C#6 . E6 . A6 . G#6 . E6 . A6! - - -' },
     { i: 'p12', v: .35, n: 'A4 C#5 E5 A5 A4 C#5 E5 A5 D5 F#5 A5 D6 E5 G#5 B5 E6' },
@@ -5553,7 +6488,7 @@ defStage({
   songs: POMPON_SONGS, intro: 'pompon_in', outro: 'pompon_out',
   peek: (g, x, y, t) => drawS(g, pomponHead(fl(t * .7) % 2 ? 'win' : 'idle'), x, y - 8, { ax: .5, ay: 1 }),
   room: {
-    top: pomponRoomTop, bot: pomponRoomBot, frame: 'stage',
+    top: pomponRoomTop, bot: pomponRoomBot, frame: 'stage', special: pomponSpecial, specialBot: pomponSpecialBot,
     cardTop: (g, S) => { const t = S.pt || 0; g.drawImage(pomponArenaBg(), 0, 0); pomponBeams(g, t, 4, .12); pomponLedScreen(g, S, t); pomponCrowd(g, 158, t * 2.1, t, .6); }, life: pomponLife, lifeY: 164, lifeSpacing: 34, miniLife: pomponMiniLife,
     counter: { x: SW / 2, y: 16 }, counterFill: ['#ffffff', '#ffd1e4', '#ff5d9e'], mini: pomponMini, playTop: pomponPlayTop,
     portal: { x: 64, y: 30, w: 128, h: 96 }, staticCols: [POMPON_BOW[1], POMPON_BOW[0]], cardCol: RAMP.pink,
@@ -5923,6 +6858,7 @@ function rizosPoseFor(S) {
 }
 function rizosRoomTop(g, S) {
   const t = S.pt || 0, beat = S.pb || 0, rt = S.reactT || 0;
+  rizosAnnPrewarm(); // one neon letter per frame, ready before the first announcement
   g.drawImage(rizosClubBack(), 0, 0);
   rizosBeams(g, NOW, beat);
   rizosFloatBubbles(g, NOW, 9, 146);
@@ -6011,10 +6947,230 @@ function rizosPlayTop(g, S) {
   rizosMini(g, 0, 0, S.g.state === 'play' ? 'watch' : S.g.state === 'won' ? 'win' : 'lose', S);
 }
 
+// ---------------------------------------------------------------- announcements
+// ¡MÁS RÁPIDO! · ¡JUEGO DEL JEFE! · ¡MÁS DIFÍCIL! the Club Champú way (room.special).
+// The neon faces come from the title-card lettering in cards.js, which loads
+// after the stages, so they are built on first use.
+let RIZOS_ANN = null;
+function rizosAnnFaces() {
+  if (RIZOS_ANN) return RIZOS_ANN;
+  const neon = (id, tube, line, rgb) => ({
+    on: Object.assign({}, CARD_RIZOS_ON, { id: id + 'On', tube, line, glow: [.6, .34, .17, .07].map(a => 'rgba(' + rgb + ',' + a + ')') }),
+    off: Object.assign({}, CARD_RIZOS_OFF, { id: id + 'Off', tube: tube.map((c, i) => mixHex(c, '#12062a', .7 + i * .02)) }),
+  });
+  const faces = { speed: { on: CARD_RIZOS_ON, off: CARD_RIZOS_OFF }, boss: neon('rizosRed', ['#ff2a3d', '#ff8a95', '#fff0f2'], '#4a0b12', '255,42,61'), level: neon('rizosCyan', ['#22c8dc', '#9ff4ff', '#f0feff'], '#08384a', '34,200,220') };
+  const words = { speed: [['¡MÁS RÁPIDO!', 214]], boss: [['¡JUEGO', 160], ['DEL JEFE!', 186]], level: [['¡MÁS DIFÍCIL!', 212]] };
+  const A = { warm: [] };
+  for (const k in words) A[k] = words[k].map(([w, maxW]) => {
+    const on = cardFit(w, maxW, faces[k].on), off = cardFit(w, maxW, faces[k].off);
+    A.warm.push([w, on], [w, off]);
+    return { w, on, off };
+  });
+  return (RIZOS_ANN = A);
+}
+// letters buzz on one by one, then an old tube drops out now and then
+function rizosAnnWord(g, W, x, y, t, t0, o = {}) {
+  const lit = i => { const on = t0 + i * (o.step || .06); if (t < on) return false; if (t < on + .22) return hash2(fl(t * 30), i, 9) > .42; return (t * (o.buzz || 1.3) + i * .37) % 3.1 >= (o.gap || .06); };
+  return cardWord(g, W.w, x, y, i => lit(i) ? W.on : W.off, o.anim ? { anim: o.anim } : {});
+}
+function rizosAnnPrewarm() { if (typeof cardPrewarm === 'function' && typeof CARD_RIZOS_ON !== 'undefined') cardPrewarm(rizosAnnFaces().warm); }
+// a marquee board with chasing bulbs (w×h centred on x, top at y)
+function rizosMarquee(g, x, y, w, h, beat, bulb = '#fff27a') {
+  panel(g, x - w / 2, y, w, h, '#130726', { r: 7, line: INK }); panel(g, x - w / 2 + 4, y + 4, w - 8, h - 8, '#1b0b34', { r: 5, line: '#3b1a6a' });
+  const per = [], L = x - w / 2 + 3, R = x + w / 2 - 3, T = y + 2.5, B = y + h - 2.5;
+  for (let xx = L + 5; xx <= R - 5; xx += 8) per.push([xx, T]); for (let yy = T + 8; yy <= B - 5; yy += 8) per.push([R, yy]);
+  for (let xx = R - 5; xx >= L + 5; xx -= 8) per.push([xx, B]); for (let yy = B - 8; yy >= T + 5; yy -= 8) per.push([L, yy]);
+  per.forEach(([bx, by], i) => { const on = (i + fl(beat * 2)) % 3 === 0; disc(g, bx, by, 2, INK); disc(g, bx, by, 1.4, on ? bulb : mixHex(bulb, '#130726', .72)); if (on) px(g, bx - 1, by - 1, '#ffffff'); });
+}
+// a green seven-segment digit (the club's BPM counter), 7×13
+const RIZOS_SEG = ['1111110', '0110000', '1101101', '1111001', '0110011', '1011011', '1011111', '1110000', '1111111', '1111011'];
+function rizosSeg(g, x, y, d, on = '#5bff9a', off = '#123a22') {
+  const m = RIZOS_SEG[d] || '0000000', seg = [[1, 0, 5, 1], [6, 1, 1, 5], [6, 7, 1, 5], [1, 12, 5, 1], [0, 7, 1, 5], [0, 1, 1, 5], [1, 6, 5, 1]];
+  seg.forEach(([sx, sy, w, h], i) => rect(g, x + sx, y + sy, w, h, m[i] === '1' ? on : off));
+}
+function rizosSegNum(g, x, y, n, on, off) { const s = String(Math.max(0, rd(n))).padStart(3, ' '); [...s].forEach((c, i) => rizosSeg(g, x + i * 9, y, c === ' ' ? -1 : +c, on, off)); }
+// the DJ deck across the bottom of the screen (brushed metal, knobs, a crossfader)
+function rizosDeckSlab() {
+  return mdl('rizosDeckSlab', () => {
+    const c = mkCanvas(SW, 88), g = c.g;
+    rect(g, 0, 0, SW, 88, INK); bandsV(g, 0, 2, SW, 86, ['#3a3350', '#2c2640', '#221d33', '#1a1628']);
+    rect(g, 0, 1, SW, 1, '#8f88a8'); rect(g, 0, 2, SW, 1, '#5f5883');
+    for (let y = 6; y < 88; y += 3) for (let x = (y * 7) % 11; x < SW; x += 11) px(g, x, y, '#3d3656');
+    // the mixer strip on the right: two knobs, level meters, a crossfader
+    rect(g, 166, 50, 84, 34, INK); rect(g, 167, 51, 82, 32, '#15111f');
+    for (const kx of [178, 198]) { disc(g, kx, 62, 5, INK); disc(g, kx, 62, 4, '#6f7a92'); px(g, kx, 59, '#ffffff'); }
+    rect(g, 210, 70, 34, 4, INK); rect(g, 211, 71, 32, 2, '#3d3656'); rect(g, 222, 67, 8, 10, INK); rect(g, 223, 68, 6, 8, '#cfd6e8');
+    return c;
+  });
+}
+// the turntable: platter with strobe dots, the record, a pink star label, the arm
+function rizosPlatter(g, x, y, spin, blur) {
+  disc(g, x, y, 42, INK); disc(g, x, y, 41, '#8f98b8'); disc(g, x, y, 39, '#5f6485');
+  for (let i = 0; i < 36; i++) { const a = i / 36 * TAU + spin * .5; px(g, x + Math.cos(a) * 40, y + Math.sin(a) * 40, i % 2 ? '#dfe4f2' : '#3a3350'); }
+  disc(g, x, y, 36, '#1b1627'); for (let r = 13; r < 35; r += 2) ringPx(g, x, y, r, r % 4 ? '#2b2540' : '#40395e');
+  // motion: light streaks sweeping round the grooves
+  g.globalAlpha = .22 + blur * .3;
+  for (let q = 0; q < 4; q++) { const a0 = spin + q * TAU / 4; for (let a = 0; a < .9 * blur + .2; a += .06) px(g, x + Math.cos(a0 - a) * (18 + q * 4), y + Math.sin(a0 - a) * (18 + q * 4), '#ffffff'); }
+  g.globalAlpha = 1;
+  disc(g, x, y, 11, INK); disc(g, x, y, 10, '#ff3d8b');
+  polyPx(g, rizosStarPts(x, y, 7, 3, spin), '#fff4fa'); disc(g, x, y, 1.5, INK);
+  // tone arm resting in the groove
+  disc(g, x + 50, y - 36, 5, INK); disc(g, x + 50, y - 36, 4, '#cfd6e8');
+  thickLine(g, x + 50, y - 36, x + 30, y - 10, 1.6, INK); thickLine(g, x + 50, y - 36, x + 30, y - 10, .8, '#dfe4f2');
+  rect(g, x + 26, y - 12, 6, 4, INK); rect(g, x + 27, y - 11, 4, 2, '#8f98b8');
+}
+// ¡MÁS RÁPIDO!: close-up on the decks, the pitch fader rides up, the record winds up
+function rizosAnnSpeed(g, S, t) {
+  const A = rizosAnnFaces(), beat = t * (S.bpm || 124) / 60, d = S.def;
+  g.drawImage(rizosClubBack(), 0, 0);
+  rizosBeams(g, NOW * 2.4, beat * 2);
+  for (let i = 0; i < 12; i++) { const y = 60 + (i * 23) % 44, x = SW - ((t * (430 + (i % 4) * 90) + i * 61) % (SW + 60)); rect(g, x, y, 18 + (i % 3) * 12, 1, i % 3 ? 'rgba(255,255,255,.55)' : RIZOS_NEON.cyan); }
+  // Rizos behind the decks, bobbing double-time
+  const bob = Math.abs(Math.sin(beat * Math.PI * 2)) * 3;
+  drawS(g, rizosHead('grin'), 128, 82 - bob, { rot: Math.sin(beat * Math.PI) * .06 });
+  g.drawImage(rizosDeckSlab(), 0, 112);
+  rizosPlatter(g, 62, 156, t * (6 + t * 24), Math.min(1, t * 1.4));
+  // the pitch fader: its knob rides from 0 to +8
+  const fx = 132, fk = E.outBack(clamp((t - .1) / .35, 0, 1)), ky = rd(lerp(155, 127, fk));
+  rect(g, fx - 2, 122, 5, 66, INK); rect(g, fx - 1, 123, 3, 64, '#0b0418');
+  for (let i = 0; i <= 8; i++) { const yy = 124 + i * 7; hline(g, fx - 7, fx - 4, yy, '#8f88a8'); hline(g, fx + 5, fx + 8, yy, '#8f88a8'); }
+  tiny(g, '+8', fx + 12, 122, RIZOS_NEON.cyan); tiny(g, '0', fx + 12, 152, '#8f88a8'); tiny(g, '-8', fx + 12, 180, '#8f88a8');
+  if (fk > 0 && fk < 1) { g.globalAlpha = .5; rect(g, fx - 7, ky + 4, 15, 155 - ky, RIZOS_NEON.cyan); g.globalAlpha = 1; }
+  rect(g, fx - 8, ky - 3, 17, 8, INK); rect(g, fx - 7, ky - 2, 15, 6, '#cfd6e8'); hline(g, fx - 6, fx + 6, ky, INK); hline(g, fx - 6, fx + 6, ky - 2, '#ffffff');
+  // the BPM counter rolls up to the new tempo
+  const nb = (d.bpm || 124) * (1 + .13 * S.speed), ob = (d.bpm || 124) * (1 + .13 * Math.max(0, S.speed - 1)), rk = clamp((t - .2) / .5, 0, 1);
+  panel(g, 170, 118, 78, 34, '#0b0418', { r: 4, line: '#3d3656' });
+  tiny(g, 'BPM', 178, 124, RIZOS_NEON.cyan);
+  const blink = rk >= 1 && fl(t * 6) % 2 === 0;
+  rizosSegNum(g, 204, 123, lerp(ob, nb, E.outC(rk)), blink ? '#b8ffcf' : '#5bff9a');
+  tiny(g, 'PITCH +' + rd(13 * S.speed) + '%', 178, 139, '#ff9fcb');
+  // the marquee drops in and the neon buzzes on
+  const mk = E.outBack(clamp(t / .3, 0, 1)), my = rd(lerp(-60, 4, mk));
+  rizosMarquee(g, SW / 2, my, 244, 50, beat);
+  rizosAnnWord(g, A.speed[0], 124, my + 12, t, .14);
+  // strobes on the off-beats while it winds up
+  if (beat < 2.2 && (beat * 2) % 1 < .16) { g.globalAlpha = .22; rect(g, 0, 0, SW, SH, '#ffffff'); g.globalAlpha = 1; }
+}
+// La Gran Maraña's silhouette: a mountain of snarled curls (220×190, drawn once)
+function rizosMaranaShadow() {
+  return mdl('rizosMaranaShadow', () => {
+    const c = mkCanvas(230, 196), g = c.g, cx = 115;
+    const lumps = []; for (let i = 0; i < 26; i++) { const a = Math.PI + i / 25 * Math.PI, rr = 84 + hash2(i, 3) * 18; lumps.push([cx + Math.cos(a) * rr, 190 + Math.sin(a) * rr * 1.72, 16 + hash2(i, 4) * 12]); }
+    for (let i = 0; i < 70; i++) { const a = hash2(i, 5) * TAU, rr = hash2(i, 6) * 150; lumps.push([cx + Math.cos(a) * rr * .56, 190 - Math.abs(Math.sin(a)) * rr, 18]); }
+    // frizz sticking out of the edge
+    for (let i = 0; i < 60; i++) { const a = Math.PI + i / 59 * Math.PI, r0 = 96 + hash2(i, 7) * 12, r1 = r0 + 8 + hash2(i, 8) * 12; linePx(g, cx + Math.cos(a) * r0, 190 + Math.sin(a) * r0 * 1.72, cx + Math.cos(a + .05) * r1, 190 + Math.sin(a + .05) * r1 * 1.72, '#2a0612'); }
+    for (const [x, y, r] of lumps) disc(g, x, y, r + 1, '#050008');
+    for (const [x, y, r] of lumps) disc(g, x, y, r, '#1a030c');
+    // tangled loops glinting inside
+    for (let i = 0; i < 16; i++) { const x0 = cx + (hash2(i, 9) - .5) * 150, y0 = 60 + hash2(i, 10) * 120, r = 5 + hash2(i, 11) * 7; let lx = null, ly = null; for (let a = 0; a < 5.5; a += .35) { const px0 = x0 + Math.cos(a) * r, py0 = y0 + Math.sin(a) * r * .8 + a * 1.5; if (lx != null) linePx(g, lx, ly, px0, py0, i % 3 ? '#3a0a18' : '#5a1428'); lx = px0; ly = py0; } }
+    return c;
+  });
+}
+// ¡JUEGO DEL JEFE!: the club goes red, the tangle rises behind the floor, Rizos freezes
+function rizosAnnBoss(g, S, t) {
+  const A = rizosAnnFaces(), beat = t * (S.bpm || 124) / 60;
+  g.drawImage(rizosClubBack(), 0, 0);
+  g.globalAlpha = Math.min(.6, t * 1.8); rect(g, 0, 0, SW, SH, '#5a0012'); g.globalAlpha = 1;
+  // red spots searching the room
+  for (let i = 0; i < 2; i++) { const ox = i ? 236 : 20, a = Math.PI / 2 + Math.sin(t * 1.6 + i * 2.2) * .6, L = 250; g.globalAlpha = .16; polyPx(g, [[ox, 8], [ox + Math.cos(a - .12) * L, 8 + Math.sin(a - .12) * L], [ox + Math.cos(a + .12) * L, 8 + Math.sin(a + .12) * L]], '#ff2a3d'); g.globalAlpha = 1; }
+  // the shadow rises and looms, breathing
+  const rk = E.outC(clamp(t / 1.1, 0, 1)), sy = rd(lerp(290, 178, rk) + Math.sin(t * 2.4) * 2);
+  drawS(g, rizosMaranaShadow(), 158, sy, { ax: .5, ay: 1 });
+  // knots crackle on its flanks, its eyes open
+  if (rk > .6) { rizosDrawKnot(g, 214, sy - 70, .9, t, 3, true); rizosDrawKnot(g, 238, sy - 26, .75, t, 7, true); }
+  const ek = clamp((t - .95) / .2, 0, 1), blink = (t % 2.4) > 2.28 ? .15 : 1;
+  if (ek > 0) for (const s of [-1, 1]) {
+    const ex = 164 + s * 20, ey = sy - 96, h = Math.max(1, 6 * ek * blink);
+    polyPx(g, [[ex - 11 * s, ey - h], [ex + 9 * s, ey - h * .2 - 3], [ex + 7 * s, ey + h * .6], [ex - 9 * s, ey + h * .5]], INK);
+    polyPx(g, [[ex - 9 * s, ey - h + 1], [ex + 7 * s, ey - h * .2 - 2], [ex + 5 * s, ey + h * .5 - 1], [ex - 7 * s, ey + h * .4 - 1]], '#ffe14f');
+    if (h > 3) disc(g, ex + s, ey - 1, 1.6, '#c0102a');
+  }
+  // the floor lights up red only
+  rizosDanceFloor(g, 162, beat, 4); g.globalAlpha = .55; rect(g, 0, 162, SW, 30, '#5a0012'); g.globalAlpha = 1;
+  // Rizos, frozen in the corner, glasses popping off
+  rizosDraw(g, 60, 196 + Math.round(Math.sin(t * 40) * .6), 'boss');
+  // the broken red sign
+  const wk = E.outBack(clamp((t - .15) / .3, 0, 1));
+  g.save(); g.translate(0, rd((1 - wk) * -70));
+  rizosAnnWord(g, A.boss[0], 150, 8, t, .2, { buzz: 2.2, gap: .18 }); // clear of the pause button
+  rizosAnnWord(g, A.boss[1], 138, 40, t, .45, { buzz: 1.9, gap: .14 });
+  g.restore();
+  if (fl(t * 11) % 29 === 0) { g.globalAlpha = .35; rect(g, 0, 0, SW, SH, '#05000a'); g.globalAlpha = 1; }
+}
+// ¡MÁS DIFÍCIL!: the difficulty board jumps and Rizos' afro pumps up, pop by pop
+function rizosAnnLevel(g, S, t) {
+  const A = rizosAnnFaces(), beat = t * (S.bpm || 124) / 60, lv = Math.max(1, Math.min(3, S.level || 2));
+  g.drawImage(rizosClubBack(), 0, 0);
+  g.globalAlpha = .3; rect(g, 0, 0, SW, SH, '#0b3a5a'); g.globalAlpha = 1;
+  rizosBeams(g, NOW * 1.6, beat);
+  rizosFloatBubbles(g, NOW, 10, 150);
+  rizosDanceFloor(g, 156, beat, 4);
+  // the afro pumps three times; curls fly off at every pump
+  const pumps = [.3, .6, .9], done = pumps.filter(p => t >= p).length;
+  let sc = 1; pumps.forEach((p, i) => { if (t >= p) sc += .12 * (i === done - 1 ? spring(t - p, 3, 9) : 1); });
+  const B = rizosBodyBase('ready'), X = 128 - 48, Y = 178 - 128;
+  shadowOval(g, 128, 178, 26, 3, .55);
+  g.drawImage(B.body, X, Y);
+  drawS(g, rizosHead(done >= 3 ? 'joy' : 'grin'), X + 48, Y + 72, { s: sc, ay: .85, rot: Math.sin(beat * Math.PI) * .04 });
+  g.drawImage(B.arms, X, Y);
+  const hy = Y + 72 - 44 * sc;
+  pumps.forEach((p, i) => { const k = t - p; if (k < 0 || k > .7) return; for (let j = 0; j < 7; j++) { const a = -Math.PI * (.1 + j / 6 * .8) + i, r = 40 * sc + k * 70, x = 128 + Math.cos(a) * r, y = hy + Math.sin(a) * r * .8; g.globalAlpha = 1 - k / .7; for (let q = 0; q < 2.6; q += .45) px(g, x + Math.cos(q + a) * 3, y + Math.sin(q + a) * 3, j % 2 ? RIZOS_FUR[4] : RIZOS_FUR[2]); g.globalAlpha = 1; } });
+  // the difficulty board on the wall: it jolts on every pump and lights one more ball
+  const jolt = pumps.reduce((m, p) => Math.max(m, t >= p && t < p + .18 ? (1 - (t - p) / .18) * 4 : 0), 0);
+  const bx0 = 190, by0 = rd(92 - jolt);
+  panel(g, bx0 - 36, by0 - 14, 72, 34, '#0b0418', { r: 5, line: '#22c8dc' });
+  tiny(g, 'DIFICULTAD', bx0, by0 - 8, '#9ff4ff', { align: 'c' });
+  for (let i = 0; i < 3; i++) {
+    const bx = bx0 - 16 + i * 16, by = by0 + 9, on = i < lv - 1 || (i === lv - 1 && t > .9);
+    if (on) { rizosDiscoBall(g, bx, by, 5, NOW + i, { noChain: true }); if (i === lv - 1 && t < 1.4) for (let q = 0; q < 6; q++) { const a = q / 6 * TAU + t * 6, rr = 8 + (t - .9) * 18; drawStar(g, bx + Math.cos(a) * rr, by + Math.sin(a) * rr, 2, '#9ff4ff'); } }
+    else { disc(g, bx, by, 5, INK); disc(g, bx, by, 4, '#2a1052'); }
+  }
+  // cyan neon across the top
+  const mk = E.outBack(clamp(t / .3, 0, 1)), my = rd(lerp(-50, 2, mk));
+  rizosAnnWord(g, A.level[0], 120, my + 6, t, .12);
+}
+function rizosSpecial(g, S, kind, t) {
+  if (typeof cardWord !== 'function' || typeof CARD_RIZOS_ON === 'undefined') return false;
+  if (kind === 'speed') rizosAnnSpeed(g, S, t);
+  else if (kind === 'boss') rizosAnnBoss(g, S, t);
+  else if (kind === 'level') rizosAnnLevel(g, S, t);
+  else return false;
+}
+// the bottom-screen strip: a neon tube sign in the colour of the announcement
+const RIZOS_ANN_LBL = { speed: ['¡El DJ sube el pitch!', '#ff3d8b'], boss: ['¡Llega La Gran Maraña!', '#ff2a3d'], level: ['¡Crece el afro… y el reto!', '#22c8dc'] };
+function rizosSpecialBot(g, S, kind, t) {
+  const L = RIZOS_ANN_LBL[kind]; if (!L) return false;
+  const [label, col] = L, k = E.outBack(clamp(t * 3, 0, 1)), y = rd(6 - (1 - k) * 34), w = Math.max(150, txtW(label) + 34);
+  g.globalAlpha = .35; panel(g, SW / 2 - w / 2 - 3, y - 3, w + 6, 24, '#000000', { r: 7, line: '#000000' }); g.globalAlpha = 1;
+  panel(g, SW / 2 - w / 2, y, w, 18, '#130726', { r: 6, line: col });
+  ringRect(g, SW / 2 - w / 2 + 2, y + 2, w - 4, 14, 1, mixHex(col, '#130726', .5));
+  const on = t > .1 && (t * 1.7) % 2.3 > .05;
+  txt(g, label, SW / 2, y + 5, on ? mixHex(col, '#ffffff', .55) : mixHex(col, '#130726', .55), { align: 'c', bold: true, out: on ? mixHex(col, '#130726', .45) : null });
+  for (const sx of [-1, 1]) { const bx = SW / 2 + sx * (w / 2 - 7); disc(g, bx, y + 9, 2, INK); disc(g, bx, y + 9, 1.4, fl(t * 6) % 2 ? '#fff27a' : '#5a3d14'); }
+}
+
 // ---------------------------------------------------------------- music -----
 // disco-funk: four on the floor, octave bass, string stabs, clavinet plucks
 const RIZOS_DRUM = 'k h o h k+c h o h k h o h k+c h o h';
 const RIZOS_SONGS = {
+  // the announcements: a funk run winding up, a sinister disco stab, a key change
+  jingles: {
+    speed: { spb: 4, tracks: [
+      { i: 'pluck', v: .7, n: 'A4 C5 D5 E5 G5 A5 C6 D6 E6 G6 A6! - - . . .' },
+      { i: 'brass', v: .55, n: '. . A4+C5+E5 . . . A4+C5+E5 . . . A4+C5+E5 . E5+A5+C6! - . .' },
+      { i: 'bass', v: .85, n: 'A2 A3 A2 A3 A2 A3 A2 A3 A2 A3 A2 A3 A2! - . .' },
+      { i: 'd', v: .85, n: 'k z c z k z c z k z c z k+x - . .' }] },
+    boss: { spb: 4, tracks: [
+      { i: 'brass', v: .75, n: 'A3 - - . A3 - - . C4 - - . D#4! - - -' },
+      { i: 'pad', v: .45, n: 'A2+E3 - - - - - - - D#3+A3 - - - - - - -' },
+      { i: 'bass', v: .9, n: 'A1 . A1 A2 . A1 . A2 A1 . A1 A2 . D#2 D#2 D#2' },
+      { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+    level: { spb: 4, tracks: [
+      { i: 'pluck', v: .7, n: 'A4 C#5 E5 A5 B4 D#5 F#5 B5 C#5 F5 G#5 C#6! - - . .' },
+      { i: 'bell', v: .5, n: '. . . . . . . . . . . . C#6 - E6 -' },
+      { i: 'bass', v: .85, n: 'A2 . A3 . B2 . B3 . C#3 . C#4 . C#3! - . .' },
+      { i: 'd', v: .85, n: 'k h o h k h o h k c c c k+x - . .' }] },
+  },
   card: { spb: 4, tracks: [
     { i: 'brass', v: .6, n: 'A4 . . A4 . . C5 . D5 - E5 - . . . . G5 - E5 . D5 . C5 . A4! - - - . . . .' },
     { i: 'pad', v: .5, n: 'A3+C4+E4 - - - - - - - D3+F3+A3 - - - - - - - E3+G3+B3 - - - - - - - A3+C4+E4 - - - . . . .' },
@@ -6049,6 +7205,7 @@ defStage({
   intro: 'rizos_in', outro: 'rizos_out',
   room: {
     top: rizosRoomTop, bot: rizosRoomBot, frame: 'disco', life: rizosLife, miniLife: rizosMiniLife, lifeY: 140, lifeSpacing: 34,
+    special: rizosSpecial, specialBot: rizosSpecialBot,
     counter: { x: SW / 2, y: 5 }, counterFill: ['#ffffff', '#ffd1e4', '#ff5d9e'], mini: rizosMini, playTop: rizosPlayTop, portal: { x: 64, y: 26, w: 128, h: 96 },
     staticCols: ['#2a1052', '#4a2590'], playCols: ['#2a1052', '#3b1a6a'], cardCol: ['#1d0b3d', '#2a1052', '#3b1a6a', '#5a2a9a', '#8f6cff'],
   },
@@ -6200,8 +7357,8 @@ function chibiStar(g, x, y, col, lens) {
 // ============================================================================
 //  FINAL — SÚPER KEIKO · ¡TODO!  (Wario-Man homage)
 //  Keiko (Anahí's westie) eats the whole "Pack de Chuches" and becomes Súper
-//  Keiko. Every microgame of every stage, faster and faster, then the boss the
-//  user dreamt up in his parody video: ¡PREPARA EL PERRO!
+//  Keiko. Every microgame of every stage, faster and faster, then the boss:
+//  El Monstruo de Barro (washing it reveals Nube, lost in the sewers).
 //  + the extra modes unlocked after the ending: MEZCLA MAESTRA and A UN PELO.
 // ============================================================================
 'use strict';
@@ -6315,6 +7472,7 @@ function barcelonaNight(g, t) {
 }
 function heroRoomTop(g, S) {
   const t = S.pt || 0, rt = S.reactT || 0;
+  if (typeof cardPrewarm === 'function') cardPrewarm(swAnnWords(S.def.id === 'mezcla')); // the announcements' letters, one per frame
   barcelonaNight(g, NOW);
   let x = 128, y = 98, rot = 0, mood = 'happy', flip = false;
   const r = S.react;
@@ -6372,6 +7530,197 @@ function mudMonsterModel(f) {
   });
 }
 function drawMudMonster(g, x, y, t, s = 1) { drawS(g, mudMonsterModel(fl(t * 3) % 2), x, y, { s, sy: s * (1 + Math.sin(t * 4) * .03) }); }
+// ---------------------------------------------------------------- announcements
+// ¡MÁS RÁPIDO! · ¡JUEGO DEL JEFE! · ¡MÁS DIFÍCIL!, as comic-book splash panels:
+// Súper Keiko zooming through speed lines, the Mud Monster bursting out of the
+// sewer, a new chapter with her cape snapping. Mezcla Maestra gets a mixtape.
+// Lettering: the comic faces of her title card (src/cards.js, read at run time).
+let SW_FACES = null;
+function swFaces() {
+  return SW_FACES || (SW_FACES = {
+    mud: { id: 'swMud', u: 2.4, r: 2.6, slant: .2, gap: .7, fill: ['#f2d49a', '#b8894f', '#7a5226'], line: INK, rim: 2, sx: 3, sy: 4, shadow: ['#4a2f14', '#2a1a0a'], hi: '#fff2c0' },
+    sfx: { id: 'swSfx', u: 1.9, r: 2.1, slant: .3, gap: .6, fill: ['#ffffff', '#b3f3ff', '#63a0ef'], line: INK, rim: 2, sx: 2, sy: 3, shadow: '#1c3aa8' },
+    glorgh: { id: 'swGlorgh', u: 1.7, r: 1.9, slant: -.15, gap: .6, fill: ['#e8ffc9', '#9cff6b', '#4fa83a'], line: INK, rim: 2, sx: 2, sy: 2, shadow: '#1f4a1a' },
+  });
+}
+const SW_ANN_WORDS = {};
+function swAnnWords(mix) {
+  const k = mix ? 'mix' : 'hero'; if (SW_ANN_WORDS[k]) return SW_ANN_WORDS[k];
+  const F = swFaces();
+  return (SW_ANN_WORDS[k] = mix ? [['¡MÁS RÁPIDO!', i => cardMixFace(i, 0)]] : [
+    ['¡MÁS RÁPIDO!', cardFit('¡MÁS RÁPIDO!', 214, CARD_HERO_FACE)], ['¡ZOOM!', cardFit('¡ZOOM!', 92, F.sfx)],
+    ['¡JUEGO', cardFit('¡JUEGO', 160, F.mud)], ['DEL JEFE!', cardFit('DEL JEFE!', 210, F.mud)], ['¡GLORGH!', cardFit('¡GLORGH!', 80, F.glorgh)],
+    ['¡MÁS DIFÍCIL!', cardFit('¡MÁS DIFÍCIL!', 228, CARD_HERO_FACE)], ['¡FLAP!', cardFit('¡FLAP!', 64, CARD_HERO_SMALL)]]);
+}
+function swPanelFrame(g) { ringRect(g, 0, 0, SW, SH, 2, '#ffffff'); ringRect(g, 2, 2, SW - 4, SH - 4, 3, INK); }
+// a jagged comic burst (SFX balloon), centred at (x, y)
+function swBurst(g, x, y, rx, ry, n, fill, t, seed = 0) {
+  const pts = []; for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * TAU + seed, k = i % 2 ? .62 : 1 + (hash2(i, seed * 9 | 0, 5) - .5) * .25 + Math.sin(t * 12 + i) * .03; pts.push([x + Math.cos(a) * rx * k, y + Math.sin(a) * ry * k]); }
+  polyPx(g, pts.map(([a, b]) => [a + 2, b + 2]), INK); polyPx(g, pts.map(([a, b]) => [x + (a - x) * 1.06, y + (b - y) * 1.08]), INK); polyPx(g, pts, fill);
+}
+function swAnnSpeedBg() {
+  return mdl('sw:annSpeedBg', () => {
+    const c = mkCanvas(SW, SH), g = c.g;
+    bandsV(g, 0, 0, SW, SH, ['#fff7ae', '#ffec94', '#ffdf6e', '#ffc94a', '#ffab52']);
+    for (let y = 2; y < SH; y += 6) for (let x = ((y / 6) % 2) * 3 + 2; x < SW; x += 6) { const v = x / SW * .45 + y / SH * .75; if (v > .6) disc(g, x, y, Math.min(2.2, (v - .6) * 5), '#ec8a3a'); }
+    return c;
+  });
+}
+function swAnnSpeed(g, S, t) {
+  g.drawImage(swAnnSpeedBg(), 0, 0);
+  for (let i = 0; i < 16; i++) { const y = 52 + i * 8 + (i % 3) * 2, len = 30 + (i * 37 % 60), x = SW - ((t * 820 + i * 131) % (SW + 160)); rect(g, x, y, len, i % 4 === 0 ? 2 : 1, i % 3 ? '#ffffff' : '#ec5e5e'); }
+  const W = swAnnWords(false);
+  // ¡ZOOM! bursts where she took off
+  const zk = spring(t - .3, 2.6, 7);
+  if (zk > 0) { g.save(); g.translate(64, 84); g.rotate(-.14); g.scale(zk, zk); swBurst(g, 0, 0, 58, 30, 14, '#ec5e5e', t, 1); swBurst(g, 0, 0, 48, 23, 14, '#ffdf4f', t, 1.2); cardWord(g, W[1][0], 0, -12, W[1][1]); g.restore(); }
+  // Súper Keiko shoots across with afterimages
+  const fk = E.outQuint(clamp(t / .55, 0, 1)), kx = lerp(-80, 156, fk) + (t > .55 ? Math.sin(t * 5) * 4 : 0), ky = 132 + Math.sin(t * 11) * 2;
+  // motion streaks trail her, plus a single ghost of where she just was
+  for (let j = 0; j < 8; j++) { const yy = rd(ky - 20 + j * 6), len = rd((36 + (j * 23 % 50)) * (1.6 - fk * .6)); rect(g, rd(kx - 44 - len), yy, len, j % 3 === 0 ? 2 : 1, j % 2 ? '#ffffff' : '#fff27a'); }
+  g.globalAlpha = .22; drawSuperWestie(g, kx - 30, ky, NOW * 2 - .1, { lift: 1 }); g.globalAlpha = 1;
+  drawSuperWestie(g, kx, ky, NOW * 2, { lift: 1 });
+  const nk = t - .12; if (nk > 0) cardWord(g, W[0][0], 122, 20, W[0][1], { anim: i => cardAnimSlam(nk, i, { from: 2.2, stagger: .04 }) });
+  swPanelFrame(g);
+}
+function swAnnBossBg() {
+  return mdl('sw:annBossBg', () => {
+    const c = mkCanvas(SW, SH), g = c.g;
+    bandsV(g, 0, 0, SW, 130, ['#0b0c2a', '#141848', '#1f1d52', '#2b2458']);
+    for (let x = -4; x < SW; x += 42) { const h = 70 + hash2(x + 9, 3) * 30; rect(g, x, 130 - h, 40, h, '#1b1742'); rect(g, x, 130 - h, 40, 2, '#2a2450'); for (let wy = 130 - h + 8; wy < 124; wy += 12) for (let wx = x + 5; wx < x + 36; wx += 10) rect(g, wx, wy, 5, 7, hash2(wx, wy) < .4 ? '#ffd87a' : '#2a2450'); }
+    fillPat(g, panotPat(), 0, 130, SW, 34); g.globalAlpha = .6; rect(g, 0, 130, SW, 34, '#140c2a'); g.globalAlpha = 1;
+    rect(g, 0, 164, SW, 3, '#5b5a66'); rect(g, 0, 167, SW, 25, '#2a2838'); for (let x = 0; x < SW; x += 24) rect(g, x, 184, 12, 2, '#6b6977');
+    ellipsePx(g, 128, 176, 23, 8, INK); ellipsePx(g, 128, 176, 21, 6.5, '#0b0810');
+    return c;
+  });
+}
+function swAnnBoss(g, S, t) {
+  g.drawImage(swAnnBossBg(), 0, 0);
+  const W = swAnnWords(false), F = swFaces();
+  // green sewer light pouring out of the hole
+  const gl = .5 + .5 * Math.sin(t * 7);
+  g.globalAlpha = .1 + .06 * gl; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * .28; polyPx(g, [[118, 176], [138, 176], [128 + Math.cos(a - .1) * 170, 176 + Math.sin(a - .1) * 170], [128 + Math.cos(a + .1) * 170, 176 + Math.sin(a + .1) * 170]], '#9cff6b'); } g.globalAlpha = 1;
+  // the manhole cover rattles, then flies off
+  const lt = t - .15;
+  if (lt < 1.4) {
+    const lx = lt < 0 ? 128 + (hash2(fl(t * 40), 3) - .5) * 3 : 128 + lt * 90, ly = lt < 0 ? 175 : 175 - (lt * 300 - lt * lt * 420), rot = lt < 0 ? 0 : lt * 9;
+    g.save(); g.translate(rd(lx), rd(ly)); g.rotate(rot); ellipsePx(g, 0, 0, 21, 7, INK); ellipsePx(g, 0, 0, 20, 6, '#5b5a66'); for (let i = -14; i <= 14; i += 4) hline(g, i - 1, i + 1, 0, '#44424f'); g.restore();
+  }
+  // the Mud Monster heaves itself up out of the sewer
+  const mk = E.outBack(clamp((t - .28) / .6, 0, 1)), my = rd(lerp(236, 122, mk));
+  g.save(); g.beginPath(); g.rect(0, 0, SW, 177); g.clip(); drawMudMonster(g, 128 + Math.sin(t * 5) * 2, my, NOW, .85); g.restore();
+  ellipsePx(g, 128, 177, 21, 4, '#0b0810'); for (let a = 0; a <= Math.PI; a += .06) { px(g, 128 + Math.cos(a) * 23, 176 + Math.sin(a) * 8, INK); px(g, 128 + Math.cos(a) * 22, 176 + Math.sin(a) * 7, '#5b5a66'); }
+  // mud splats flying out and landing on the pavement
+  const st = t - .38;
+  if (st > 0) for (let j = 0; j < 10; j++) {
+    const a = -Math.PI / 2 + (hash2(j, 1, 7) - .5) * 2.6, v = 110 + hash2(1, j, 7) * 130, tt = Math.min(st, 1.4);
+    const x = 128 + Math.cos(a) * v * tt, y = 168 + Math.sin(a) * v * tt + 280 * tt * tt;
+    if (y < 170) { disc(g, x, y, 4 + (j % 3), INK); disc(g, x, y, 3 + (j % 3), '#7a5226'); px(g, x - 1, y - 1, '#b8894f'); }
+    else { const land = (-Math.sin(a) * v + Math.sqrt(Math.sin(a) * Math.sin(a) * v * v + 4 * 280 * 2)) / (2 * 280), lx = 128 + Math.cos(a) * v * land; ellipsePx(g, clamp(lx, 8, SW - 8), 170 + (j % 3) * 5, 6 + (j % 3), 2, '#5b3a1d'); }
+  }
+  // ¡GLORGH!
+  const gk = spring(t - .62, 2.6, 7);
+  if (gk > 0) { g.save(); g.translate(196, 106); g.rotate(.12); g.scale(gk, gk); swBurst(g, 0, 0, 44, 22, 12, '#4fa83a', t, 2); swBurst(g, 0, 0, 36, 16, 12, '#1f4a1a', t, 2.3); cardWord(g, W[4][0], 0, -9, W[4][1]); g.restore(); }
+  // Súper Keiko in an inset panel, frowning behind her mask
+  const ik = spring(t - .8, 2.4, 6);
+  if (ik > 0) {
+    g.save(); g.translate(40, 150); g.scale(ik, ik);
+    disc(g, 0, 0, 31, INK); disc(g, 0, 0, 29, '#ffdf4f'); for (let y = -26; y < 28; y += 5) for (let x = -26 + ((y / 5 | 0) % 2) * 2; x < 28; x += 5) if (x * x + y * y < 700) px(g, x, y, '#ffb84a');
+    g.beginPath(); g.arc(0, 0, 28, 0, TAU); g.clip();
+    const head = mdl('sw:grrHead', () => { const c = mkCanvas(64, 66); c.g.drawImage(keikoHead('grr'), 0, 0); swKeikoMask(c.g, 0, 0); return c; });
+    g.drawImage(head, -32, -26);
+    g.restore();
+  }
+  // the title, in mud that drips
+  const nk = t - .18;
+  if (nk > 0) {
+    cardWord(g, W[2][0], 128, 8, W[2][1], { anim: i => cardAnimSlam(nk, i, { from: 2, stagger: .05 }) });
+    const boxes = cardWord(g, W[3][0], 128, 38, W[3][1], { anim: i => cardAnimSlam(nk - .2, i, { from: 2, stagger: .05 }) });
+    const dk = t - 1.05;
+    if (dk > 0) for (const b of boxes) if (b.i % 2 === 0) { const x = rd(b.cx), y0 = 38 + 10 * b.u + 4, len = Math.min(9, dk * 14) * (.6 + hash2(b.i, 4) * .6); thickLine(g, x, y0, x, y0 + len, 1.3, '#7a5226'); disc(g, x, y0 + len + 1, 1.8, '#7a5226'); }
+  }
+  swPanelFrame(g);
+}
+function swAnnLevelBg() {
+  return mdl('sw:annLevelBg', () => {
+    const c = mkCanvas(SW, SH), g = c.g;
+    bandsV(g, 0, 0, SW, SH, ['#0b0c2a', '#141848', '#231f5e', '#3b2a6e', '#4a2f76']);
+    for (let y = 2; y < SH; y += 6) for (let x = ((y / 6) % 2) * 3 + 2; x < SW; x += 6) { const v = y / SH; if (v > .55) disc(g, x, y, Math.min(1.8, (v - .55) * 4), '#5a3a8e'); }
+    for (let i = 0; i < 30; i++) px(g, hash2(i, 21) * SW, hash2(21, i) * 110, i % 4 ? '#9fa8ff' : '#ffffff');
+    return c;
+  });
+}
+function swAnnLevel(g, S, t) {
+  g.drawImage(swAnnLevelBg(), 0, 0);
+  const W = swAnnWords(false);
+  // her cape sweeps across the whole panel and snaps
+  const ck = E.outBack(clamp(t / .3, 0, 1)), amp = 8 + 16 * Math.max(0, 1 - Math.abs(t - .32) * 3), ox = (1 - ck) * 280, top = [], bot = [];
+  for (let i = 0; i <= 18; i++) { const k = i / 18, x = 280 - k * 310 + ox, w = Math.sin(NOW * 8 - k * 6) * amp * (.3 + k); top.push([x, 30 + k * 18 + w]); bot.push([x, 128 + k * 34 + w * 1.25]); }
+  const poly = top.concat(bot.slice().reverse());
+  polyPx(g, poly.map(([a, b]) => [a + 2, b + 3]), INK); polyPx(g, poly.map(([a, b]) => [a - 1, b - 1]), INK); polyPx(g, poly, RAMP.green[2]);
+  for (let i = 1; i < 18; i += 3) linePx(g, top[i][0], top[i][1] + 3, bot[i + 1][0], bot[i + 1][1] - 3, RAMP.green[1]);
+  for (let i = 0; i < 18; i++) { linePx(g, top[i][0], top[i][1] + 1, top[i + 1][0], top[i + 1][1] + 1, RAMP.green[3]); thickLine(g, bot[i][0], bot[i][1] - 1, bot[i + 1][0], bot[i + 1][1] - 1, .8, RAMP.gold[3]); }
+  const cx = (top[7][0] + bot[7][0]) / 2, cy = (top[7][1] + bot[7][1]) / 2; disc(g, cx, cy, 9, INK); disc(g, cx, cy, 8, RAMP.gold[3]); disc(g, cx - 2, cy - 2, 4, RAMP.gold[4]); txt(g, 'W', cx, cy - 4, RAMP.green[1], { align: 'c', bold: true });
+  // ¡FLAP!
+  const fk = spring(t - .26, 2.8, 7);
+  if (fk > 0 && t < 1.6) { g.save(); g.translate(46, 150); g.rotate(-.2); g.scale(fk, fk); swBurst(g, 0, 0, 34, 16, 10, '#ffffff', t, 3); cardWord(g, W[6][0], 0, -9, W[6][1]); g.restore(); }
+  // the hero strikes a pose; the chapter caption; the title; one star per difficulty step
+  const hk = E.outBack(clamp((t - .35) / .4, 0, 1)); drawS(g, heroPortrait(), rd(lerp(SW + 70, 204, hk)), 192, { ax: .5, ay: 1 });
+  const bk = E.outBack(clamp((t - .08) / .3, 0, 1)), bw = txtW('…y la cosa se complica') + 12, bx = rd(lerp(-bw - 10, 8, bk));
+  rect(g, bx - 1, 7, bw + 2, 17, INK); rect(g, bx, 8, bw, 15, '#fff7ae'); txt(g, '…y la cosa se complica', bx + 6, 12, INK);
+  const nk = t - .2; if (nk > 0) cardWord(g, W[5][0], 118, 60, W[5][1], { anim: i => cardAnimSlam(nk, i, { from: 2.2, stagger: .04 }) });
+  for (let i = 0; i < 3; i++) { const sk = spring(t - .7 - i * .12, 2.6, 6); if (sk <= 0) continue; const on = i < (S.level || 1), x = 62 + i * 24; g.save(); g.translate(x, 116); g.scale(sk, sk); drawStar(g, 0, 0, 10, INK); drawStar(g, 0, 0, 8, on ? RAMP.gold[3] : '#3b2a6e'); if (on) drawStar(g, -1, -1, 4, RAMP.gold[4]); g.restore(); }
+  swPanelFrame(g);
+}
+// Mezcla Maestra: a mixtape speeding up, sticker letters bouncing on the beat
+function swAnnMix(g, S, t) {
+  const bt = t * (S.bpm || 120) / 60, off = (t * 90) % 132;
+  for (let i = -4; i < 16; i++) { const x = i * 22 + off; polyPx(g, [[x, 0], [x + 22, 0], [x - 44, SH], [x - 66, SH]], CARD_MIX_COLS[((i % 6) + 6) % 6]); }
+  g.globalAlpha = .45; rect(g, 0, 6, SW, 44, INK); g.globalAlpha = 1;
+  // the record spins faster and faster under the tonearm
+  const vk = E.outBack(clamp(t / .4, 0, 1)), vx = rd(lerp(-60, 78, vk)), vy = 128, a = t * (7 + t * 9);
+  disc(g, vx, vy, 49, INK); disc(g, vx, vy, 47, '#1d1424'); for (let r = 20; r < 46; r += 4) ringPx(g, vx, vy, r, '#2b2540');
+  for (const q of [a, a + Math.PI]) { thickLine(g, vx + Math.cos(q) * 22, vy + Math.sin(q) * 22, vx + Math.cos(q + .5) * 42, vy + Math.sin(q + .5) * 42, .8, '#5a5490'); }
+  disc(g, vx, vy, 16, INK); disc(g, vx, vy, 15, '#ff5d9e'); disc(g, vx + Math.cos(a) * 8, vy + Math.sin(a) * 8, 3, '#ffd1e4'); disc(g, vx, vy, 2, '#fff8e6');
+  thickLine(g, 150, 70, vx + 30, vy - 22, 1.6, INK); thickLine(g, 150, 70, vx + 30, vy - 22, .8, RAMP.steel[4]); disc(g, 150, 70, 6, INK); disc(g, 150, 70, 5, RAMP.steel[3]); rect(g, vx + 26, vy - 26, 8, 6, INK);
+  // the tempo sticker
+  const tk = spring(t - .45, 2.6, 6);
+  if (tk > 0) { g.save(); g.translate(200, 128); g.rotate(-.18); g.scale(tk, tk); disc(g, 0, 0, 27, INK); disc(g, 0, 0, 25, '#ffffff'); disc(g, 0, 0, 22, '#ffdf4f'); txt(g, 'x' + (1 + .13 * (S.speed || 0)).toFixed(2).replace('.', ','), 0, -6, INK, { align: 'c', bold: true }); tiny(g, 'TEMPO', 0, 6, INK, { align: 'c' }); g.restore(); }
+  const W = swAnnWords(true), nk = t - .1;
+  if (nk > 0) cardWord(g, W[0][0], 122, 16, W[0][1], { anim: i => { const e = cardAnimDrop(nk, i, { stagger: .05, h: -40 }); if (!e.s) return e; e.dy = (e.dy || 0) - Math.abs(Math.sin((bt * .5 + i * .13) * Math.PI)) * 4; return e; } });
+  ringRect(g, 0, 0, SW, SH, 3, '#ffffff'); ringRect(g, 3, 3, SW - 6, SH - 6, 1, INK);
+}
+function swSpecial(g, S, kind, t) {
+  if (S.def.id === 'mezcla' && kind === 'speed') swAnnMix(g, S, t);
+  else if (kind === 'speed') swAnnSpeed(g, S, t);
+  else if (kind === 'boss') swAnnBoss(g, S, t);
+  else if (kind === 'level') swAnnLevel(g, S, t);
+  else return false;
+}
+// bottom screen: a comic caption box sliding in
+function swSpecialBot(g, S, kind, t) {
+  const lbl = S.def.id === 'mezcla' ? '¡Sube el tempo de la mezcla!' : { speed: '¡Súper Keiko pisa el acelerador!', boss: '¡Algo sale de la alcantarilla!', level: '¡Agárrate bien la capa!' }[kind];
+  if (!lbl) return false;
+  const k = E.outBack(clamp(t * 3, 0, 1)), w = txtW(lbl) + 16, x = rd(SW / 2 - w / 2 - (1 - k) * 220), y = 6;
+  rect(g, x - 1, y - 1, w + 2, 20, INK); rect(g, x, y, w, 18, '#fff7ae'); rect(g, x, y + 15, w, 3, '#ffdf4f'); txt(g, lbl, x + w / 2, y + 5, INK, { align: 'c' });
+}
+HERO_SONGS.jingles = {
+  speed: { spb: 4, tracks: [
+    { i: 'p25', v: .7, n: 'C5 D5 E5 F5 G5 A5 B5 C6 D6 E6 F6 G6 C7! - - .' },
+    { i: 'brass', v: .6, n: 'C4 . . . E4 . . . G4 . . . C5! - - -' },
+    { i: 'bass', v: .9, n: 'C3 . C3 . C3 . C3 . C3 C3 C3 C3 C3! - . .' },
+    { i: 'd', v: .85, n: 'k . s . k . s . k s k s k+x - z .' }] },
+  boss: { spb: 4, tracks: [
+    { i: 'brass', v: .8, n: 'C3 - - . C3 - - . Db3 - - . G2! - - -' },
+    { i: 'sub', v: .7, n: 'C2 - - - C2 - - - Db2 - - - G1 - - -' },
+    { i: 'squeak', v: .3, n: '. . G5 . . . Ab5 . . . G5 . . . C5 .' },
+    { i: 'd', v: .9, n: 'k . . T k . . T k . T T T T k+x .' }] },
+  level: { spb: 4, tracks: [
+    { i: 'brass', v: .75, n: 'G4 - C5 - E5 - G5 - E5 - G5 - C6! - - -' },
+    { i: 'bell', v: .5, n: '. . . . . . . . . . . . C6 E6 G6 C7' },
+    { i: 'bass', v: .85, n: 'C3 . G2 . C3 . G2 . C3 . G2 . C3! - . .' },
+    { i: 'd', v: .85, n: 'k . h . s . h . k . s s k+x - . .' }] },
+};
+
 defStage({
   id: 'superwestie', name: 'SÚPER KEIKO', sub: '«¡Por un Eixample sin greñas!»', verb: '¡TODO!', mech: 'mix', bpm: 126,
   games: () => allStoryGames(), boss: 'barro', bossAt: 20, speedAt: [5, 10, 15],
@@ -6380,7 +7729,7 @@ defStage({
   face: () => mdl('heroFaceK', () => { const c = mkCanvas(64, 66); c.g.drawImage(keikoHead('wink'), 0, 0); swKeikoMask(c.g, 0, 0); return faceCrop(c, 12, 6, 40, 42); }),
   rim: '#ffdf4f', cardCols: ['#141848', '#231f5e'], nameFill: ['#ffffff', '#b3d9ff', '#63a0ef'], tip: 'Todos los microjuegos… ¡y el Monstruo de Barro!',
   songs: HERO_SONGS, intro: 'superwestie_in', outro: 'superwestie_out', creditsOnClear: true,
-  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 },
+  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, special: swSpecial, specialBot: swSpecialBot,
     mini: (g, x, y, st) => drawSuperWestie(g, 44, SH - 22, NOW, { mood: st === 'lose' ? 'sad' : 'happy' }), bossLabel: '¡Sale de la alcantarilla!',
     portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#231f5e', '#3b2a6e'], playCols: ['#141848', '#231f5e'], cardCol: RAMP.purple },
 });
@@ -6406,14 +7755,14 @@ defStage({
   games: () => allStoryGames(), boss: null, speedEvery: 5, unlockBy: 'superwestie',
   portrait: () => heroPortrait(), face: () => modeIcon('mix'), rim: '#bf95e9', cardCols: ['#3d2066', '#5a3396'], tip: '¿Hasta dónde llegas?',
   songs: HERO_SONGS,
-  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#3d2066', '#5a3396'], playCols: ['#3d2066', '#5a3396'], cardCol: RAMP.purple },
+  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, special: swSpecial, specialBot: swSpecialBot, portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#3d2066', '#5a3396'], playCols: ['#3d2066', '#5a3396'], cardCol: RAMP.purple },
 });
 defStage({
   id: 'unpelo', name: 'A UN PELO', sub: '«Una vida. Nivel 2. Sin piedad»', verb: '¡TODO!', mech: 'mix', bpm: 128, endless: true, lives: 1, startLevel: 2, noSpeed: true,
   games: () => allStoryGames(), boss: null, unlockBy: 'superwestie',
   portrait: () => heroPortrait(), face: () => modeIcon('hair'), rim: '#ff5d5d', cardCols: ['#5a0f1e', '#7c1830'], tip: 'Un fallo y se acabó',
   songs: HERO_SONGS,
-  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#5a0f1e', '#7c1830'], playCols: ['#5a0f1e', '#7c1830'], cardCol: RAMP.red },
+  room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 }, special: swSpecial, specialBot: swSpecialBot, portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#5a0f1e', '#7c1830'], playCols: ['#5a0f1e', '#7c1830'], cardCol: RAMP.red },
 });
 
 // ---------------------------------------------------------------- story -----
@@ -16973,6 +18322,7 @@ function bubbleImg(id, r, face, rim, locked) {
   });
 }
 
+const REVEAL_T = 3.4; // seconds each newly unlocked character gets to itself
 const MENU = {
   enter(arg = {}) {
     stopAllMusic(.1); this.song = playSong(SONG_MENU, { bpm: 104 });
@@ -16997,10 +18347,10 @@ const MENU = {
     this.sel = arg.from && STAGES[arg.from] ? arg.from : (SAVE.lastSel && STAGES[SAVE.lastSel] && stageUnlocked(SAVE.lastSel) ? SAVE.lastSel : 'anahi');
     this.selT = 0;
     const fresh = this.walkers.filter(w => w.isNew);
-    // a newly unlocked character drops in from above under a spotlight (WarioWare-style reveal)
-    fresh.forEach((w, i) => { w.appear = 1; w.drop = { t: -.45 - i * .45 }; });
-    this.reveal = fresh.length ? { id: fresh[0].id, t: 0 } : null;
-    if (fresh.length) { this.sel = fresh[0].id; this.popFor = null; after(.3, () => { sfx('sparkle'); playSong(JINGLE.record, { bpm: 140 }); }); }
+    // a newly unlocked character drops in from above under a spotlight (WarioWare-style reveal);
+    // if several are new at once they arrive one by one, each with its own moment
+    fresh.forEach((w, i) => { w.appear = 1; w.drop = { t: -.45 - i * REVEAL_T }; });
+    this.revealQ = fresh.map(w => w.id); this.reveal = null; this.nextReveal();
     for (const w of fresh) SAVE.unlockSeen[w.id] = 1;
     if (QS.get('pop')) { const w = this.walkers.find(w => w.id === QS.get('pop')); if (w) { this.popFor = w; this.sel = w.id; } }
     persist();
@@ -17009,7 +18359,7 @@ const MENU = {
   exit() { },
   update(dt) {
     this.t += dt; this.selT += dt; this.popT += dt; this.fx.update(dt); this.topFx.update(dt);
-    if (this.reveal) { this.reveal.t += dt; if (this.reveal.t > 3.2) this.reveal = null; }
+    if (this.reveal) { this.reveal.t += dt; if (this.reveal.t > REVEAL_T) this.nextReveal(); }
     if (this.tab === 'juegos') this.updWalkers(dt);
     else if (this.tab === 'coleccion') this.updColeccion(dt);
     else if (this.tab === 'opciones') this.updOpciones(dt);
@@ -17017,6 +18367,11 @@ const MENU = {
     this.updTabs();
   },
   // ------------------------------------------------------------ walkers ---
+  nextReveal() {
+    const id = this.revealQ && this.revealQ.shift();
+    this.reveal = id ? { id, t: 0 } : null;
+    if (id) { this.sel = id; this.selT = 0; this.popFor = null; after(.3, () => { sfx('sparkle'); playSong(JINGLE.record, { bpm: 140 }); }); }
+  },
   area: { x0: 16, x1: 240, y0: 72, y1: 156 },
   // best of a handful of random spots: the one farthest from everybody else
   freeSpot(from, reach) {
@@ -17152,7 +18507,7 @@ const MENU = {
     g.restore();
     // the unlock stamp over the record bars while a new character arrives
     if (this.reveal && this.reveal.id === id) {
-      const rt = this.reveal.t, k = spring(rt - .5, 2.4, 6), out = rt > 2.7 ? clamp((3.2 - rt) * 2, 0, 1) : 1;
+      const rt = this.reveal.t, k = spring(rt - .5, 2.4, 6), out = rt > REVEAL_T - .5 ? clamp((REVEAL_T - rt) * 2, 0, 1) : 1;
       if (k > 0) { g.save(); g.globalAlpha = out; g.translate(92, 104); g.rotate(-.12); g.scale(k, k);
         rect(g, -86, -22, 172, 44, INK); rect(g, -86, -19, 172, 38, '#e8303c'); rect(g, -86, -19, 172, 3, '#ff7a86');
         for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + rt * 3; drawStar(g, Math.cos(a) * 94, Math.sin(a) * 30, 2.5, '#fff27a'); }
@@ -17741,6 +19096,7 @@ function runPerfTest() {
 function runStageTest() {
   BOTIN.on = true; RNG = mulberry32(+(QS.get('seed') || 5));
   const id = QS.get('id') || 'anahi', secs = +(QS.get('secs') || 240), rep = { id, snaps: [] };
+  if (QS.has('replay')) SAVE.cleared[id] = 1; // play it as an already-cleared stage (endless, harder, faster)
   go(STG, { id, story: false });
   let last = '';
   for (let i = 0; i < secs * 60; i++) {
@@ -17807,7 +19163,10 @@ function runAudioTest() {
     try { const pl = playSong(song, { bpm: 120, vol: .01 }); stopSong(pl, .01); rep.songs++; } catch (e) { rep.errors.push(name + ': ' + e.message); }
   };
   for (const k in JINGLE) check('JINGLE.' + k, JINGLE[k]);
-  for (const id of STAGE_ORDER) { const d = STAGES[id]; if (d.songs) for (const k in d.songs) check(id + '.' + k, d.songs[k], ['win', 'lose', 'next', 'ready'].includes(k) ? 2 : 0); }
+  for (const id of STAGE_ORDER) { const d = STAGES[id]; if (d.songs) for (const k in d.songs) {
+    if (k === 'jingles') { for (const j in d.songs.jingles) check(id + '.jingles.' + j, d.songs.jingles[j], 4); continue; } // the themed announcements: 4 beats each
+    check(id + '.' + k, d.songs[k], ['win', 'lose', 'next', 'ready'].includes(k) ? 2 : 0);
+  } }
   for (const id of MG_ORDER) { const d = MG[id]; if (d.song) { try { const g = mgNew(id, 1, 120); check('mg.' + id, d.song(g), d.boss ? 0 : d.beats); } catch (e) { rep.errors.push('mg.' + id + ': ' + e.message); } } }
   for (const id in CUTS) { const c = CUTS[id]; if (c.song) check('cut.' + id, c.song); (c.shots || []).forEach((s, i) => { if (s.song) check('cut.' + id + '#' + i, s.song); }); }
   stopAllMusic(.01);

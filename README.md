@@ -21,8 +21,8 @@ Cada microjuego dura cuatro segundos y empieza con una orden de una palabra:
 Hay que entenderla y cumplirla antes de que la **bomba de baño** llegue al final
 de su mecha. Las primeras veces, una **mano fantasma** enseña el gesto sobre el
 propio microjuego y la pantalla de arriba explica en una línea qué hay que hacer.
-Tienes cuatro vidas; cada pocos microjuegos Keiko avisa de que todo va
-**¡MÁS RÁPIDO!** y al final de cada fase llega el **¡JUEGO DEL JEFE!**
+Tienes cuatro vidas; cada pocos microjuegos todo va **¡MÁS RÁPIDO!** y al
+final de cada fase llega el **¡JUEGO DEL JEFE!**, cada personaje a su manera.
 
 ## Todo lo de *Touched!*, a la manera de Westie BLVRD
 
@@ -50,10 +50,15 @@ Tienes cuatro vidas; cada pocos microjuegos Keiko avisa de que todo va
   plano; Súper Keiko, viñeta de cómic), la mecánica, historia de entrada, interludios
   con reacción (el de Anahí, en el salón: ella tras la mesa de peluquería con
   Keiko encima), contador y vidas propias de cada personaje, zoom dentro del marco
-  (el espejo dorado del salón), orden estampada, bomba de baño, «¡MÁS RÁPIDO!»,
-  «¡JUEGO DEL JEFE!», «¡SUPERADO!» con historia de salida, «¡SE ACABÓ!», podio
-  de récords, botón para compartir la puntuación y, al repetir, «¡NIVEL 2!» y
-  «¡NIVEL 3!» sin fin.
+  (el espejo dorado del salón), orden estampada, bomba de baño, los avisos de
+  «¡MÁS RÁPIDO!», «¡JUEGO DEL JEFE!» y «¡MÁS DIFÍCIL!» a la manera de cada
+  personaje (con su escena, sus letras y su sintonía), «¡SUPERADO!» con
+  historia de salida, «¡SE ACABÓ!», podio de récords y botón para compartir la
+  puntuación.
+- **La primera vez** una fase termina al vencer al jefe. **Al repetirla** ya no
+  acaba: cada jefe superado la hace «¡MÁS DIFÍCIL!» hasta el tope y, a partir de
+  ahí, solo sube la velocidad, vuelta tras vuelta, hasta perder las vidas. A por
+  el récord, como en *WarioWare*.
 - **Final**: Súper Keiko, todos los microjuegos mezclados y **el Monstruo de
   Barro**, una bola de barro con patas salida de la alcantarilla: seis fases,
   una por cada gesto del juego (toca, frota, corta, dibuja, arrastra y gira).
@@ -113,7 +118,8 @@ cada tramo se programa sobre el reloj de audio para caer justo en el pulso.
   `tools/phone.html` enseña el juego en tamaños de móvil; `tools/icons.sh` saca los
   iconos de la app; `tools/test.sh perf` mide cuánto cuesta un fotograma de cada
   microjuego, y `node tools/dupes.js` avisa de nombres globales repetidos entre ficheros.
-- En `artifacts/` están las láminas de cada fase y la miniatura.
+- En `artifacts/` están las láminas de cada fase, los avisos de cada personaje
+  (`avisos.jpg`) y la miniatura.
 
 ## Créditos
 

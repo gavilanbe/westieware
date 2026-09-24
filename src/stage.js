@@ -10,6 +10,7 @@
 const STAGES = {}, STAGE_ORDER = [];
 function defStage(def) { STAGES[def.id] = def; STAGE_ORDER.push(def.id); }
 const LIVES = 4;
+const SPEED_MAX = 8; // speed tiers: tempo × (1 + .13 × tier), so the top is about twice the start
 
 // ---------------------------------------------------------------- global jingles
 const JINGLE = {
@@ -122,7 +123,8 @@ const STG = {
       const d = S.def;
       if (S.nextIsBoss) S.special = 'boss';
       else if (S.levelUp) { S.special = 'level'; S.levelUp = false; }
-      else if (result !== null && !d.noSpeed && (d.speedEvery ? this.countSinceBoss() % d.speedEvery === 0 && S.speed < 6 : (d.speedAt || [4, 7]).includes(this.countSinceBoss()))) S.special = 'speed';
+      else if (S.speedUp) { S.special = 'speed'; S.speedUp = false; }
+      else if (result !== null && !d.noSpeed && S.speed < SPEED_MAX && (d.speedEvery ? this.countSinceBoss() % d.speedEvery === 0 && S.speed < 6 : (d.speedAt || [4, 7]).includes(this.countSinceBoss()))) S.special = 'speed';
     }
     if (QS.get('force') && result !== null && S.lives > 0) S.special = QS.get('force'); // debug captures
     S.len = S.special ? 8 : 4;
@@ -134,9 +136,9 @@ const STG = {
     playSong(result === true ? songs.win : result === false ? songs.lose : (songs.ready || songs.win), { bpm: S.bpm, at: t0 });
     // a speed-up takes effect on beat 2, exactly when its jingle starts
     let nbpm = S.bpm;
-    if (S.special === 'speed') { S.speed++; nbpm = (S.def.bpm || 120) * (1 + .13 * S.speed); S.bpmAt2 = nbpm; }
+    if (S.special === 'speed') { S.speed = Math.min(SPEED_MAX, S.speed + 1); nbpm = (S.def.bpm || 120) * (1 + .13 * S.speed); S.bpmAt2 = nbpm; }
     const bd2 = 60 / nbpm;
-    if (S.special) playSong(JINGLE[S.special], { bpm: nbpm, at: t0 + 2 * bd });
+    if (S.special) playSong((songs.jingles && songs.jingles[S.special]) || JINGLE[S.special], { bpm: nbpm, at: t0 + 2 * bd });
     playSong(songs.next, { bpm: nbpm, at: t0 + 2 * bd + (S.special ? 4 * bd2 : 0) });
     // choose the next microgame now so the portal can peek at it
     this.prepareNext();
@@ -224,7 +226,8 @@ const STG = {
       S.bossCount = S.count + 1;
       if (won) {
         if (S.first) { S.count++; this.stageClear(); return; }
-        S.level = Math.min(3, S.level + 1); S.speed = 0; S.bpm = S.def.bpm || 120; S.levelUp = true;
+        if (S.level < 3) { S.level++; S.speed = 0; S.bpm = S.def.bpm || 120; S.levelUp = true; }
+        else S.speedUp = true; // top difficulty: no reset, the tempo just keeps climbing
         if (S.lives < S.maxLives) S.lives++;
       } else S.nextIsBoss = true; // the boss comes back until it's beaten
     } else {
@@ -362,6 +365,8 @@ const STG = {
   },
   drawSpecialTop(g, S) {
     const t = (S.pb - 2) * this.beatDur; if (t < 0) return;
+    // every character brings its own ¡MÁS RÁPIDO! / ¡JUEGO DEL JEFE! / ¡MÁS DIFÍCIL! (room.special)
+    const R = S.def.room; if (R.special && R.special(g, S, S.special, t) !== false) return;
     if (S.special === 'speed') {
       // speed lines + brush lettering + Keiko cheering from below
       for (let i = 0; i < 18; i++) { const y = (i * 37 + fl(t * 400) * 3) % SH, x = (i * 71 + fl(t * 900)) % (SW + 60) - 30; rect(g, SW - x, y, 26 + (i % 3) * 10, 1, '#ffffff'); }
@@ -373,11 +378,12 @@ const STG = {
       const kk = spring(t - .35, 2.2, 6); if (kk > 0) drawS(g, keikoBossHead(), 196, 128, { s: kk, rot: -.1 + Math.sin(t * 3) * .04 });
       drawBrushWords(g, ['¡JUEGO', 'DEL JEFE!'], 102, 46, t);
     } else if (S.special === 'level') {
-      this.drawBanner(g, '¡NIVEL ' + S.level + '!', t, ['#ffffff', '#d2f5e4', '#5bb593']);
+      this.drawBanner(g, '¡MÁS DIFÍCIL!', t, ['#ffffff', '#d2f5e4', '#5bb593']);
     }
   },
   drawSpecialBot(g, S) {
     const t = (S.pb - 2) * this.beatDur; if (t < 0 || S.pb > 6) return;
+    if (S.def.room.specialBot && S.def.room.specialBot(g, S, S.special, t) !== false) return;
     const R = S.def.room, SPEED_LBL = { tap: '¡Más ritmo, más tijera!', rub: '¡A frotar a toda mecha!', cut: '¡Tijeras a tope!', draw: '¡Tiza a toda velocidad!', drag: '¡Rapidito, rapidito!', spin: '¡Más vueltas, más rápido!', mix: '¡Todo a la vez!' };
     const lbl = S.special === 'speed' ? (R.speedLabel || SPEED_LBL[S.def.mech] || SPEED_LBL.tap) : S.special === 'boss' ? (R.bossLabel || '¡Se acerca algo gordo!') : (R.levelLabel || '¡Más difícil todavía!');
     const k = E.outBack(clamp(t * 3, 0, 1));

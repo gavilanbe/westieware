@@ -72,12 +72,15 @@ const T = TOPC.g, B = BOTC.g, TL = TALLC.g;
 
 // ---------------------------------------------------------------- save ----
 const SAVE_KEY = 'westieware-save-v1';
+// bump SAVE_V when a new version should start everyone from scratch (v2: the
+// round-3 game — characters must arrive one by one, the first visit must end)
+const SAVE_V = 2;
 function defaultSave() {
-  return { v: 1, prologue: false, cleared: {}, best: {}, seen: {}, bestMg: {}, unlockSeen: {}, toys: {}, opts: { sound: 1, layout: 'auto' }, plays: 0 };
+  return { v: SAVE_V, prologue: false, cleared: {}, best: {}, seen: {}, bestMg: {}, unlockSeen: {}, toys: {}, opts: { sound: 1, layout: 'auto' }, plays: 0 };
 }
 function loadSave() {
   if (QS.has('nosave') || TESTING) return defaultSave();
-  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) { const d = defaultSave(); return Object.assign(d, s, { opts: Object.assign(d.opts, s.opts || {}) }); } } catch (e) { }
+  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === SAVE_V) { const d = defaultSave(); return Object.assign(d, s, { opts: Object.assign(d.opts, s.opts || {}) }); } } catch (e) { }
   return defaultSave();
 }
 let SAVE = loadSave();

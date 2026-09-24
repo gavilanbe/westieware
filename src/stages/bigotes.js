@@ -20,8 +20,8 @@ VOICES.bigotes = { base: 50, scale: [0, 3, 5, 7, 10, 12], inst: 'p50', len: .055
 // ---------------------------------------------------------------- head ------
 // brow: 'n' normal, 'up' raised (joy/shock), 'dn' knitted (focus), 'sad'
 const BIGOTES_BROWS = { n: [.22, 0], up: [-.1, -2.5], dn: [.5, 1.5], sad: [-.45, 1] };
-function bigotesHeadBase(brow = 'n', soot = 0) {
-  return mdl('bigotes:bigHead:' + brow + soot, () => {
+function bigotesHeadBase(brow = 'n', soot = 0, bare = false) {
+  return mdl('bigotes:bigHead:' + brow + soot + (bare ? 'b' : ''), () => {
     const SP = soot ? RAMP.bigotesSalt.map(c => mixHex(c, '#0b0810', .55)) : RAMP.bigotesSalt;
     const BD = soot ? RAMP.bigotesBeard.map(c => mixHex(c, '#2b2540', .5)) : RAMP.bigotesBeard;
     const [ba, bdy] = BIGOTES_BROWS[brow] || BIGOTES_BROWS.n;
@@ -45,9 +45,10 @@ function bigotesHeadBase(brow = 'n', soot = 0) {
       { f: earL, ramp: EAR, z: 1.5, th: 4, tex: speck }, { f: earR, ramp: EAR, z: 1.5, th: 4, tex: speck },
       { f: skull, ramp: SP, z: 1, th: 13, tex: (x, y) => speck(x, y) + t1(x, y) },
       { f: cheeks, ramp: SP, z: 1.2, th: 8, tex: speck },
-      { f: strap, ramp: RAMP.wood, z: 1.55, th: 2 },
-      { f: gL, ramp: RAMP.gold, z: 1.7, th: 3 }, { f: gR, ramp: RAMP.gold, z: 1.7, th: 3 },
-      { f: lL, ramp: RAMP.bigotesLens, z: 1.8, th: 3, gloss: true, edge: false }, { f: lR, ramp: RAMP.bigotesLens, z: 1.8, th: 3, gloss: true, edge: false },
+      ...(bare ? [] : [
+        { f: strap, ramp: RAMP.wood, z: 1.55, th: 2 },
+        { f: gL, ramp: RAMP.gold, z: 1.7, th: 3 }, { f: gR, ramp: RAMP.gold, z: 1.7, th: 3 },
+        { f: lL, ramp: RAMP.bigotesLens, z: 1.8, th: 3, gloss: true, edge: false }, { f: lR, ramp: RAMP.bigotesLens, z: 1.8, th: 3, gloss: true, edge: false }]),
       { f: muzzle, ramp: SP, z: 2, th: 6, tex: speck },
       { f: beard, fs: beardS, ramp: BD, z: 2.6, th: 7, tex: tb },
       { f: browL, fs: browLs, ramp: BD, z: 2.8, th: 4, tex: tb }, { f: browR, fs: browRs, ramp: BD, z: 2.8, th: 4, tex: tb },
@@ -58,9 +59,9 @@ function bigotesHeadBase(brow = 'n', soot = 0) {
 }
 // expressions: normal, joy (laughing), shock, focus, sad, soot (singed), wink, mad
 const BIGOTES_EX = { normal: 'n', joy: 'up', laugh: 'up', shock: 'up', focus: 'dn', sad: 'sad', soot: 'sad', wink: 'n', mad: 'dn', talk: 'n', eureka: 'up' };
-function bigotesHead(ex = 'normal') {
-  return mdl('bigotes:bigHeadEx:' + ex, () => {
-    const soot = ex === 'soot' ? 1 : 0, base = bigotesHeadBase(BIGOTES_EX[ex] || 'n', soot), c = mkCanvas(base.width, base.height), g = c.g;
+function bigotesHead(ex = 'normal', bare = false) {
+  return mdl('bigotes:bigHeadEx:' + ex + (bare ? ':b' : ''), () => {
+    const soot = ex === 'soot' ? 1 : 0, base = bigotesHeadBase(BIGOTES_EX[ex] || 'n', soot, bare), c = mkCanvas(base.width, base.height), g = c.g;
     g.drawImage(base, 0, 0);
     const K = '#0b0810', br = BIGOTES_BROWS[BIGOTES_EX[ex] || 'n'][1], ey = 25 + Math.max(0, br * .6);
     const eye = (x, kind, side) => {
@@ -309,6 +310,7 @@ PORTAL_FRAMES.bigotesLab = function (g, x, y, w, h, beat) {
 const BIGOTES_REACT = { ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' };
 function bigotesRoomTop(g, S) {
   const t = NOW, beat = S.pb || 0, rt = S.reactT || 0;
+  if (typeof cardPrewarm === 'function') cardPrewarm(bigotesAnnWords()); // the announcements' letters, one per frame
   g.drawImage(bigotesLabBackdrop(), 0, 0);
   // flasks bubbling on the shelves
   [['#5bd18b', 204, 50], ['#ff93bf', 218, 50], ['#63a0ef', 233, 50], ['#ffdf4f', 246, 50], ['#bf95e9', 208, 84], ['#ff9f4f', 226, 84], ['#5bd18b', 242, 84]].forEach(([col, x, y], i) => bigotesFlask(g, x, y, col, t, i));
@@ -410,6 +412,23 @@ const BIGOTES_SONGS = {
     { i: 'd', v: .85, n: 'k . . s k . s h k . . s k . s s k . . s k . s h T . T . T T T+x T' }] },
 };
 
+BIGOTES_SONGS.jingles = {
+  speed: { spb: 4, tracks: [
+    { i: 'organ', v: .6, n: 'A4 B4 C5 D5 E5 F5 G#5 A5 B5 C6 D6 E6 A6! - - .' },
+    { i: 'bass', v: .85, n: 'A2 . A2 . E2 . E2 . A2 A2 A2 A2 A2! - . .' },
+    { i: 'd', v: .85, n: 'r . r . r r r r r r r r k+x - z .' }] },
+  boss: { spb: 4, tracks: [
+    { i: 'p50', v: .45, n: 'A5 F5 A5 F5 A5 F5 A5 F5 A5 F5 A5 F5 A5! - - -' },
+    { i: 'brass', v: .75, n: 'D3 - - . D3 - - . F3 - - . G#3! - - -' },
+    { i: 'organ', v: .35, n: 'D4+F4+G#4 - - . D4+F4+G#4 - - . D4+F4+B4 - - . D4+G#4+B4! - - -' },
+    { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+  level: { spb: 4, tracks: [
+    { i: 'organ', v: .55, n: 'A4 C5 E5 A5 B4 D5 F#5 B5 C#5 E5 G#5 C#6! - - . .' },
+    { i: 'bell', v: .5, n: '. . . . . . . . . . . . E6 - A6 -' },
+    { i: 'bass', v: .85, n: 'A2 . A2 . B2 . B2 . C#3 . C#3 . A2! - . .' },
+    { i: 'd', v: .85, n: 'k . z . k . z . k . s s k+x - . .' }] },
+};
+
 // ---------------------------------------------------------------- story -----
 function bigotesLabTall(g, t, o = {}) {
   // a tall view of the lab: roof + sky above (top screen), lab below
@@ -489,6 +508,160 @@ defCut('bigotes_out', {
   ],
 });
 
+// ---------------------------------------------------------------- announcements
+// ¡MÁS RÁPIDO! · ¡JUEGO DEL JEFE! · ¡MÁS DIFÍCIL!, told in Don Bigotes' own lab:
+// a pressure console that rises into the red, the Supersónico 3000 waking up
+// under the warning beacons, and OVERCLOCK: goggles down, moustache curling.
+// Lettering: the brass face of his title card (src/cards.js, read at run time).
+let BIGOTES_WARN = null;
+function bigotesWarnFace() { return BIGOTES_WARN || (BIGOTES_WARN = Object.assign({}, CARD_BRASS_FACE, { id: 'bigWarn', fill: ['#fff0a6', '#ff9f4f', '#e23b4e'], hi: '#fffbe0', lo: '#7c1830', shadow: '#3a0a14' })); }
+// every word the three announcements write, in the exact (fitted) faces they use
+let BIGOTES_ANN_WORDS = null;
+function bigotesAnnWords() {
+  return BIGOTES_ANN_WORDS || (BIGOTES_ANN_WORDS = [['¡MÁS RÁPIDO!', cardFit('¡MÁS RÁPIDO!', 164, CARD_BRASS_FACE)], ['¡JUEGO', cardFit('¡JUEGO', 200, bigotesWarnFace())], ['DEL JEFE!', cardFit('DEL JEFE!', 224, bigotesWarnFace())], ['¡MÁS DIFÍCIL!', cardFit('¡MÁS DIFÍCIL!', 222, CARD_BRASS_FACE)]]);
+}
+// the riveted pressure console that rises from the bench (256 x 92)
+function bigotesAnnConsole() {
+  return mdl('bigotes:annConsole', () => {
+    const c = mkCanvas(SW, 92), g = c.g, S = RAMP.steel;
+    rect(g, 0, 6, SW, 86, INK); rect(g, 0, 8, SW, 84, S[2]); rect(g, 0, 8, SW, 2, S[4]); rect(g, 0, 10, SW, 1, S[3]);
+    for (let y = 14; y < 92; y += 3) hline(g, 0, SW, y, 'rgba(255,255,255,.07)');
+    // hazard trim along the top edge
+    rect(g, 0, 0, SW, 7, '#ffd23f'); for (let x = -8; x < SW; x += 12) polyPx(g, [[x, 0], [x + 6, 0], [x + 12, 7], [x + 6, 7]], INK); rect(g, 0, 6, SW, 1, INK);
+    // the gauge bezel, a dark window for the lamps, rivets
+    disc(g, 40, 50, 33, INK); disc(g, 40, 50, 32, S[1]); disc(g, 40, 50, 31, S[3]);
+    rect(g, 82, 58, 166, 18, INK); rect(g, 83, 59, 164, 16, '#0b1a12'); for (let x = 85; x < 246; x += 4) vline(g, x, 60, 73, '#0f2419');
+    for (const [x, y] of [[6, 14], [SW - 7, 14], [6, 84], [SW - 7, 84], [80, 14], [80, 84]]) { disc(g, x, y, 2.5, INK); disc(g, x, y, 1.8, S[3]); px(g, x - 1, y - 1, S[4]); }
+    // two steam vents in the top edge
+    for (const vx of [96, 228]) { rect(g, vx - 9, 8, 18, 6, INK); for (let i = -6; i <= 6; i += 3) vline(g, vx + i, 9, 12, S[0]); }
+    tiny(g, 'PRESION', 40, 76, INK, { align: 'c' });
+    return c;
+  });
+}
+// the pressure dial: green, amber, red (face only; the needle is live)
+function bigotesAnnGauge() {
+  return mdl('bigotes:annGauge', () => {
+    const r = 28, c = mkCanvas(64, 64), g = c.g, cx = 32, cy = 32;
+    disc(g, cx, cy, r + 1, RAMP.gold[1]); disc(g, cx, cy, r, RAMP.gold[3]); disc(g, cx, cy, r - 2, '#fffaf0');
+    for (let i = 0; i <= 60; i++) { const v = i / 60, a = Math.PI * .75 + v * Math.PI * 1.5; disc(g, cx + Math.cos(a) * (r - 6), cy + Math.sin(a) * (r - 6), 2.2, v < .55 ? '#5bd18b' : v < .78 ? '#ffb020' : '#e23b4e'); }
+    for (let i = 0; i <= 10; i++) { const a = Math.PI * .75 + i / 10 * Math.PI * 1.5; linePx(g, cx + Math.cos(a) * (r - 3), cy + Math.sin(a) * (r - 3), cx + Math.cos(a) * (r - 9), cy + Math.sin(a) * (r - 9), INK); }
+    px(g, cx - 9, cy - 16, '#ffffff'); px(g, cx - 10, cy - 15, '#ffffff'); px(g, cx - 11, cy - 13, '#ffffff');
+    return c;
+  });
+}
+function bigotesAnnSpeed(g, S, t) {
+  const bt = t * (S.bpm || 120) / 60;
+  // cyan streaks through the lab above
+  for (let i = 0; i < 10; i++) { const y = 6 + i * 10, x = SW - ((t * 560 + i * 71) % (SW + 90)); rect(g, x, y, 16 + (i % 3) * 12, 1, i % 2 ? '#b3f3ff' : '#ffffff'); }
+  const k = E.outBack(clamp(t / .34, 0, 1)), shake = t > .3 && t < .7 ? (hash2(fl(t * 50), 5) - .5) * 3 * (1 - (t - .3) / .4) : 0;
+  const y0 = rd(lerp(SH + 4, 102, k) + shake);
+  // steam from the vents
+  for (const vx of [96, 228]) for (let j = 0; j < 5; j++) { const q = (t * 1.7 + j * .2) % 1; if (t < .3) continue; const r = 3 + q * 9; disc(g, vx + Math.sin(j * 2 + t * 3) * 5, y0 + 6 - q * 44, r + 1, `rgba(120,128,150,${.5 * (1 - q)})`); disc(g, vx + Math.sin(j * 2 + t * 3) * 5, y0 + 6 - q * 44, r, `rgba(236,240,248,${.85 * (1 - q)})`); }
+  g.drawImage(bigotesAnnConsole(), 0, y0);
+  // the needle leaps into the red and shivers there
+  const vt = clamp((t - .18) / .5, 0, 1), v = .22 + .86 * E.outBack(vt) + (vt >= 1 ? Math.sin(t * 46) * .025 : 0);
+  const gx = 40, gy = y0 + 50; g.drawImage(bigotesAnnGauge(), gx - 32, gy - 32);
+  const a = Math.PI * .75 + clamp(v, 0, 1.12) * Math.PI * 1.5;
+  thickLine(g, gx, gy, gx + Math.cos(a) * 23, gy + Math.sin(a) * 23, 1.2, '#e23b4e'); disc(g, gx, gy, 3.5, INK); disc(g, gx, gy, 2.2, RAMP.gold[3]);
+  if (v > .9 && fl(t * 10) % 2 === 0) { disc(g, gx + 26, gy - 26, 5, INK); disc(g, gx + 26, gy - 26, 4, '#ff4060'); px(g, gx + 25, gy - 27, '#ffffff'); }
+  // the word, stamped in brass on the console
+  const words = bigotesAnnWords(), nk = t - .24;
+  if (nk > 0) cardWord(g, words[0][0], 166, y0 + 20, words[0][1], { anim: i => cardAnimSlam(nk, i, { from: 1.8, stagger: .045 }) });
+  // one lamp per speed step; the newest one blinks
+  const n = Math.max(1, S.speed || 1);
+  for (let i = 0; i < 8; i++) {
+    const x = 94 + i * 20, y = y0 + 67, on = i < n, fresh = i === n - 1 && fl(bt * 4) % 2 === 0;
+    if (on) { g.globalAlpha = .35; disc(g, x, y, 7, fresh ? '#ffffff' : '#fff27a'); g.globalAlpha = 1; }
+    disc(g, x, y, 5, INK); disc(g, x, y, 4, on ? (fresh ? '#ffffff' : '#fff27a') : '#2b3a33'); if (on) px(g, x - 1, y - 2, '#ffffff');
+  }
+  txt(g, 'x' + (1 + .13 * (S.speed || 0)).toFixed(2).replace('.', ','), 248, y0 + 80, '#7fe0d6', { align: 'r' });
+  // a piston thumping in time on the right
+  const py = y0 - 4 - Math.abs(Math.sin(bt * Math.PI)) * 12;
+  rect(g, 244, py, 6, y0 - py + 6, INK); rect(g, 245, py + 1, 4, y0 - py + 5, RAMP.steel[4]); rect(g, 240, py - 4, 14, 5, INK); rect(g, 241, py - 3, 12, 3, RAMP.bigotesCopper[3]);
+}
+function bigotesAnnBoss(g, S, t) {
+  // the lab goes dark and red; two beacons sweep it
+  g.globalAlpha = Math.min(.8, t * 2.5); rect(g, 0, 0, SW, SH, '#12060c'); g.globalAlpha = .12 + .1 * Math.max(0, Math.sin(t * 9)); rect(g, 0, 0, SW, SH, '#ff2040'); g.globalAlpha = 1;
+  for (const [bx, ph] of [[16, 0], [240, Math.PI]]) {
+    const a = t * 5 + ph;
+    g.globalAlpha = .2; polyPx(g, [[bx, 104], [bx + Math.cos(a - .22) * 260, 104 + Math.sin(a - .22) * 260], [bx + Math.cos(a + .22) * 260, 104 + Math.sin(a + .22) * 260]], '#ff5d5d'); g.globalAlpha = 1;
+  }
+  // the Secador Supersónico 3000 rises from below, humming harder and harder
+  const k = E.outBack(clamp((t - .1) / .55, 0, 1)), jit = t > .5 ? (hash2(fl(t * 60), 9) - .5) * Math.min(3, (t - .5) * 3) : 0;
+  const mx = rd(118 + jit), my = rd(lerp(SH + 130, 200, k));
+  bigotesMachineBig(g, mx, my, 1, t * (1.5 + t * 3));
+  // blasts of hot air out of the nozzle
+  const nx = mx + 86, ny = my - 63;
+  if (k > .9) for (let i = 0; i < 4; i++) { const q = (t * 2.4 + i / 4) % 1, x0 = nx + q * 60; for (let j = 0; j < 8; j++) px(g, x0 + j * 2, ny - 8 + i * 5 + Math.sin(j * .9 + t * 20 + i) * 2, i % 2 ? '#ffb020' : '#ffdf8a'); }
+  // Don Bigotes, startled, bottom left
+  const hk = spring(t - .45, 2.4, 6); if (hk > 0) { drawS(g, bigotesHead('shock'), 34, 168, { s: hk }); if (fl(t * 3) % 2 === 0) { disc(g, 58, 146, 2, '#63a0ef'); px(g, 57, 145, '#ffffff'); } }
+  // beacons on the walls, under the plate
+  for (const [bx, ph] of [[16, 0], [240, Math.PI]]) {
+    const a = t * 5 + ph, on = Math.cos(a) > 0;
+    rect(g, bx - 9, 108, 18, 6, INK); rect(g, bx - 8, 109, 16, 4, RAMP.steel[2]);
+    ellipsePx(g, bx, 104, 9, 8, INK); ellipsePx(g, bx, 104, 8, 7, on ? '#ff4060' : '#a0182e'); ellipsePx(g, bx + Math.cos(a) * 4, 102, 3, 3, '#ffd1dc');
+  }
+  // the red-hot brass letters on a riveted plate that drops in
+  const pk = E.outBack(clamp(t / .3, 0, 1)), py = rd(lerp(-90, 44, pk)), words = bigotesAnnWords();
+  g.save(); g.translate(128, py);
+  rect(g, -112, -38, 224, 76, INK); rect(g, -111, -37, 222, 74, RAMP.steel[3]); rect(g, -111, -37, 222, 2, RAMP.steel[4]);
+  for (let x = -111; x < 111; x += 12) polyPx(g, [[x, 30], [x + 6, 30], [x + 12, 37], [x + 6, 37]], fl((x + 111) / 12) % 2 ? '#ffd23f' : INK);
+  for (const [x, y] of [[-105, -31], [105, -31]]) { disc(g, x, y, 2.5, INK); disc(g, x, y, 1.8, RAMP.steel[2]); }
+  const nk = t - .2;
+  if (nk > 0) { cardWord(g, words[1][0], 0, -33, words[1][1], { anim: i => cardAnimSlam(nk, i, { from: 1.9, stagger: .05 }) }); cardWord(g, words[2][0], 0, -3, words[2][1], { anim: i => cardAnimSlam(nk - .18, i, { from: 1.9, stagger: .05 }) }); }
+  g.restore();
+}
+function bigotesAnnLevel(g, S, t) {
+  // blueprint paper, arcs crackling
+  rect(g, 0, 0, SW, SH, '#1f4aa0');
+  const off = fl(t * 30) % 12;
+  for (let x = -12; x < SW + 12; x += 12) vline(g, x + off, 0, SH, '#2a5ab0');
+  for (let y = -12; y < SH + 12; y += 12) hline(g, 0, SW, y + off, '#2a5ab0');
+  ringPx(g, 128, 120, 70, '#3a6fc8'); ringPx(g, 128, 120, 52, '#3a6fc8'); tiny(g, 'FIG. 9', 74, SH - 10, '#8fb8ff');
+  // the close-up: goggles come down, the moustache curls up
+  const hk = E.outBack(clamp((t - .04) / .4, 0, 1)), hx = 128, hy = rd(lerp(SH + 130, 186, hk)), X0 = hx - 64, Y0 = hy - 124;
+  for (let i = 0; i < 3; i++) { const seed = fl(t * 12) + i * 31; let x0 = hx + (i - 1) * 50, y0 = Y0 + 20; for (let s2 = 0; s2 < 5; s2++) { const x1 = x0 + (hash2(seed, s2) - .5) * 18, y1 = y0 - 8 - hash2(s2, seed) * 6; thickLine(g, x0, y0, x1, y1, 1, '#4fb8e8'); linePx(g, x0, y0, x1, y1, '#ffffff'); x0 = x1; y0 = y1; } }
+  drawS(g, bigotesHead('focus', true), hx, hy, { s: 2, ay: 1 });
+  // the moustache tips wind up into curls
+  const ck = clamp((t - .55) / .5, 0, 1);
+  if (ck > 0) for (const sd of [-1, 1]) {
+    const cx0 = hx + sd * 30, cy0 = Y0 + 82, turns = ck * 2.3 * Math.PI;
+    let px0 = cx0, py0 = cy0;
+    for (let a = 0; a <= turns; a += .18) { const r = 9 - a * 1.1, x1 = cx0 + sd * (10 + Math.cos(a) * r), y1 = cy0 - 6 - Math.sin(a) * r; thickLine(g, px0, py0, x1, y1, 2.2, INK); px0 = x1; py0 = y1; }
+    px0 = cx0; py0 = cy0;
+    for (let a = 0; a <= turns; a += .18) { const r = 9 - a * 1.1, x1 = cx0 + sd * (10 + Math.cos(a) * r), y1 = cy0 - 6 - Math.sin(a) * r; thickLine(g, px0, py0, x1, y1, 1.3, RAMP.bigotesBeard[3]); px0 = x1; py0 = y1; }
+  }
+  // the goggles: from his forehead down over his eyes (clack!)
+  const gk = E.outBack(clamp((t - .3) / .22, 0, 1)), gy = rd(lerp(Y0 + 25, Y0 + 53, gk)), glow = gk >= 1 ? .5 + .5 * Math.sin(t * 12) : 0;
+  rect(g, X0 + 26, gy - 3, 76, 6, INK); rect(g, X0 + 27, gy - 2, 74, 4, RAMP.wood[2]); rect(g, X0 + 27, gy - 2, 74, 1, RAMP.wood[3]);
+  for (const lx of [X0 + 50, X0 + 78]) {
+    if (glow > 0) { g.globalAlpha = .25 * glow; disc(g, lx, gy, 17, '#7fe0d6'); g.globalAlpha = 1; }
+    disc(g, lx, gy, 12, INK); disc(g, lx, gy, 11, RAMP.gold[2]); disc(g, lx - 1, gy - 1, 10, RAMP.gold[3]);
+    disc(g, lx, gy, 8, RAMP.bigotesLens[1]); disc(g, lx - 1, gy - 1, 7, RAMP.bigotesLens[2 + (glow > .5 ? 1 : 0)]);
+    linePx(g, lx - 5, gy - 2, lx - 2, gy - 5, '#ffffff'); px(g, lx + 3, gy + 3, RAMP.bigotesLens[4]);
+  }
+  // the word, and OVERCLOCK blinking on a red LED strip
+  const words = bigotesAnnWords(), nk = t - .12;
+  if (nk > 0) cardWord(g, words[3][0], 124, 16, words[3][1], { anim: i => cardAnimSlam(nk, i, { from: 1.8, stagger: .045 }) });
+  if (t > .6) { const on = fl(t * 4) % 2 === 0; rect(g, 176, 156, 74, 18, INK); rect(g, 177, 157, 72, 16, '#1a0610'); if (on) txt(g, 'OVERCLOCK', 213, 161, '#ff4060', { align: 'c', bold: true }); }
+  // one bulb per difficulty step
+  for (let i = 0; i < 3; i++) drawS(g, bigotesBulbSpr(i < (S.level || 1) ? 'on' : 'off'), 18 + i * 20, 186, { ay: 1 });
+}
+function bigotesSpecial(g, S, kind, t) {
+  if (kind === 'speed') bigotesAnnSpeed(g, S, t);
+  else if (kind === 'boss') bigotesAnnBoss(g, S, t);
+  else if (kind === 'level') bigotesAnnLevel(g, S, t);
+  else return false;
+}
+// bottom screen: a brass plate with the line of the moment
+function bigotesSpecialBot(g, S, kind, t) {
+  const lbl = { speed: '¡Presión al máximo!', boss: '¡Arranca el Supersónico 3000!', level: 'Modo OVERCLOCK: ¡más difícil!' }[kind]; if (!lbl) return false;
+  const k = E.outBack(clamp(t * 3, 0, 1)), w = Math.max(150, txtW(lbl) + 30), x = rd(SW / 2 - w / 2), y = rd(6 - (1 - k) * 34);
+  rect(g, x, y, w, 20, INK); rect(g, x + 1, y + 1, w - 2, 18, RAMP.gold[3]); rect(g, x + 1, y + 1, w - 2, 2, RAMP.gold[4]); rect(g, x + 1, y + 17, w - 2, 2, RAMP.gold[1]);
+  for (const rx of [x + 6, x + w - 7]) { disc(g, rx, y + 10, 2.2, INK); disc(g, rx, y + 10, 1.5, RAMP.gold[1]); }
+  txt(g, lbl, SW / 2, y + 6, INK, { align: 'c', bold: kind === 'boss' });
+}
+
 // ---------------------------------------------------------------- the stage --
 defStage({
   id: 'bigotes', name: 'DON BIGOTES', sub: '«¡La ciencia del secado!»', verb: '¡GIRA!', mech: 'spin', bpm: 122,
@@ -503,6 +676,7 @@ defStage({
   intro: 'bigotes_in', outro: 'bigotes_out',
   room: {
     top: bigotesRoomTop, bot: bigotesRoomBot, frame: 'bigotesLab', life: bigotesLife, miniLife: bigotesMiniLife, lifeY: 150, lifeSpacing: 34,
+    special: bigotesSpecial, specialBot: bigotesSpecialBot,
     counter: { x: SW / 2, y: 22 }, counterFill: ['#ffffff', '#b8ffcf', '#5bd18b'], mini: bigotesMini, playTop: bigotesPlayTop,
     portal: { x: 64, y: 24, w: 128, h: 92 },
     staticCols: [RAMP.bigotesWall[1], RAMP.bigotesWall[2]], cardCol: RAMP.teal,

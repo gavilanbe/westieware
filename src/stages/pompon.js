@@ -258,6 +258,7 @@ function pomponLedScreen(g, S, t) {
 const POMPON_REACT = { ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' };
 function pomponRoomTop(g, S) {
   const t = S.pt || 0, beat = S.pb || 0, rt = S.reactT || 0;
+  pomponAnnPrewarm(); // one bubble letter per frame, ready before the first announcement
   g.drawImage(pomponArenaBg(), 0, 0);
   let pose = rt < 1.3 ? (POMPON_REACT[S.react] || 'sing') : (fl(beat / 2) % 2 ? 'sing' : 'idle');
   const special = S.phase === 'inter' && S.special && S.pb >= 2 ? S.special : null;
@@ -347,8 +348,158 @@ function pomponPlayTop(g, S) {
   pomponMini(g, 60, 140, S.g.state === 'play' ? 'watch' : S.g.state === 'won' ? 'win' : 'lose', S);
 }
 
+// ---------------------------------------------------------------- announcements
+// ¡MÁS RÁPIDO! · ¡JUEGO DEL JEFE! · ¡MÁS DIFÍCIL! the Palau Sant Guau way (room.special).
+// The bubble lettering is Pompón's title-card face from cards.js (loaded after the
+// stages), so the faces are built on first use.
+let POMPON_ANN = null;
+function pomponAnnFaces() {
+  if (POMPON_ANN) return POMPON_ANN;
+  const pink = CARD_POMPON_FACE;
+  const gold = Object.assign({}, CARD_POMPON_FACE, { id: 'pompGold', fill: ['#fffbe0', '#ffdf4f', '#e0a81e'], line2: '#5a2a00', shadow: '#2a1400' });
+  const cool = Object.assign({}, CARD_POMPON_FACE, { id: 'pompCool', fill: ['#ffffff', '#c9f3ff', '#7fd6ff'], line2: '#1a3a6b', shadow: '#0a1a3b' });
+  const A = { warm: [] };
+  for (const [k, w, maxW, st] of [['speed', '¡MÁS RÁPIDO!', 212, pink], ['boss', '¡JUEGO DEL JEFE!', 214, gold], ['level', '¡MÁS DIFÍCIL!', 212, cool], ['vs', 'VS', 60, gold]]) {
+    const f = cardFit(w, maxW, st); A[k] = { w, st: f }; A.warm.push([w, f]);
+  }
+  return (POMPON_ANN = A);
+}
+function pomponAnnPrewarm() { if (typeof cardPrewarm === 'function' && typeof CARD_POMPON_FACE !== 'undefined') cardPrewarm(pomponAnnFaces().warm); }
+// a word that drops in letter by letter and keeps bouncing on the beat
+function pomponAnnWord(g, W, x, y, t, t0, beat) {
+  const nk = t - t0; if (nk <= 0) return [];
+  return cardWord(g, W.w, x, y, W.st, { anim: i => { const a = cardAnimDrop(nk, i, { h: -40, stagger: .05 }); if (a.s !== 0 && nk > .6) a.dy = (a.dy || 0) - Math.max(0, Math.sin((beat + i * .12) * Math.PI)) * 2; return a; } });
+}
+// camera flashes popping in the crowd: a white star burst, sometimes lighting the room
+function pomponFlashes(g, t, rate, y0 = 146) {
+  let big = 0;
+  for (let k = 0; k < 3; k++) {
+    const n = fl(t * rate) - k, age = t * rate - fl(t * rate) + k; if (n < 0 || age > 1.4) continue;
+    const x = 12 + hash2(n, 11) * 232, y = y0 + hash2(n, 12) * 24, r = (1 - age / 1.4) * (6 + hash2(n, 13) * 4);
+    if (r < 1) continue;
+    for (const [dx, dy] of [[1, 0], [0, 1], [.7, .7], [.7, -.7]]) { linePx(g, x - dx * r * 1.6, y - dy * r * 1.6, x + dx * r * 1.6, y + dy * r * 1.6, '#ffffff'); }
+    disc(g, x, y, Math.max(1, r * .45), '#ffffff');
+    if (age < .12) big = Math.max(big, .14);
+  }
+  if (big) { g.globalAlpha = big; rect(g, 0, 0, SW, SH, '#ffffff'); g.globalAlpha = 1; }
+}
+// ¡MÁS RÁPIDO!: the concert speeds up, flashes pop, the LED ticker races
+function pomponAnnSpeed(g, S, t) {
+  const A = pomponAnnFaces(), beat = t * (S.bpm || 126) / 60, d = S.def;
+  g.drawImage(pomponArenaBg(), 0, 0);
+  pomponBeams(g, NOW * 2.6, 4, .2);
+  // music notes fly off her, faster and faster
+  for (let i = 0; i < 8; i++) { const p = (t * (1.1 + i * .08) + i * .13) % 1, side = i % 2 ? 1 : -1, x = 128 + side * (18 + p * 90), y = 104 - p * 60 + Math.sin(p * 9 + i) * 4; txt(g, '♪', x, y, ['#ff93bf', '#63e6ff', '#fff27a'][i % 3], { out: INK }); }
+  const hop = Math.abs(Math.sin(beat * Math.PI * 2)) * 4;
+  shadowOval(g, 128, 160, 16, 3, .6);
+  pomponDraw(g, 128, 160, 'speed', { jump: hop });
+  for (let i = 0; i < 5; i++) { const y = 70 + i * 16, w = 14 + (i % 2) * 10, x = (t * 520 + i * 70) % 300 - 40; rect(g, SW - x, y, w, 1, 'rgba(255,255,255,.6)'); }
+  pomponCrowd(g, 158, beat * 2, NOW * 1.8, 1.3);
+  pomponFlashes(g, t, 7);
+  // the title drops in over the lighting rig
+  pomponAnnWord(g, A.speed, 120, 8, t, .1, beat); // clear of the pause button
+  // the LED ticker races along the stage lip
+  const nb = rd((d.bpm || 126) * (1 + .13 * S.speed));
+  cardLedTicker(g, 176, '♥ ¡MÁS RÁPIDO! ♥ TEMPO ' + nb + ' BPM ', t * (2.2 + S.speed * .2), '#ff93bf');
+}
+// the darkness with holes where the spots fall (a canvas reused every frame)
+let POMPON_DARK = null;
+function pomponSpotCone(lx, tx) { return [[lx - 3, 14], [lx + 3, 14], [tx + 24, 156], [tx - 24, 156]]; }
+// ¡JUEGO DEL JEFE!: two spots hunt the stage, then pin Pompón and Vanesa: VS
+function pomponAnnBoss(g, S, t) {
+  const A = pomponAnnFaces(), beat = t * (S.bpm || 126) / 60, lock = E.outBack(clamp((t - .95) / .3, 0, 1));
+  g.drawImage(pomponArenaBg(), 0, 0);
+  const pk = lock > 0 ? 'angry' : 'boss';
+  pomponDraw(g, 76, 160, pk, {});
+  pomponDrawVanesa(g, 186, 160, 'smug', { flip: true });
+  pomponCrowd(g, 158, beat, NOW, .2);
+  // where each spot points: hunting, then locked on its artist
+  const xa = lerp(128 + Math.sin(t * 6.1) * 96 + Math.sin(t * 13) * 14, 76, lock), xb = lerp(128 + Math.sin(t * 5.3 + 2) * 96 + Math.sin(t * 11 + 1) * 14, 186, lock);
+  const L = POMPON_DARK || (POMPON_DARK = mkCanvas(SW, SH)), lg = L.g;
+  lg.clearRect(0, 0, SW, SH); lg.globalCompositeOperation = 'source-over'; lg.fillStyle = 'rgba(6,2,14,.82)'; lg.fillRect(0, 0, SW, SH);
+  lg.globalCompositeOperation = 'destination-out';
+  for (const [lx, tx] of [[40, xa], [216, xb]]) { polyPx(lg, pomponSpotCone(lx, tx), '#000000'); ellipsePx(lg, tx, 156, 26, 7, '#000000'); }
+  lg.globalCompositeOperation = 'source-over';
+  g.drawImage(L, 0, 0);
+  for (const [lx, tx, col] of [[40, xa, '#fff7ae'], [216, xb, '#c9a3ff']]) { g.globalAlpha = .13; polyPx(g, pomponSpotCone(lx, tx), col); g.globalAlpha = .3; ellipsePx(g, tx, 157, 26, 6, col); g.globalAlpha = 1; rect(g, lx - 4, 8, 9, 7, INK); rect(g, lx - 2, 14, 5, 2, col); }
+  // VS badge between them once the spots lock
+  if (lock > 0) {
+    g.save(); g.translate(131, 112); g.scale(lock, lock); g.rotate(Math.sin(t * 5) * .06);
+    cardBigStar(g, 0, 0, 22, t * .8, '#ff5d9e', '#ffffff'); cardBigStar(g, 0, 0, 16, t * .8, '#b3202e', '#ff5d9e');
+    cardWord(g, A.vs.w, 0, -11, A.vs.st);
+    g.restore();
+  }
+  // gold title, and the ribbon that names the fight
+  pomponAnnWord(g, A.boss, 120, 10, t, .25, beat);
+  const rk = E.outBack(clamp((t - 1.1) / .35, 0, 1));
+  if (rk > 0) {
+    g.save(); g.translate(SW / 2, 182); g.scale(rk, 1);
+    for (const sx of [-1, 1]) { polyPx(g, [[sx * 70, -7], [sx * 88, -9], [sx * 81, 0], [sx * 88, 9], [sx * 70, 7]], INK); polyPx(g, [[sx * 71, -6], [sx * 86, -8], [sx * 79, 0], [sx * 86, 8], [sx * 71, 6]], '#a3185a'); }
+    panel(g, -74, -9, 148, 18, '#ffdf4f', { r: 3, line: INK, hi: '#fffbe0', lo: '#e0a81e' });
+    txt(g, 'ESTILISMO DE GALA', 0, -4, '#5a2a00', { align: 'c', bold: true });
+    g.restore();
+  }
+}
+// ¡MÁS DIFÍCIL!: a key change — confetti, glowsticks up, notes climbing the steps
+function pomponAnnLevel(g, S, t) {
+  const A = pomponAnnFaces(), beat = t * (S.bpm || 126) / 60, lv = Math.max(1, Math.min(3, S.level || 2));
+  g.drawImage(pomponArenaBg(), 0, 0);
+  pomponBeams(g, NOW * 1.7, 4, .16, ['#ff82b4', '#63e6ff', '#fff27a', '#94ffb4']);
+  // the notes climb a staircase: the key goes up
+  for (let i = 0; i < 6; i++) {
+    const k = clamp((t - .2 - i * .1) / .25, 0, 1); if (k <= 0) continue;
+    for (const side of [-1, 1]) { const x = 128 + side * (40 + i * 13), y = 128 - i * 11 - (1 - E.outBack(k)) * 12; txt(g, '♪', x - 3, y - 6, ['#fff27a', '#ff93bf', '#63e6ff'][(i + (side > 0 ? 1 : 0)) % 3], { out: INK }); }
+  }
+  const jump = Math.abs(Math.sin(beat * Math.PI)) * 8;
+  shadowOval(g, 128, 160, 16 - jump * .4, 3, .6);
+  pomponDraw(g, 128, 160, 'win', { jump });
+  pomponCrowd(g, 158, beat, NOW * 1.5, 2.4);
+  // confetti from the rig
+  for (let i = 0; i < 46; i++) { const sp = 50 + hash2(i, 21) * 60, y = (t * sp + hash2(i, 22) * 200) % 210 - 12, x = (hash2(i, 23) * SW + Math.sin(t * 3 + i) * 8) % SW; if (t * sp + hash2(i, 22) * 200 < 12) continue; rect(g, x, y, 2 + (i % 2), 2, ['#ff5d9e', '#63e6ff', '#fff27a', '#94ffb4', '#ffffff'][i % 5]); }
+  // difficulty: one more bow lights up
+  panel(g, 176, 44, 72, 28, '#12061f', { r: 5, line: '#ff82b4' });
+  tiny(g, 'DIFICULTAD', 212, 49, '#ffd1e4', { align: 'c' });
+  for (let i = 0; i < 3; i++) { const bx = 196 + i * 16, by = 62, on = i < lv - 1 || (i === lv - 1 && t > .8); if (on) { const kk = i === lv - 1 ? spring(t - .8, 2.6, 7) : 1; g.save(); g.translate(bx, by); g.scale(kk, kk); pomponBowAt(g, 0, 0, .9); g.restore(); } else { pomponBowAt(g, bx, by, .9); g.globalAlpha = .7; disc(g, bx, by, 8, '#12061f'); g.globalAlpha = 1; } }
+  pomponAnnWord(g, A.level, 120, 8, t, .1, beat);
+}
+function pomponSpecial(g, S, kind, t) {
+  if (typeof cardWord !== 'function' || typeof CARD_POMPON_FACE === 'undefined') return false;
+  if (kind === 'speed') pomponAnnSpeed(g, S, t);
+  else if (kind === 'boss') pomponAnnBoss(g, S, t);
+  else if (kind === 'level') pomponAnnLevel(g, S, t);
+  else return false;
+}
+// the bottom-screen strip: a pink sash with hearts
+const POMPON_ANN_LBL = { speed: ['¡Sube el tempo del concierto!', '#ff5d9e'], boss: ['¡Estilismo de gala contra Vanesa!', '#e0a81e'], level: ['¡Cambio de tono! ¡Más difícil!', '#63a0ef'] };
+function pomponSpecialBot(g, S, kind, t) {
+  const L = POMPON_ANN_LBL[kind]; if (!L) return false;
+  const [label, col] = L, k = E.outBack(clamp(t * 3, 0, 1)), w = Math.max(160, txtW(label) + 40), y = rd(6 - (1 - k) * 34);
+  panel(g, SW / 2 - w / 2, y, w, 18, col, { r: 9, line: INK, hi: mixHex(col, '#ffffff', .45), lo: mixHex(col, INK, .3) });
+  for (const sx of [-1, 1]) { const hx = SW / 2 + sx * (w / 2 - 10), bob = Math.sin(t * 8 + sx) * 1; drawHeart(g, hx, y + 9 + bob, INK, 1.3); drawHeart(g, hx, y + 8 + bob, '#ffffff', 1); }
+  txt(g, label, SW / 2, y + 5, '#ffffff', { align: 'c', bold: true, out: mixHex(col, INK, .5) });
+  const sh = ((t * 90) % (w + 40)) - 20; g.globalAlpha = .35; rect(g, SW / 2 - w / 2 + sh, y + 2, 3, 14, '#ffffff'); g.globalAlpha = 1;
+}
+
 // ---------------------------------------------------------------- music -----
 const POMPON_SONGS = {
+  // the announcements: an idol-pop riser, a gala fanfare, the truck-driver key change
+  jingles: {
+    speed: { spb: 4, tracks: [
+      { i: 'bell', v: .65, n: 'E5 F#5 G#5 A5 B5 C#6 D#6 E6 F#6 G#6 A6 B6 C#7! - . .' },
+      { i: 'p12', v: .35, n: 'A4 C#5 E5 A5 A4 C#5 E5 A5 A4 C#5 E5 A5 A4! - . .' },
+      { i: 'bass', v: .85, n: 'A2 A3 A2 A3 A2 A3 A2 A3 E2 E3 E2 E3 A2! - . .' },
+      { i: 'd', v: .8, n: 'k c k c k c k c k c c c k+c+x - . .' }] },
+    boss: { spb: 4, tracks: [
+      { i: 'brass', v: .75, n: 'F#4 - - . F#4 - A4 - C#5 - - . F5! - - -' },
+      { i: 'bell', v: .45, n: '. . . . . . . . . . . . F6 - C#6 -' },
+      { i: 'bass', v: .9, n: 'F#2 . F#2 . F#2 . F#2 . D2 . D2 . C#2! - - -' },
+      { i: 'd', v: .9, n: 'T . . T T . . T T . T T T T k+x .' }] },
+    level: { spb: 4, tracks: [
+      { i: 'bell', v: .6, n: 'A5 C#6 E6 A6 A5 C#6 E6 A6 B5 D#6 F#6 B6! - - . .' },
+      { i: 'p12', v: .35, n: '. . . . . . . . B4 D#5 F#5 B5 B4! - . .' },
+      { i: 'bass', v: .85, n: 'A2 . A3 . A2 . A3 . B2 . B3 . B2! - . .' },
+      { i: 'd', v: .85, n: 'k . c . k . c . k c c c k+x - . .' }] },
+  },
   card: { spb: 4, tracks: [
     { i: 'bell', v: .7, n: 'A5 . C#6 . E6 . A6 . G#6 . E6 . A6! - - -' },
     { i: 'p12', v: .35, n: 'A4 C#5 E5 A5 A4 C#5 E5 A5 D5 F#5 A5 D6 E5 G#5 B5 E6' },
@@ -380,7 +531,7 @@ defStage({
   songs: POMPON_SONGS, intro: 'pompon_in', outro: 'pompon_out',
   peek: (g, x, y, t) => drawS(g, pomponHead(fl(t * .7) % 2 ? 'win' : 'idle'), x, y - 8, { ax: .5, ay: 1 }),
   room: {
-    top: pomponRoomTop, bot: pomponRoomBot, frame: 'stage',
+    top: pomponRoomTop, bot: pomponRoomBot, frame: 'stage', special: pomponSpecial, specialBot: pomponSpecialBot,
     cardTop: (g, S) => { const t = S.pt || 0; g.drawImage(pomponArenaBg(), 0, 0); pomponBeams(g, t, 4, .12); pomponLedScreen(g, S, t); pomponCrowd(g, 158, t * 2.1, t, .6); }, life: pomponLife, lifeY: 164, lifeSpacing: 34, miniLife: pomponMiniLife,
     counter: { x: SW / 2, y: 16 }, counterFill: ['#ffffff', '#ffd1e4', '#ff5d9e'], mini: pomponMini, playTop: pomponPlayTop,
     portal: { x: 64, y: 30, w: 128, h: 96 }, staticCols: [POMPON_BOW[1], POMPON_BOW[0]], cardCol: RAMP.pink,

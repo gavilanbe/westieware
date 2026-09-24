@@ -28,6 +28,7 @@ function bubbleImg(id, r, face, rim, locked) {
   });
 }
 
+const REVEAL_T = 3.4; // seconds each newly unlocked character gets to itself
 const MENU = {
   enter(arg = {}) {
     stopAllMusic(.1); this.song = playSong(SONG_MENU, { bpm: 104 });
@@ -52,10 +53,10 @@ const MENU = {
     this.sel = arg.from && STAGES[arg.from] ? arg.from : (SAVE.lastSel && STAGES[SAVE.lastSel] && stageUnlocked(SAVE.lastSel) ? SAVE.lastSel : 'anahi');
     this.selT = 0;
     const fresh = this.walkers.filter(w => w.isNew);
-    // a newly unlocked character drops in from above under a spotlight (WarioWare-style reveal)
-    fresh.forEach((w, i) => { w.appear = 1; w.drop = { t: -.45 - i * .45 }; });
-    this.reveal = fresh.length ? { id: fresh[0].id, t: 0 } : null;
-    if (fresh.length) { this.sel = fresh[0].id; this.popFor = null; after(.3, () => { sfx('sparkle'); playSong(JINGLE.record, { bpm: 140 }); }); }
+    // a newly unlocked character drops in from above under a spotlight (WarioWare-style reveal);
+    // if several are new at once they arrive one by one, each with its own moment
+    fresh.forEach((w, i) => { w.appear = 1; w.drop = { t: -.45 - i * REVEAL_T }; });
+    this.revealQ = fresh.map(w => w.id); this.reveal = null; this.nextReveal();
     for (const w of fresh) SAVE.unlockSeen[w.id] = 1;
     if (QS.get('pop')) { const w = this.walkers.find(w => w.id === QS.get('pop')); if (w) { this.popFor = w; this.sel = w.id; } }
     persist();
@@ -64,7 +65,7 @@ const MENU = {
   exit() { },
   update(dt) {
     this.t += dt; this.selT += dt; this.popT += dt; this.fx.update(dt); this.topFx.update(dt);
-    if (this.reveal) { this.reveal.t += dt; if (this.reveal.t > 3.2) this.reveal = null; }
+    if (this.reveal) { this.reveal.t += dt; if (this.reveal.t > REVEAL_T) this.nextReveal(); }
     if (this.tab === 'juegos') this.updWalkers(dt);
     else if (this.tab === 'coleccion') this.updColeccion(dt);
     else if (this.tab === 'opciones') this.updOpciones(dt);
@@ -72,6 +73,11 @@ const MENU = {
     this.updTabs();
   },
   // ------------------------------------------------------------ walkers ---
+  nextReveal() {
+    const id = this.revealQ && this.revealQ.shift();
+    this.reveal = id ? { id, t: 0 } : null;
+    if (id) { this.sel = id; this.selT = 0; this.popFor = null; after(.3, () => { sfx('sparkle'); playSong(JINGLE.record, { bpm: 140 }); }); }
+  },
   area: { x0: 16, x1: 240, y0: 72, y1: 156 },
   // best of a handful of random spots: the one farthest from everybody else
   freeSpot(from, reach) {
@@ -207,7 +213,7 @@ const MENU = {
     g.restore();
     // the unlock stamp over the record bars while a new character arrives
     if (this.reveal && this.reveal.id === id) {
-      const rt = this.reveal.t, k = spring(rt - .5, 2.4, 6), out = rt > 2.7 ? clamp((3.2 - rt) * 2, 0, 1) : 1;
+      const rt = this.reveal.t, k = spring(rt - .5, 2.4, 6), out = rt > REVEAL_T - .5 ? clamp((REVEAL_T - rt) * 2, 0, 1) : 1;
       if (k > 0) { g.save(); g.globalAlpha = out; g.translate(92, 104); g.rotate(-.12); g.scale(k, k);
         rect(g, -86, -22, 172, 44, INK); rect(g, -86, -19, 172, 38, '#e8303c'); rect(g, -86, -19, 172, 3, '#ff7a86');
         for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + rt * 3; drawStar(g, Math.cos(a) * 94, Math.sin(a) * 30, 2.5, '#fff27a'); }
