@@ -32,6 +32,7 @@ const ANA2 = {
   speed: { l: [18, 96], r: [80, 104], hl: 'fist', hr: 'fist', ex: 'focus', tl: 'scissors', tr: 'comb' },
   talk: { l: [22, 133], r: [85, 98], hl: 'open', hr: 'open', ex: 'talk' },
   think: { l: [21, 130], r: [58, 60], hl: 'open', hr: 'fist', ex: 'hmm' },
+  pro: { l: [4, 46], r: [84, 100], hl: 'fist', hr: 'fist', ex: 'wink', tl: 'scissors', tr: 'comb', rl: -.25, rr: .5 }, // her own portrait pose: scissors up, comb ready
 };
 const ANA_POSES = ANA2; // old name, same table
 function ik2(sx, sy, hx, hy, L1, L2, bend) {
@@ -190,9 +191,10 @@ function drawAnahiFull(g, x, y, pose = 'idle', t = 0, o = {}) {
   const jump = o.jump || 0, bob = o.bob || 0;
   const X = rd(x - img.width / 2), Y = rd(y - img.height - jump + bob);
   g.drawImage(img, X, Y);
-  const tool = (kind, hx, hy, rot) => { if (kind === 'scissors') drawS(g, scissorsSpr(), X + hx * k, Y + hy * k - 2, { rot: rot + Math.sin(t * 20) * (o.snip ? .25 : 0), s: Math.max(1, rd(k * 1.6)) }); if (kind === 'comb') drawS(g, combSpr(), X + hx * k, Y + hy * k - 2, { rot: rot, s: Math.max(1, rd(k * 1.6)) }); };
-  if (P.tl) tool(P.tl, P.l[0], P.l[1], -.6);
-  if (P.tr) tool(P.tr, P.r[0], P.r[1], .3);
+  const ts = o.ts || Math.max(1, rd(k * 1.6));
+  const tool = (kind, hx, hy, rot) => { if (kind === 'scissors') drawS(g, scissorsSpr(), X + hx * k, Y + hy * k - 2, { rot: rot + Math.sin(t * 20) * (o.snip ? .25 : 0), s: ts }); if (kind === 'comb') drawS(g, combSpr(), X + hx * k, Y + hy * k - 2, { rot: rot, s: ts }); };
+  if (P.tl) tool(P.tl, P.l[0], P.l[1], P.rl != null ? P.rl : -.6);
+  if (P.tr) tool(P.tr, P.r[0], P.r[1], P.rr != null ? P.rr : .3);
 }
 // upper-body helper kept for older callers: (x, y) = her waist line
 function drawAnahi(g, x, y, pose = 'idle', t = 0, o = {}) {
@@ -262,11 +264,3 @@ const ANA_CHIBI_BODY = {
     '..koook..kook...'],
 };
 const ANA_CHIBI_HAPPY = ANA_CHIBI_HEAD.map((r, i) => i === 7 ? 'khhssesssesshhhk' : i === 8 ? 'khhsesessesesshk' : i === 10 ? 'khhhsssmmmsshhhk' : r);
-function anahiChibi(frame = 'walk0', t = 0) {
-  const body = frame === 'walk1' ? 'walk' : frame === 'happy' ? 'happy' : 'stand';
-  return mdl('anaChibi:' + frame, () => {
-    const map = { k: INK, h: ANA_C.hair[1], H: ANA_C.hair[0], s: ANA_C.skin[1], S: ANA_C.skin[0], b: ANA_C.blush, e: ANA_C.eye, m: ANA_C.lip, t: ANA_C.tee[1], T: ANA_C.tee[2], g: ANA_C.strap[1], p: ANA_C.pants[1], P: '#6b3a14', o: ANA_C.shoe[1] };
-    const head = frame === 'happy' || frame === 'held' ? ANA_CHIBI_HAPPY : ANA_CHIBI_HEAD;
-    return spr(head.concat(ANA_CHIBI_BODY[body]), map);
-  });
-}

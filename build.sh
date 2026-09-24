@@ -17,7 +17,7 @@ else
   GAMES=$(ls src/games/*.js 2>/dev/null)
 fi
 OUTFILE=${OUT:-index.html}
-SCENES="src/boot.js src/title.js src/menu.js src/extras.js src/lab.js src/main.js"
+SCENES="src/cards.js src/chibis.js src/boot.js src/title.js src/menu.js src/extras.js src/lab.js src/main.js"
 FILES=""
 for f in $CORE $STAGE_SYS $STAGES $GAMES $SCENES; do [ -f "$f" ] && FILES="$FILES $f"; done
 # a syntax error in any module stops the build with its file and line

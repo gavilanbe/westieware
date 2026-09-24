@@ -64,6 +64,7 @@ const STG = {
       fx: new FX(), topFx: new FX(), story: arg.story !== false,
     };
     if (arg.practice) { S.first = false; S.practiceId = arg.practice; }
+    else if (def.bossFirst) S.nextIsBoss = true; // a boss-only stage (the secret ¡PAPELEO!)
     // build every microgame's pictures while the title card is up (no hitches later)
     for (const id of (arg.practice ? [arg.practice] : stageGames(def).concat(def.boss ? [def.boss] : []))) warm(() => { if (MG[id]) { const g = mgNew(id, 1, 120); mgUpdate(g, STEP); mgDraw(g); } });
     stopAllMusic(.1);
@@ -504,25 +505,50 @@ const STG = {
     txt(g, String(S.count + 1).padStart(2, '0'), 8, 6, '#ffffff', { out: INK, bold: true });
   },
   drawMiniLives(g, S) { for (let i = 0; i < S.maxLives; i++) { const alive = i < S.lives; (S.def.room.miniLife || drawMiniLifeDefault)(g, 10 + i * 12, SH - 12, alive); } },
-  // ---- title card
+  // ---- title card: every character brings its own (src/cards.js); this is the plain template
   drawCardTop(g) {
-    const S = this.S, d = S.def, t = S.pt, cols = d.cardCols || [RAMP.green[1], RAMP.green[2]];
-    // a character title card: sunburst in the stage colours, portrait slams in from the left
+    const S = this.S, d = S.def, t = S.pt, cd = d.card || (typeof CARD_DESIGNS !== 'undefined' && CARD_DESIGNS[d.id]);
+    if (cd && cd.top) { cd.top(g, S, t); return; }
+    const cols = d.cardCols || [RAMP.green[1], RAMP.green[2]];
+    // sunburst in the stage colours, a diagonal band for the name, portrait from the left
     rect(g, 0, 0, SW, SH, cols[0]);
-    if (d.cardBg === 'waves') { g.fillStyle = cols[1]; for (let y = -12; y < SH + 12; y += 16) for (let x = 0; x < SW; x++) { const yy = y + Math.sin(x * .09 + t * 2 + y * .2) * 4; g.fillRect(x, rd(yy), 1, 7); } }
-    else for (let i = 0; i < 18; i++) { const a = i / 18 * TAU + t * .25; polyPx(g, [[70, 120], [70 + Math.cos(a - .09) * 320, 120 + Math.sin(a - .09) * 320], [70 + Math.cos(a + .09) * 320, 120 + Math.sin(a + .09) * 320]], cols[1]); }
-    if (d.slogan) { const sk = clamp((t - .9) / .3, 0, 1); if (sk > 0) { const ls = wrapText(d.slogan, 150); ls.forEach((l, i) => txt(g, l, 176, 150 + i * 12 + (1 - E.outBack(sk)) * 30, '#ffffff', { align: 'c', out: INK, bold: true })); } }
-    // diagonal name band
+    for (let i = 0; i < 18; i++) { const a = i / 18 * TAU + t * .25; polyPx(g, [[70, 120], [70 + Math.cos(a - .09) * 320, 120 + Math.sin(a - .09) * 320], [70 + Math.cos(a + .09) * 320, 120 + Math.sin(a + .09) * 320]], cols[1]); }
     const bk = E.outBack(clamp((t - .15) / .35, 0, 1));
     g.save(); g.translate(lerp(SW + 120, 170, bk), 58); g.rotate(-.06);
     rect(g, -110, -26, 240, 52, INK); rect(g, -110, -23, 240, 46, '#fff8e6'); rect(g, -110, -23, 240, 3, '#ffffff'); rect(g, -110, 20, 240, 3, '#e8dcc0');
     g.restore();
-    const k = E.outBack(clamp(t / .45, 0, 1));
-    if (d.portrait) { const p = d.portrait('card', t); shadowOval(g, lerp(-80, 64, k), 186, 34, 5, .45); drawS(g, p, lerp(-80, 64, k), 190, { ax: .5, ay: 1 }); }
-    const nk = t - .3;
-    if (nk > 0) { const st = fitMord(d.name, 150, { u: 2.3, r: 2.4, sy: 3, fill: d.nameFill || ['#ffffff', '#fff27a', '#ffc23a'] }); mord(g, d.name, 172, 38, st, { anim: (i) => { const lt = nk - i * .05; return { s: lt <= 0 ? 0 : spring(lt, 2.2, 7), rot: lt < .2 ? (i % 2 ? .3 : -.3) * (1 - lt / .2) : 0 }; } }); }
-    if (t > .75) { const s2 = d.sub, n = Math.min(s2.length, fl((t - .75) * 42)); txt(g, s2.slice(0, n), 172, 96, '#ffffff', { align: 'c', out: INK }); }
-    if (t > 1.15) { const k2 = spring(t - 1.15, 2.5, 6); g.save(); g.translate(176, 128); g.rotate(.05); g.scale(k2, k2); panel(g, -50, -11, 100, 22, S.first ? C.pink : C.yellow, { r: 5, hi: '#ffffff' }); txt(g, S.first ? '¡PRIMERA VISITA!' : 'RÉCORD: ' + (SAVE.best[S.id] || 0), 0, -4, S.first ? '#ffffff' : INK, { align: 'c', bold: true }); g.restore(); }
+    this.cardPortrait(g, S, t);
+    this.cardName(g, S, t, d.name, 172, 38, fitMord(d.name, 150, { u: 2.3, r: 2.4, sy: 3, fill: d.nameFill || ['#ffffff', '#fff27a', '#ffc23a'] }));
+    this.cardSub(g, S, t, 172, 96);
+    this.cardPill(g, S, t, 176, 128);
+  },
+  // the card kit — the four parts every title card keeps, on the same clock:
+  // portrait slams in (0–.45 s), name pops in (.3 s), motto types in (.75 s), pill springs in (1.15 s)
+  cardPortrait(g, S, t, o = {}) {
+    const d = S.def; if (!d.portrait) return;
+    const k = E.outBack(clamp((t - (o.delay || 0)) / .45, 0, 1)), x = lerp(o.from != null ? o.from : -80, o.x != null ? o.x : 64, k), y = o.y != null ? o.y : 190;
+    if (o.shadow !== false) shadowOval(g, x, y - 4, 34, 5, .45);
+    drawS(g, d.portrait('card', t), x, y, { ax: .5, ay: 1, flip: o.flip });
+  },
+  // letter-by-letter entrance: a springy pop with a little twist
+  cardPop(nk, i) { const lt = nk - i * .05; return { s: lt <= 0 ? 0 : spring(lt, 2.2, 7), rot: lt < .2 && lt > 0 ? (i % 2 ? .3 : -.3) * (1 - lt / .2) : 0 }; },
+  cardName(g, S, t, word, x, y, st, o = {}) {
+    const nk = t - (o.t0 != null ? o.t0 : .3); if (nk <= 0) return;
+    mord(g, word, x, y, st, { align: o.align, anim: o.anim ? i => o.anim(nk, i) : i => this.cardPop(nk, i) });
+  },
+  cardSub(g, S, t, x, y, o = {}) {
+    const s = o.text || S.def.sub, t0 = o.t0 != null ? o.t0 : .75; if (t <= t0 || !s) return;
+    const n = Math.min(s.length, fl((t - t0) * (o.cps || 42)));
+    txt(g, s.slice(0, n), x, y, o.col || '#ffffff', { align: o.align || 'c', out: o.out === undefined ? INK : o.out, bold: o.bold });
+  },
+  // ¡PRIMERA VISITA! the first time, RÉCORD: n afterwards; o.draw(g, k, label, first) draws a custom shape
+  cardPill(g, S, t, x, y, o = {}) {
+    const t0 = o.t0 != null ? o.t0 : 1.15; if (t <= t0) return;
+    const k = spring(t - t0, 2.5, 6), first = !!S.first, label = first ? '¡PRIMERA VISITA!' : 'RÉCORD: ' + (SAVE.best[S.id] || 0);
+    g.save(); g.translate(rd(x), rd(y)); g.rotate(o.rot != null ? o.rot : .05); g.scale(k, k);
+    if (o.draw) o.draw(g, k, label, first);
+    else { const w = Math.max(100, txtW(label) + 22); panel(g, -w / 2, -11, w, 22, first ? (o.first || C.pink) : (o.rec || C.yellow), { r: o.r != null ? o.r : 5, hi: '#ffffff', line: o.line }); txt(g, label, 0, -4, first ? (o.firstInk || '#ffffff') : (o.recInk || INK), { align: 'c', bold: true }); }
+    g.restore();
   },
   drawCardBot(g) {
     const S = this.S, d = S.def, t = S.pt;

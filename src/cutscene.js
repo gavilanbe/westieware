@@ -10,7 +10,11 @@
 const CUTS = {};
 function defCut(id, def) { CUTS[id] = def; }
 let _cutDone = null;
-function playCut(id, done) { _cutDone = done; go(CUT, { id }); }
+function playCut(id, done) {
+  _cutDone = done;
+  if (!(SAVE.cutsSeen || {})[id]) { SAVE.cutsSeen = SAVE.cutsSeen || {}; SAVE.cutsSeen[id] = 1; persist(); } // for the Cine
+  go(CUT, { id });
+}
 
 const WHO = {
   anahi: { name: 'Anahí', col: '#2a7356', voice: 'anahi' },

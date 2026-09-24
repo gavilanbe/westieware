@@ -23,69 +23,40 @@ const ANAHI_SONGS = {
     { i: 'd', v: .85, n: 'k . h s . k s h k . h s k s s s k . h s . k s h k . h s k s s+x s' }] },
 };
 
-// the shopfront on Carrer de Viladomat, as in the user's video: tan stucco,
-// the green sign with its crest, the window, the door, grass and the A-frame
-function anahiShopTop() {
-  return mdl('anahiShopTop', () => {
-    const c = mkCanvas(SW, SH), g = c.g;
-    rect(g, 0, 0, SW, SH, '#c9a27a');
-    for (let i = 0; i < 700; i++) px(g, hash2(i, 11) * SW, hash2(11, i) * SH, hash2(i, 2) < .5 ? '#bb946c' : '#d4b088');
-    for (const x of [0, 246]) { rect(g, x, 0, 10, SH, '#8a5f3a'); rect(g, x + 1, 0, 1, SH, '#a8764c'); }
-    // the shop opening: window (left) + door (right)
-    const oy = 78;
-    rect(g, 14, oy, 228, 90, INK);
-    rect(g, 16, oy + 2, 150, 86, '#16362c'); rect(g, 18, oy + 4, 146, 82, '#1f4a3c');
-    for (const lx of [40, 80, 120]) { rect(g, lx, oy + 6, 10, 2, '#fff7ae'); rect(g, lx + 2, oy + 8, 6, 1, '#fff2c0'); }
-    rect(g, 30, oy + 26, 40, 30, '#2a5a48'); ringRect(g, 88, oy + 20, 26, 32, 2, RAMP.gold[2]); rect(g, 90, oy + 22, 22, 28, '#dce7ea');
-    rect(g, 22, oy + 58, 138, 4, '#caa27a'); rect(g, 22, oy + 62, 138, 22, '#8e6a44'); for (let x = 26; x < 156; x += 26) rect(g, x, oy + 64, 22, 18, '#a67e54');
-    drawS(g, aFrameSign(), 60, oy + 86, { ax: .5, ay: 1, s: .8 });
-    for (let i = 0; i < 4; i++) linePx(g, 100 + i * 7, oy + 2, 70 + i * 7, oy + 88, 'rgba(255,255,255,.12)');
-    // door
-    rect(g, 170, oy + 2, 70, 86, '#0f1a17'); rect(g, 174, oy + 6, 62, 80, '#1d3a33'); rect(g, 178, oy + 10, 54, 72, '#2c5a50');
-    ellipsePx(g, 205, oy + 26, 13, 7, INK); ellipsePx(g, 205, oy + 26, 12, 6, '#fffaf0'); tiny(g, 'OPEN', 205, oy + 24, INK, { align: 'c' });
-    rect(g, 228, oy + 44, 3, 12, RAMP.gold[3]);
-    // grass strip, water bowl, pavement
-    rect(g, 14, oy + 90, 228, 6, '#3e8f3a'); for (let x = 14; x < 242; x += 2) px(g, x, oy + 89, '#56ab4a');
-    ellipsePx(g, 150, oy + 92, 9, 3, INK); ellipsePx(g, 150, oy + 91, 8, 2.4, RAMP.steel[3]); ellipsePx(g, 150, oy + 91, 5.5, 1.4, '#9bd6f7');
-    rect(g, 0, oy + 96, SW, SH - oy - 96, '#6d7ea0');
-    for (let y = oy + 96; y < SH; y += 9) { rect(g, 0, y, SW, 1, '#556486'); for (let x = ((y / 9) % 2) * 9; x < SW; x += 18) rect(g, x, y, 1, 9, '#556486'); }
-    // the sign over the opening
-    drawS(g, wbSign(), SW / 2, oy - 4, { ax: .5, ay: 1 });
-    return c;
-  });
+// the hanging oval plate that holds the counter
+function counterPlate(g, x, y) {
+  vline(g, x - 16, 0, y - 6, RAMP.gold[1]); vline(g, x + 16, 0, y - 6, RAMP.gold[1]);
+  for (let i = 1; i < y - 6; i += 3) { px(g, x - 16, i, RAMP.gold[3]); px(g, x + 16, i, RAMP.gold[3]); }
+  ellipsePx(g, x, y + 8, 27, 13, INK); ellipsePx(g, x, y + 8, 26, 12, RAMP.gold[2]); ellipsePx(g, x, y + 8, 24, 10, RAMP.green[1]); ellipsePx(g, x - 1, y + 7, 22, 8, RAMP.green[2]);
+  for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; px(g, x + Math.cos(a) * 25, y + 8 + Math.sin(a) * 11.5, RAMP.gold[4]); }
 }
-const ANA_REACT = { ready: 'ready', win: 'thumbs', lose: 'sad', clear: 'cheer', over: 'over' };
+const ANA_REACT = { ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' };
+// the salon: Anahí behind the grooming table, Keiko on top of it, the counter
+// hanging from the ceiling in its gilt oval
 function anahiRoomTop(g, S) {
-  g.drawImage(anahiShopTop(), 0, 0);
+  g.drawImage(salonBackdrop(), 0, 0);
+  wallClock(g, 168, 38, 600 + NOW * 30);
+  counterPlate(g, SW / 2, 8);
   const beat = S.pb || 0, rt = S.reactT || 0;
-  let pose = rt < 1.6 ? (ANA_REACT[S.react] || 'idle') : 'idle';
-  if (S.phase === 'inter' && S.special === 'speed' && S.pb >= 2) pose = 'work';
-  if (S.phase === 'inter' && S.special === 'boss' && S.pb >= 2) pose = 'wow';
+  let pose = rt < 1.2 ? (ANA_REACT[S.react] || 'idle') : 'idle';
+  if (S.phase === 'inter' && S.special === 'speed' && S.pb >= 2) pose = 'speed';
+  if (S.phase === 'inter' && S.special === 'boss' && S.pb >= 2) pose = 'boss';
   if (S.react === 'clear' || S.react === 'over') pose = ANA_REACT[S.react];
-  // Keiko sits by the door and cheers with you
-  const happy = pose === 'thumbs' || pose === 'cheer', sad = pose === 'sad' || pose === 'over';
-  const kb = happy ? Math.abs(Math.sin(rt * 10)) * 3 : 0;
-  drawS(g, keikoSide(.46, happy ? 'wag' : 'stand', happy ? 'happy' : sad ? 'sad' : 'normal'), 212, 166 - kb, { ax: .5, ay: 1, flip: true });
-  // Anahí, big, in front of the shop (cut at the thighs)
-  const jump = (pose === 'thumbs' || pose === 'cheer') ? Math.max(0, Math.sin(Math.min(1, rt / .4) * Math.PI)) * 7 : 0;
-  const bob = Math.round(Math.abs(Math.sin(beat * Math.PI)) * -1.5);
-  drawAnahiFull(g, 124, 262, pose, S.pt || 0, { k: .9, jump, bob, snip: pose === 'work' });
-  // the counter pops inside the crest of the sign
-  const sinceInc = S.phase === 'inter' && S.result !== null ? S.pb : 9;
-  if (S.phase === 'inter' || S.phase === 'over') {
-    if (sinceInc < 2.6 || S.phase === 'over') {
-      const k = S.countPop > 0 ? 1 + S.countPop * .5 : 1;
-      rect(g, SW / 2 - 12, 14, 24, 21, RAMP.green[2]);
-      mord(g, String(S.count), SW / 2, 13, { u: 1.5, r: 1.8, rim: 2, sy: 2, fill: ['#ffffff', '#fff8e6', '#f2e2b8'] }, { anim: () => ({ s: k }) });
-    }
-  }
-  // reaction garnish
+  const jump = (pose === 'win' || pose === 'clear') ? Math.max(0, Math.sin(Math.min(1, rt / .45) * Math.PI)) * 10 + (pose === 'clear' ? Math.abs(Math.sin(rt * 6)) * 6 : 0) : 0;
+  const bob = Math.round(Math.abs(Math.sin(beat * Math.PI)) * -1.4);
+  drawAnahiFull(g, 192, 170, pose, S.pt || 0, { jump, bob, snip: pose === 'speed' });
+  groomTable(g, 132, 124, 72);
+  const mood = pose === 'win' || pose === 'clear' ? 'happy' : pose === 'lose' || pose === 'over' ? 'sad' : pose === 'boss' ? 'wow' : 'normal';
+  const dogBounce = mood === 'happy' ? Math.abs(Math.sin(rt * 9)) * 3 : 0;
+  drawS(g, keikoSide(.62, mood === 'happy' ? 'wag' : mood === 'sad' ? 'wet' : 'stand', mood), 126, 122 - dogBounce, { ax: .5, ay: 1 });
+  shadowOval(g, 132, 170, 30, 3, .5);
+  // reaction garnish: a shower of stars for a win, a puff for a miss
   if (S.topFx && S.phase === 'inter') {
-    if (S.react === 'win' && rt < .05 && S._burst !== S.count) { S._burst = S.count; S.topFx.burst(100, 110, 14, { k: 'star', c: ['#fff27a', '#ffffff', '#ffd1e4'], sp0: 60, sp1: 150, g: 120, life0: .4, life1: .8 }); S.topFx.burst(212, 140, 6, { k: 'heart', c: '#ff5d9e', sp0: 30, sp1: 70, g: -20, life0: .6, life1: 1 }); }
-    if (S.react === 'lose' && rt < .05 && S._burst !== -S.count) { S._burst = -S.count; S.topFx.burst(124, 96, 10, { k: 'puff', c: ['#9896a4', '#b3b8d4'], sp0: 20, sp1: 60, r: 4, life0: .4, life1: .7 }); }
+    if (S.react === 'win' && rt < .05 && S._burst !== S.count) { S._burst = S.count; S.topFx.burst(188, 84, 14, { k: 'star', c: ['#fff27a', '#ffffff', '#ffd1e4'], sp0: 60, sp1: 150, g: 120, life0: .4, life1: .8 }); S.topFx.burst(126, 100, 8, { k: 'heart', c: '#ff5d9e', sp0: 30, sp1: 70, g: -20, life0: .6, life1: 1 }); }
+    if (S.react === 'lose' && rt < .05 && S._burst !== -S.count) { S._burst = -S.count; S.topFx.burst(126, 104, 10, { k: 'puff', c: ['#9896a4', '#b3b8d4'], sp0: 20, sp1: 60, r: 4, life0: .4, life1: .7 }); }
   }
-  if (pose === 'over') { const k = Math.min(1, rt * 3); drawRainCloud(g, 124, 70 + (1 - k) * -30, rt); }
-  if (pose === 'work') { for (let i = 0; i < 7; i++) { const yy = 96 + i * 12, xx = (i * 53 + fl((S.pt || 0) * 300)) % 90; rect(g, 8 + xx * .3, yy, 18, 1, '#ffffff'); } }
+  if (pose === 'lose' || pose === 'over') { const k = Math.min(1, rt * 3); drawRainCloud(g, 190, 30 + (1 - k) * -30, rt); }
+  if (pose === 'speed') { for (let i = 0; i < 6; i++) { const yy = 70 + i * 12, xx = (i * 53 + fl((S.pt || 0) * 300)) % 90; rect(g, 216 + xx * .3, yy, 16, 1, '#ffffff'); } }
 }
 function drawRainCloud(g, x, y, t) {
   for (const [dx, dy, r] of [[-8, 2, 6], [0, -2, 8], [9, 2, 6]]) disc(g, x + dx, y + dy, r + 1, INK);
@@ -96,29 +67,28 @@ function drawRainCloud(g, x, y, t) {
 function anahiRoomBot(g, S) {
   g.drawImage(salonBotBackdrop(), 0, 0);
 }
-function anahiLife(g, x, y, st, bt, S) {
-  const sadNow = S && S.phase === 'inter' && S.react === 'lose' && S.reactT < 1.3;
-  if (st === 'gone') return;
-  if (st === 'break') { const k = clamp(bt / .9, 0, 1); if (k < 1) drawS(g, lifeKeiko(true), x, y + E.inQ(k) * 6, { s: 1 - E.inQ(k), rot: k * .6 }); return; }
-  drawS(g, lifeKeiko(sadNow), x, y + (sadNow ? 1 : 0));
+// a life: Keiko's little head on the cabinet under the mirror; a lost one runs off
+function anahiLife(g, x, y, st, bt) {
+  if (st === 'gone') { g.globalAlpha = .45; drawS(g, lifeKeiko(true), x, y, { alpha: .25 }); g.globalAlpha = 1; ringPx(g, x, y + 2, 9, 'rgba(29,20,36,.25)'); return; }
+  if (st === 'break') { const k = clamp(bt / 1.1, 0, 1); drawS(g, lifeKeiko(true), x + E.inQ(k) * 90 * (x > SW / 2 ? 1 : -1), y - Math.sin(k * Math.PI) * 18, { flip: x < SW / 2 }); if (bt < .5) txt(g, '¡Aaay!', x, y - 22 - bt * 10, '#ffffff', { align: 'c', out: INK }); return; }
+  drawS(g, lifeKeiko(false), x, y);
 }
 function anahiMini(g, x, y, st, S) {
-  const pose = st === 'win' ? 'win' : st === 'lose' ? 'lose' : 'idle';
   drawAnahiFull(g, 34, SH + 84 - (st === 'win' ? 5 : 0), st === 'win' ? 'thumbs' : st === 'lose' ? 'sad' : 'idle', S.pt, { k: .6 });
 }
 
 defStage({
   id: 'anahi', name: 'ANAHÍ', sub: '«Cuidado, calma y detalle»', verb: '¡TOCA!', mech: 'tap', bpm: 118,
-  games: ['pulgas', 'unas', 'foto', 'helado', 'burbujas', 'topos', 'seca', 'modelo', 'empareja'].filter(id => MG[id] || true), boss: 'hacienda', bossAt: 10, speedAt: [4, 7],
-  portrait: (k, t) => anahiSprite(k === 'sad' ? 'sad' : k === 'card' || k === 'menu' ? 'headhand' : 'thumbs', .62),
+  games: ['pulgas', 'unas', 'foto', 'helado', 'burbujas', 'topos', 'seca', 'modelo', 'empareja'], boss: 'prepara', bossAt: 10, speedAt: [4, 7],
+  portrait: (k, t) => k === 'sad' ? anahiSprite('sad', .62) : mdl('anaPortraitPro', () => { const s = anahiSprite('pro', .62), c = mkCanvas(s.width + 28, s.height + 14); drawAnahiFull(c.g, rd(c.width / 2), c.height, 'pro', 0, { k: .62, ts: 2 }); return c; }),
   face: () => mdl('anaFace2', () => faceCrop(anahiSprite('idle', .62), 12, 6, 38, 38)),
-  slogan: 'Tu perro es nuestra familia', cardBg: 'waves', cardCols: ['#c93aa8', '#e45ec0'], chibi: (f, t) => anahiChibi(f, t),
+  cardCols: [RAMP.green[1], RAMP.green[2]],
   rim: RAMP.green[3], tip: 'Toca las pulgas, las uñas, las pompas…',
   songs: ANAHI_SONGS,
   intro: 'anahi_in', outro: 'anahi_out',
   room: {
-    top: anahiRoomTop, bot: anahiRoomBot, frame: 'mirror', life: anahiLife, lifePos: { screen: 'top', x0: 22, y: 16, sp: 22 },
-    counter: 'none', mini: anahiMini, portal: { x: 64, y: 24, w: 128, h: 96 },
+    top: anahiRoomTop, bot: anahiRoomBot, frame: 'mirror', life: anahiLife, lifeY: 141, lifeSpacing: 34,
+    counter: { x: SW / 2, y: 7 }, mini: anahiMini, portal: { x: 64, y: 24, w: 128, h: 96 }, bossLabel: '¡Lady Di, lista para las 12:00!',
     staticCols: [RAMP.green[1], RAMP.green[2]], playCols: [RAMP.green[2], RAMP.green[3]], cardCol: RAMP.green,
   },
 });

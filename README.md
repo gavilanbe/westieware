@@ -33,37 +33,50 @@ Tienes cuatro vidas; cada pocos microjuegos Keiko avisa de que todo va
 - **Prólogo**: Anahí sube la persiana, llegan 99 citas de golpe, las tijeras caen
   por la alcantarilla, Keiko baja a buscarlas y el Gurú de la Alcantarilla le
   presta el **Peine de Oro**. El primer «¡LAVA!» se juega dentro de la historia.
-- **Menú de paseantes**: los personajes pasean por la pantalla táctil; al tocar
-  uno salta y pregunta **Jugar / Paso**, y se pueden levantar y dejar caer.
+  Sale la primera vez; luego se vuelve a ver en Opciones o en el **Cine**.
+- **Menú de paseantes**: los personajes, en muñequitos de pixel art hechos a
+  mano (andan en cuatro tiempos, respiran, parpadean, celebran y patalean si los
+  levantas), pasean por la pantalla táctil; al tocar uno salta y pregunta
+  **Jugar / Paso**, y se pueden levantar y dejar caer.
   Arriba salen su retrato, los tres mejores récords y un rótulo que va pasando.
-  Los recién desbloqueados llevan su cartel de NUEVO.
-- **Cada fase**: tarjeta de presentación con la mecánica, historia de entrada,
-  interludios con reacción (la de Anahí, en la fachada de la tienda con Keiko en
-  la puerta), contador y vidas propias de cada personaje, zoom dentro del marco
+- **Desbloqueos, como en *Touched!***: se empieza solo con Anahí. Al superar una
+  fase, el siguiente personaje cae al menú bajo un foco con su sello de
+  «¡NUEVO!»; del que viene después solo se ve la silueta. Cada fase superada
+  abre también recuerdos en **Juguetes** y el menú avisa con un «!».
+- **Cada fase**: tarjeta de presentación propia de cada personaje, con sus
+  letras, sus formas y sus colores (Anahí, placa dorada en el espejo del salón;
+  Rizos, neón de discoteca; Pompón, letras de globo; Kira & Nala, letras de
+  surf; Ceniza, gótico que gotea poción; Don Bigotes, acero remachado sobre un
+  plano; Súper Keiko, viñeta de cómic), la mecánica, historia de entrada, interludios
+  con reacción (el de Anahí, en el salón: ella tras la mesa de peluquería con
+  Keiko encima), contador y vidas propias de cada personaje, zoom dentro del marco
   (el espejo dorado del salón), orden estampada, bomba de baño, «¡MÁS RÁPIDO!»,
   «¡JUEGO DEL JEFE!», «¡SUPERADO!» con historia de salida, «¡SE ACABÓ!», podio
   de récords, botón para compartir la puntuación y, al repetir, «¡NIVEL 2!» y
   «¡NIVEL 3!» sin fin.
-- **Final**: Súper Keiko, todos los microjuegos mezclados y el jefe **¡PREPARA EL
-  PERRO!**: cepillar, champú, espuma, aclarar, secar, cortar y cobrar (con ojos
-  de euro), en siete fases seguidas. Después, los créditos.
+- **Final**: Súper Keiko, todos los microjuegos mezclados y **el Monstruo de
+  Barro**, una bola de barro con patas salida de la alcantarilla: seis fases,
+  una por cada gesto del juego (toca, frota, corta, dibuja, arrastra y gira).
+  Al lavarlo aparece Nube. Después, los créditos.
 - **Extras**: *Mezcla Maestra* (todos los microjuegos sin fin), *A un pelo*
   (una vida, nivel 2), el **Álbum** para practicar cualquier microjuego ya
-  visto y los **Juguetes** (Caricias a Keiko, Pizarra y Piano Guau).
+  visto y seis **Juguetes** que se van abriendo: Caricias a Keiko, Pizarra,
+  **Cine** (las historias ya vistas), Piano Guau, **Gramola** (la música de cada
+  personaje) y **¡PAPELEO!**, el jefe secreto: el Inspector de Hacienda.
 
 ## Personajes y fases
 
-52 microjuegos y 7 jefes, cada uno con su música, su arte y tres niveles.
+52 microjuegos y 7 jefes (más uno secreto), cada uno con su música, su arte y tres niveles.
 
 | Fase | Mecánica | Microjuegos | Jefe |
 |---|---|---|---|
-| **Anahí** · «Cuidado, calma y detalle» | ¡TOCA! | Pulgas fuera, Uñas negras, Foto para Insta, Helado perruno, Burbujas, Lavado exprés, Secado exprés, Elige el modelo, Empareja, Sube la persiana, Ding dong | **¡PAPELEO!** El Inspector de Hacienda |
+| **Anahí** · «Cuidado, calma y detalle» | ¡TOCA! | Pulgas fuera, Uñas negras, Foto para Insta, Helado perruno, Burbujas, Lavado exprés, Secado exprés, Elige el modelo, Empareja, Sube la persiana, Ding dong | **¡PREPARA EL PERRO!** Lady Di, cuatro minutos antes del concurso: cepillar, champú, espuma, aclarar, secar, cortar y cobrar (con ojos de euro) |
 | **Rizos** · «¡A mover el esqueleto!» | ¡FROTA! | Baño de espuma, Secado a toalla, DJ Rizos, Espejo empañado, Gustito en la barriga, Cepillado, Despiojado, Bola de discoteca, Afro chafado | La Gran Maraña |
 | **Pompón** · «Un pompón, mil corazones» | ¡CORTA! | Flequillo de estrella, Pompón perfecto, Nudos voladores, Reparto justo, Inauguración, Poda de gala, Patronaje estelar, ¡Arriba el telón! | Estilismo de Gala |
 | **Kira & Nala** · «Pastoras de playa» | ¡DIBUJA! | Pizarra del día, Ovejas en el parque, Cada uno su correa, Pelota a la boca, Paloma ladrona, El castillo de Nala, Une los puntos, Paseo por el Eixample | La Gaviota Ladrona |
 | **Ceniza** · «Magia… y mucha espuma» | ¡ARRASTRA! | Pócima exprés, Estantería gatuna, Lazo de gala, ¡Al agua!, A pasear, Vuelo nocturno, Cada uno a su cesta, Pato al bote | La Gran Pócima |
 | **Don Bigotes** · «¡La ciencia del secado!» | ¡GIRA! | Secador a manivela, Hasta la raya, El tapón rebelde, Heladera de manivela, ¡Que se escapa!, Bigote de gala, Robo-Keiko, La hora de la cita | Secador Supersónico 3000 |
-| **Súper Keiko** · «¡Por un Eixample sin greñas!» | ¡TODO! | Los 52, mezclados | **¡PREPARA EL PERRO!** |
+| **Súper Keiko** · «¡Por un Eixample sin greñas!» | ¡TODO! | Los 52, mezclados | El Monstruo de Barro |
 
 ## Juice
 
@@ -82,7 +95,8 @@ cada tramo se programa sobre el reloj de audio para caer justo en el pulso.
   color con dither ordenado y le añade sombras de contacto, líneas entre piezas y
   contorno selectivo; el pelo se hace con mechones celulares. Las caras se pintan
   píxel a píxel por expresión. Anahí tiene su propio modelo articulado
-  (`src/anahi_art.js`) con quince poses.
+  (`src/anahi_art.js`) con dieciocho poses; los muñequitos del menú están en
+  `src/chibis.js` y las tarjetas de cada personaje en `src/cards.js`.
 - **Fuentes propias**: *Pelusa* (5×7 con acentos, ñ, ¡, ¿ y €), una de 3×5 para
   rótulos y *Mordisco*, una tipografía de trazos con plumilla redonda que se
   rasteriza a cualquier tamaño.
@@ -90,7 +104,7 @@ cada tramo se programa sobre el reloj de audio para caer justo en el pulso.
   metales, batería, ladridos y las voces «bla-bla» de los diálogos.
 - Cada microjuego trae su bot y su pista (`hint`), que dibuja la mano fantasma.
 - Pruebas con bot, en Chrome sin cabeza:
-  - `tools/test.sh mg` juega los 59 microjuegos (jefes incluidos) en sus tres niveles;
+  - `tools/test.sh mg` juega los 60 microjuegos (jefes incluidos) en sus tres niveles;
   - `tools/test.sh stage id=anahi` juega una fase entera, de la tarjeta a los resultados;
   - `tools/test.sh cut`, `audio` y `progress` recorren las historias, hacen sonar cada
     canción y efecto, y comprueban la cadena de desbloqueos.

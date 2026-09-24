@@ -5,7 +5,19 @@
 const LAB = {
   page: +(QS.get('p') || 0),
   update() { if (IN.tap || IN.topTap) this.page++; },
+  // p=6: every menu walker, frame by frame (top: first five, bottom: the rest + Keiko)
+  drawChibis(g, ids) {
+    rect(g, 0, 0, SW, SH, '#57b8ee');
+    ids.forEach((id, r) => {
+      const y = 44 + r * 47; tiny(g, id, 4, y - 40, INK);
+      ['walk0', 'walk1', 'idle', 'happy', 'held'].forEach((f, i) => {
+        const img = id === 'keiko' ? (typeof keikoChibi === 'function' ? keikoChibi(f, 0) : keikoSide(.34, i < 2 ? 'wag' : 'stand', f === 'happy' ? 'happy' : 'normal')) : menuChibi(id, f, 0);
+        shadowOval(g, 60 + i * 44, y + 1, 7, 2, .4); drawS(g, img, 60 + i * 44, y, { ax: .5, ay: 1 });
+      });
+    });
+  },
   drawTop(g) {
+    if (this.page === 6 || this.page === 7) { this.drawChibis(g, menuStageIds().concat(['keiko']).slice((this.page - 6) * 8, (this.page - 6) * 8 + 4)); return; }
     rect(g, 0, 0, SW, SH, '#2a2440');
     txt(g, 'PELUSA: ¡Hola! ¿Qué tal, Anahí?', 6, 6, '#ffffff');
     txt(g, 'áéíóú ñÑ ÁÉÍÓÚÜ «0123456789» ♥★♪', 6, 20, C.yellow);
@@ -16,6 +28,7 @@ const LAB = {
     mord(g, '0567 89%', SW / 2, 168, { u: 1.1, r: 1.1, rim: 1, sy: 1, fill: ['#ffffff', '#ffd1e4', '#ff93bf'] });
   },
   drawBot(g) {
+    if (this.page === 6 || this.page === 7) { this.drawChibis(g, menuStageIds().concat(['keiko']).slice((this.page - 6) * 8 + 4, (this.page - 6) * 8 + 8)); return; }
     if (this.page === 2) { g.drawImage(salonBackdrop(), 0, 0); drawS(g, westieSide(1, 'stand', 'normal'), 60, 150, { ax: .5, ay: 1 }); drawS(g, westieSide(.55, 'wag', 'happy'), 160, 150, { ax: .5, ay: 1 }); drawS(g, westieSide(.55, 'wet', 'sad'), 215, 150, { ax: .5, ay: 1 }); drawWestieSit(g, 120, 190, 'happy'); drawS(g, lifeWestie(), 150, 20); drawS(g, lifeWestie(true), 175, 20); drawS(g, wbSign(), 128, 60); return; }
     if (this.page === 3) { rect(g, 0, 0, SW, SH, '#8fd0ff'); g.drawImage(anahiSprite('thumbs', 1), 8, -12); g.drawImage(anahiSprite('headhand', 1), 110, -12); return; }
     if (this.page === 4) { rect(g, 0, 0, SW, SH, '#ffd1e4'); ['idle', 'thumbs', 'sad', 'wow', 'euro', 'work', 'cheer', 'talk'].forEach((p, i) => drawAnahiFull(g, 18 + i * 31, 186, p, 0, { k: .45 })); return; }

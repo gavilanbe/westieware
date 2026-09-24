@@ -447,35 +447,3 @@ function pomponGum(g, x, y, t, s = 1) {
 }
 
 // ---------------------------------------------------------------- chibi -----
-// menu walker (WarioWare-Touched! style); frames walk0 | walk1 | idle | happy | held
-function pomponChibi(fr = 'idle') {
-  return mdl('chibi:pompon:' + fr, () => {
-    const W = 26, H = 37, c = mkCanvas(W, H), g = c.g, F = ['#8e2a5e', '#d4508f', '#ff86ba', '#ffc2dc', '#fff0f6'], SK = '#ffe8dd', SKs = '#f4c3b8';
-    const st = fr === 'walk0' ? 1 : fr === 'walk1' ? -1 : 0, held = fr === 'held', happy = fr === 'happy', Y = v => v - (happy ? 2 : 0) + 1;
-    // every piece gets its own ink outline, then they stack like a cartoon cel
-    const layer = fn => { const L = mkCanvas(W, H); fn(L.g); g.drawImage(outlined(L, INK, false), -1, -1); };
-    const puff = (q, x, y, r) => { for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; disc(q, x + Math.cos(a) * r * .72, y + Math.sin(a) * r * .72, r * .5, Math.sin(a) > .3 ? F[1] : F[2]); } disc(q, x, y, r * .78, F[2]); disc(q, x - r * .28, y - r * .28, r * .42, F[3]); px(q, x - r * .35, y - r * .45, F[4]); };
-    layer(q => puff(q, 20, Y(22), 2.8));
-    const legs = held ? [[8, 1], [16, 1]] : [[10 + st, st > 0 ? -1 : 0], [14 - st, st < 0 ? -1 : 0]];
-    layer(q => { for (const [x, dy] of legs) { rect(q, x, Y(26), 2, 6 + dy, SK); px(q, x + 1, Y(27), SKs); rect(q, x - 1, Y(34 + dy), 4, 2, SK); } });
-    layer(q => { for (const [x, dy] of legs) puff(q, x + 1, Y(31 + dy), 2.5); });
-    layer(q => { for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; disc(q, 13 + Math.cos(a) * 5.1, Y(22) + Math.sin(a) * 3.5, 2.4, i > 4 ? F[1] : F[2]); } ellipsePx(q, 13, Y(22), 5.4, 3.8, F[2]); ellipsePx(q, 12, Y(21), 3, 1.8, F[3]); });
-    const up = held || happy, rUp = up || fr === 'walk0' || fr === 'walk1';
-    for (const [x, u] of [[5, up], [19, rUp]]) layer(q => { if (u) { rect(q, x, Y(13), 2, 8, SK); puff(q, x + 1, Y(13), 2.2); } else { rect(q, x, Y(20), 2, 6, SK); puff(q, x + 1, Y(25), 2.2); } });
-    layer(q => { for (const ex of [5, 21]) { for (let j = 0; j < 3; j++) disc(q, ex, Y(11 + j * 3), 2.9, j === 2 ? F[1] : F[2]); disc(q, ex - 1, Y(11), 1.3, F[3]); } });
-    layer(q => { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; disc(q, 13 + Math.cos(a) * 5.2, Y(10) + Math.sin(a) * 4.3, 2.3, a > .3 && a < 2.8 ? F[1] : F[2]); } ellipsePx(q, 13, Y(10), 5.4, 4.6, F[2]); ellipsePx(q, 13, Y(12.5), 4.8, 3.8, SK); ellipsePx(q, 13, Y(14.5), 2.8, 1.8, '#fff4ee'); });
-    layer(q => puff(q, 13, Y(3.5), 4));
-    layer(q => { polyPx(q, [[13, Y(0)], [9, Y(-2)], [9, Y(2)]], POMPON_BOW[2]); polyPx(q, [[13, Y(0)], [17, Y(-2)], [17, Y(2)]], POMPON_BOW[2]); px(q, 10, Y(-1), POMPON_BOW[3]); px(q, 16, Y(-1), POMPON_BOW[3]); });
-    // face details (no outline)
-    for (const ex of [10, 15]) {
-      if (happy) { px(g, ex, Y(12), INK); px(g, ex + 1, Y(11), INK); px(g, ex + 2, Y(12), INK); }
-      else { rect(g, ex - (ex < 13 ? 1 : 0), Y(10), 3, 3, '#2a0f22'); px(g, ex - (ex < 13 ? 1 : 0), Y(10), '#ffffff'); px(g, ex + 1 - (ex < 13 ? 1 : 0), Y(10), '#ffffff'); px(g, ex + 1 - (ex < 13 ? 1 : 0), Y(12), '#b0508f'); px(g, ex + (ex < 13 ? -2 : 3), Y(9), '#2a0f22'); }
-    }
-    rect(g, 12, Y(13), 3, 1, INK);
-    if (held) rect(g, 12, Y(15), 3, 2, '#3e0d1c'); else if (happy) { rect(g, 11, Y(15), 5, 2, '#3e0d1c'); hline(g, 12, 14, Y(16), RAMP.pink[2]); } else { px(g, 11, Y(15), INK); hline(g, 12, 14, Y(16), INK); px(g, 15, Y(15), INK); }
-    px(g, 9, Y(14), RAMP.pink[2]); px(g, 17, Y(14), RAMP.pink[2]);
-    linePx(g, 18, Y(12), 16, Y(15), INK); px(g, 16, Y(15), '#6f7a92');
-    return c;
-  });
-}
-STAGES.pompon.chibi = pomponChibi;

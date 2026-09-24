@@ -175,15 +175,14 @@ function mudMonsterModel(f) {
 function drawMudMonster(g, x, y, t, s = 1) { drawS(g, mudMonsterModel(fl(t * 3) % 2), x, y, { s, sy: s * (1 + Math.sin(t * 4) * .03) }); }
 defStage({
   id: 'superwestie', name: 'SÚPER KEIKO', sub: '«¡Por un Eixample sin greñas!»', verb: '¡TODO!', mech: 'mix', bpm: 126,
-  games: () => allStoryGames(), boss: 'prepara', bossAt: 20, speedAt: [5, 10, 15],
+  games: () => allStoryGames(), boss: 'barro', bossAt: 20, speedAt: [5, 10, 15],
   unlockBy: ['anahi', 'rizos', 'pompon', 'hermanas', 'ceniza', 'bigotes'],
   portrait: () => heroPortrait(),
   face: () => mdl('heroFaceK', () => { const c = mkCanvas(64, 66); c.g.drawImage(keikoHead('wink'), 0, 0); swKeikoMask(c.g, 0, 0); return faceCrop(c, 12, 6, 40, 42); }),
-  rim: '#ffdf4f', cardCols: ['#141848', '#231f5e'], nameFill: ['#ffffff', '#b3d9ff', '#63a0ef'], tip: 'Todos los microjuegos… ¡y la clienta más greñuda!',
-  chibi: (frame, t) => swHeroChibi(frame, t),
+  rim: '#ffdf4f', cardCols: ['#141848', '#231f5e'], nameFill: ['#ffffff', '#b3d9ff', '#63a0ef'], tip: 'Todos los microjuegos… ¡y el Monstruo de Barro!',
   songs: HERO_SONGS, intro: 'superwestie_in', outro: 'superwestie_out', creditsOnClear: true,
   room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 },
-    mini: (g, x, y, st) => drawSuperWestie(g, 44, SH - 22, NOW, { mood: st === 'lose' ? 'sad' : 'happy' }), bossLabel: '¡Llega la clienta más greñuda!',
+    mini: (g, x, y, st) => drawSuperWestie(g, 44, SH - 22, NOW, { mood: st === 'lose' ? 'sad' : 'happy' }), bossLabel: '¡Sale de la alcantarilla!',
     portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#231f5e', '#3b2a6e'], playCols: ['#141848', '#231f5e'], cardCol: RAMP.purple },
 });
 
@@ -283,55 +282,6 @@ function familyPhoto(g, t) {
 }
 
 // ---------------------------------------------------------------- chibis ----
-// tiny walkers for the Touched!-style menu: frames walk0 | walk1 | idle | happy | held
-function swChibiCanvas(key, draw) { return mdl('swchibi:' + key, () => { const c = mkCanvas(30, 34), g = c.g; draw(g); return outlined(c, INK, true); }); }
-function swHeroChibi(frame) {
-  return swChibiCanvas('hero:' + frame, g => {
-    const W = '#ffffff', Sh = '#c8c8dc', G = RAMP.green[2], held = frame === 'held', hap = frame === 'happy', lift = hap ? 3 : 0;
-    // cape
-    polyPx(g, [[13, 14 - lift], [2, 12 - lift + (frame === 'walk1' ? 2 : 0)], [4, 22 - lift], [14, 20 - lift]], G); px(g, 5, 15 - lift, RAMP.green[3]);
-    // legs
-    const legs = held ? [[9, 23, 7], [18, 23, 7]] : frame === 'walk0' ? [[8, 24, 5], [12, 23, 5], [17, 24, 5], [21, 23, 5]] : frame === 'walk1' ? [[9, 23, 5], [11, 24, 5], [18, 23, 5], [20, 24, 5]] : hap ? [[9, 22, 3], [19, 22, 3]] : [[9, 24, 5], [12, 24, 5], [18, 24, 5], [21, 24, 5]];
-    for (const [x, y, h] of legs) rect(g, x, y - lift, 2, h, W);
-    // body + head + ears + tail
-    ellipsePx(g, 15, 21 - lift, 9, 5, W); ellipsePx(g, 15, 23 - lift, 8, 2, Sh);
-    polyPx(g, [[6, 19 - lift], [4, 13 - lift], [8, 17 - lift]], W);
-    disc(g, 22, 13 - lift, 6, W); polyPx(g, [[18, 9 - lift], [18, 3 - lift], [21, 8 - lift]], W); polyPx(g, [[23, 8 - lift], [25, 2 - lift], [26, 8 - lift]], W);
-    ellipsePx(g, 27, 15 - lift, 3, 2, W);
-    // bandana, mask, eye, nose
-    rect(g, 17, 18 - lift, 6, 2, G);
-    rect(g, 20, 11 - lift, 7, 3, G); px(g, held ? 23 : 24, 12 - lift, INK); if (held) px(g, 24, 11 - lift, '#ffffff');
-    px(g, 29, 14 - lift, INK); if (hap) px(g, 27, 17 - lift, RAMP.pink[2]);
-  });
-}
-function swMixChibi(frame) {
-  return swChibiCanvas('mix:' + frame, g => {
-    const hap = frame === 'happy', held = frame === 'held', lift = hap ? 3 : 0, cx0 = 15, cy0 = 13 - lift;
-    const legs = held ? [[11, 24, 7], [18, 24, 7]] : frame === 'walk0' ? [[10, 24, 6], [19, 23, 5]] : frame === 'walk1' ? [[11, 23, 5], [18, 24, 6]] : [[11, 24, 6], [18, 24, 6]];
-    for (const [x, y, h] of legs) { rect(g, x, y - lift, 1, h, '#2b2540'); rect(g, x - 1, y + h - lift - 1, 3, 2, '#ff5d9e'); }
-    disc(g, cx0, cy0, 11, '#2b2540'); for (const r of [4, 7, 9]) ringPx(g, cx0, cy0, r, '#40395e');
-    disc(g, cx0, cy0, 3.5, ['#ff5d9e', '#ffdf4f', '#5bd18b', '#63a0ef'][fl((hap ? 4 : 1) * (frame.length)) % 4]); px(g, cx0, cy0, '#fff8e6');
-    rect(g, cx0 - 8, cy0 - 6, 7, 3, INK); rect(g, cx0 + 1, cy0 - 6, 7, 3, INK); hline(g, cx0 - 1, cx0 + 1, cy0 - 5, INK); px(g, cx0 - 7, cy0 - 6, '#63a0ef'); px(g, cx0 + 2, cy0 - 6, '#63a0ef');
-    if (hap) { hline(g, cx0 - 3, cx0 + 3, cy0 + 4, '#ffffff'); }
-  });
-}
-function swHairChibi(frame) {
-  return swChibiCanvas('hair:' + frame, g => {
-    const hap = frame === 'happy', held = frame === 'held', lift = hap ? 3 : 0, jit = hap ? 1 : 0;
-    const legs = held ? [[11, 25, 6], [18, 25, 6]] : frame === 'walk0' ? [[10, 25, 5], [19, 24, 4]] : frame === 'walk1' ? [[11, 24, 4], [18, 25, 5]] : [[11, 25, 5], [18, 25, 5]];
-    for (const [x, y, h] of legs) { rect(g, x, y - lift, 1, h, '#44424f'); rect(g, x - 1, y + h - lift - 1, 3, 1, INK); }
-    // the clipper body, blade on top, one lonely hair
-    rect(g, 9 + jit, 8 - lift, 13, 18, '#b3202e'); rect(g, 10 + jit, 9 - lift, 3, 16, '#e8505e');
-    rect(g, 9 + jit, 5 - lift, 13, 3, '#e1e7f2'); for (let x = 10; x < 22; x += 2) px(g, x + jit, 4 - lift, '#a5afc4');
-    for (let i = 0; i < 6; i++) px(g, 16 + Math.round(Math.sin(i * .9) * 1.5) + jit, 3 - lift - i, INK);
-    // angry face
-    rect(g, 12 + jit, 13 - lift, 2, 2, '#ffffff'); rect(g, 18 + jit, 13 - lift, 2, 2, '#ffffff'); px(g, 13 + jit, 14 - lift, INK); px(g, 18 + jit, 14 - lift, INK);
-    linePx(g, 11 + jit, 11 - lift, 14 + jit, 12 - lift, INK); linePx(g, 21 + jit, 11 - lift, 18 + jit, 12 - lift, INK);
-    hline(g, 13 + jit, 18 + jit, 18 - lift, held ? INK : '#5a1a2a');
-  });
-}
-STAGES.mezcla.chibi = (frame) => swMixChibi(frame);
-STAGES.unpelo.chibi = (frame) => swHairChibi(frame);
 // debug bench (not reachable from the game): ?escena=cut&id=superwestie_art
 defCut('superwestie_art', { shots: [{ dur: 0, box: 'none', lines: [['narr', '…']],
   top(g, t) { rect(g, 0, 0, SW, SH, '#8f7fb0'); drawS(g, heroPortrait(), 60, 186, { ax: .5, ay: 1 }); drawS(g, STAGES.superwestie.face(), 150, 60); drawS(g, STAGES.mezcla.face(), 200, 60); drawS(g, STAGES.unpelo.face(), 240, 60); prepKeikoCheer(g, 190, 190, t, 'happy'); },

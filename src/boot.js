@@ -7,7 +7,7 @@ const BOOT = {
   enter() {
     this.t = 0; this.st = 'warn'; this.k = 0; this.fx = new FX();
     // build the heavy pictures while the player reads
-    for (const f of [() => wbSign(), () => buleHead('happy'), () => buleHead('wink'), () => salonBackdrop(), () => salonBotBackdrop(), () => anahiSprite('headhand', .62), () => anahiSprite('thumbs', .9), () => anahiSprite('idle', .9), () => anahiShopTop(), () => anahiChibi('walk0'), () => anahiChibi('walk1'), () => westieSide(.62, 'stand', 'normal'), () => westieSide(1, 'wag', 'happy'), () => lifeWestie(false), () => lifeWestie(true), () => velvetChair()]) warm(f);
+    for (const f of [() => wbSign(), () => buleHead('happy'), () => buleHead('wink'), () => salonBackdrop(), () => salonBotBackdrop(), () => anahiSprite('headhand', .62), () => anahiSprite('thumbs', .9), () => anahiSprite('idle', .9), () => STAGES.anahi.chibi('walk0', 0), () => STAGES.anahi.chibi('walk1', 0), () => westieSide(.62, 'stand', 'normal'), () => westieSide(1, 'wag', 'happy'), () => lifeWestie(false), () => lifeWestie(true), () => velvetChair()]) warm(f);
   },
   update(dt) {
     this.t += dt; this.k += dt; this.fx.update(dt);

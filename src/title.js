@@ -3,6 +3,7 @@
 // ============================================================================
 'use strict';
 
+const PROLOGUE_V = 2; // bump when the prologue changes so returning players see it again
 const SONG_TITLE = { spb: 4, loop: true, tracks: [
   { i: 'p25', v: .6, n: 'C5 . E5 G5 . A5 G5 . E5 . C5 . D5 . E5 . C5 . E5 G5 . A5 C6 . A5 . G5 . E5 . D5 . F5 . A5 C6 . D6 C6 . A5 . F5 . G5 . A5 . G5 . E5 C5 . D5 E5 . C5 . . . . . . .' },
   { i: 'p12', v: .3, n: 'E4 . G4 C5 . E5 C5 . G4 . E4 . F4 . G4 . E4 . G4 C5 . E5 G5 . E5 . C5 . G4 . F4 . A4 . C5 F5 . A5 F5 . C5 . A4 . B4 . D5 . B4 . G4 E4 . F4 G4 . E4 . . . . . . .' },
@@ -54,7 +55,8 @@ const TITLE = {
       this.out = 0; sfx('bark', { n: 2, pitch: 1.1 }); sfx('slam'); flash('both', '#ffffff', .15); shake('top', 3, .25);
       this.fx.burst(IN.x || SW / 2, IN.y || 100, 18, { k: 'star', c: [C.yellow, '#fff', C.pinkL], sp0: 60, sp1: 180 });
       stopSong(this.song, .3);
-      after(.55, () => { if (!SAVE.prologue) playCut('prologo', () => { SAVE.prologue = true; persist(); go(MENU, { first: true }); }); else transit('paw', MENU, {}); });
+      // the prologue plays on the first visit, and once more for players of an older version (it was redrawn with Keiko)
+      after(.55, () => { if (!SAVE.prologue || (SAVE.prologueV || 1) < PROLOGUE_V) playCut('prologo', () => { SAVE.prologue = true; SAVE.prologueV = PROLOGUE_V; persist(); go(MENU, { first: true }); }); else transit('paw', MENU, {}); });
     }
     if (this.out >= 0) this.out += dt;
   },

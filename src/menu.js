@@ -31,7 +31,10 @@ function bubbleImg(id, r, face, rim, locked) {
 const MENU = {
   enter(arg = {}) {
     stopAllMusic(.1); this.song = playSong(SONG_MENU, { bpm: 104 });
-    this.t = 0; this.tab = 'juegos'; this.fx = new FX(); this.topFx = new FX();
+    this.t = 0; this.tab = arg.tab || 'juegos'; this.fx = new FX(); this.topFx = new FX();
+    // back from something played in Juguetes (the Cine, the secret boss)
+    if (arg.from && STAGES[arg.from] && STAGES[arg.from].menu === false) { this.tab = 'juguetes'; arg = {}; }
+    if (arg.toy && typeof TOY_IMPL !== 'undefined' && TOY_IMPL[arg.toy]) { TOY.sel = arg.toy; TOY.playing = arg.toy; TOY_IMPL[arg.toy].enter(); }
     this.walkers = []; this.popFor = null; this.popT = 0; this.hold = null; this.btnPress = null; this.lockMsg = null;
     const ids = menuStageIds();
     // the locked ones queue up on the right, so the others keep off that strip
@@ -39,7 +42,8 @@ const MENU = {
     let li = 0;
     for (const id of ids) {
       const locked = !stageUnlocked(id), isNew = !locked && !SAVE.unlockSeen[id] && id !== 'anahi';
-      if (locked) { this.walkers.push({ id, locked, x: 236 - (li % 2) * 14, y: 74 + li * 12, st: 'wait', t: 0, dir: -1, f: 0 }); li++; continue; }
+      // only the next one to unlock peeks in, as a silhouette; the rest stay a surprise
+      if (locked) { if (li++ === 0) this.walkers.push({ id, locked, x: 230, y: 112, st: 'wait', t: 0, dir: -1, f: 0 }); continue; }
       const [x, y] = this.freeSpot();
       this.walkers.push({ id, locked, isNew, x, y, vx: 0, vy: 0, st: 'idle', t: rnd(.2, 1.6), dir: chance(.5) ? 1 : -1, f: 0, hop: 0, appear: isNew ? -.4 : 1 });
     }
@@ -48,7 +52,10 @@ const MENU = {
     this.sel = arg.from && STAGES[arg.from] ? arg.from : (SAVE.lastSel && STAGES[SAVE.lastSel] && stageUnlocked(SAVE.lastSel) ? SAVE.lastSel : 'anahi');
     this.selT = 0;
     const fresh = this.walkers.filter(w => w.isNew);
-    if (fresh.length) { this.sel = fresh[0].id; this.popFor = fresh[0]; this.popT = 0; after(.5, () => { sfx('sparkle'); playSong(JINGLE.record, { bpm: 140 }); }); }
+    // a newly unlocked character drops in from above under a spotlight (WarioWare-style reveal)
+    fresh.forEach((w, i) => { w.appear = 1; w.drop = { t: -.45 - i * .45 }; });
+    this.reveal = fresh.length ? { id: fresh[0].id, t: 0 } : null;
+    if (fresh.length) { this.sel = fresh[0].id; this.popFor = null; after(.3, () => { sfx('sparkle'); playSong(JINGLE.record, { bpm: 140 }); }); }
     for (const w of fresh) SAVE.unlockSeen[w.id] = 1;
     if (QS.get('pop')) { const w = this.walkers.find(w => w.id === QS.get('pop')); if (w) { this.popFor = w; this.sel = w.id; } }
     persist();
@@ -57,6 +64,7 @@ const MENU = {
   exit() { },
   update(dt) {
     this.t += dt; this.selT += dt; this.popT += dt; this.fx.update(dt); this.topFx.update(dt);
+    if (this.reveal) { this.reveal.t += dt; if (this.reveal.t > 3.2) this.reveal = null; }
     if (this.tab === 'juegos') this.updWalkers(dt);
     else if (this.tab === 'coleccion') this.updColeccion(dt);
     else if (this.tab === 'opciones') this.updOpciones(dt);
@@ -84,6 +92,14 @@ const MENU = {
     for (const w of this.walkers) {
       w.f += dt; w.hop = Math.max(0, (w.hop || 0) - dt * 3); if (w.appear != null) w.appear = Math.min(1, w.appear + dt * 2);
       if (w.st === 'wait' || w === this.hold) continue;
+      if (w.drop) { w.drop.t += dt; if (w.drop.landed && w.drop.t > 1.4) w.drop = null; }
+      if (w.drop && !w.drop.landed) {
+        w.st = 'idle';
+        if (w.drop.t >= .55) { w.drop.landed = true; w.hop = 1; sfx('boing', { pitch: 1.4, vol: .6 }); sfx('bark', { n: 2, pitch: 1.2 }); shake('bot', 2, .15);
+          this.fx.burst(w.x, w.y - 14, 26, { k: 'star', c: [C.yellow, '#ffffff', C.pinkL, C.mint], sp0: 60, sp1: 210 });
+          if (this.reveal && this.reveal.id === w.id) { this.popFor = w; this.popT = 0; } }
+        continue;
+      }
       if (w.st === 'fall') { w.vy += 700 * dt; w.y += w.vy * dt; if (w.y >= w.floor) { w.y = w.floor; if (w.vy > 120) { w.vy = -w.vy * .35; sfx('boing', { pitch: 2, vol: .3 }); } else { w.st = 'idle'; w.t = rnd(.4, 1.2); } } continue; }
       if (this.popFor === w) { w.st = 'idle'; continue; }
       w.t -= dt;
@@ -114,7 +130,8 @@ const MENU = {
       }
     }
     // pick / drag / tap
-    const hitW = () => this.walkers.slice().sort((a, b) => b.y - a.y).find(w => Math.abs(IN.x - w.x) < 12 && IN.y > w.y - 32 && IN.y < w.y + 4);
+    // the tap box follows each little sprite (the sisters are wide, Rizos's afro is tall)
+    const hitW = () => this.walkers.slice().sort((a, b) => b.y - a.y).find(w => Math.abs(IN.x - w.x) < Math.max(12, (w.iw || 24) / 2 + 2) && IN.y > w.y - Math.max(32, (w.ih || 32) + 2) && IN.y < w.y + 4);
     if (IN.tap && IN.y < 168) {
       const w = hitW();
       if (w) { this.hold = w; this.holdMoved = 0; this.holdFrom = [w.x, w.y]; }
@@ -182,12 +199,22 @@ const MENU = {
     if (d && d.portrait) drawS(g, d.portrait('menu', this.t), lerp(SW + 40, 206, k), 168, { ax: .5, ay: 1 });
     // ticker
     rect(g, 0, 166, SW, 26, INK); rect(g, 0, 167, SW, 1, '#44424f');
-    const name = d ? d.name : '', msg = '¡Bienvenido a los microjuegos de Westie BLVRD!   ' + (this.lockMsg && this.lockMsg.t < 3 ? '🔒 Supera antes: ' + ((STAGES[STAGES[this.lockMsg.id].unlockBy] || {}).name || '¿?') : (name + ' · ' + (d && d.tip || 'Toca un personaje para jugar'))) + '   ';
+    const name = d ? d.name : '', msg = (typeof anyToyNew === 'function' && anyToyNew() ? '¡Hay un recuerdo nuevo en JUGUETES!   ' : '') + '¡Bienvenido a los microjuegos de Westie BLVRD!   ' + (this.lockMsg && this.lockMsg.t < 3 ? '🔒 Supera antes: ' + ((STAGES[STAGES[this.lockMsg.id].unlockBy] || {}).name || '¿?') : (name + ' · ' + (d && d.tip || 'Toca un personaje para jugar'))) + '   ';
     if (this.lockMsg) this.lockMsg.t += STEP;
     const w = txtW(msg), off = (this.t * 40) % (w + 40);
     g.save(); g.beginPath(); g.rect(0, 168, SW, 22); g.clip();
     for (let x = SW - off; x < SW + w; x += w + 40) txt(g, msg.replace('🔒', '♦'), x, 175, '#ffffff');
     g.restore();
+    // the unlock stamp over the record bars while a new character arrives
+    if (this.reveal && this.reveal.id === id) {
+      const rt = this.reveal.t, k = spring(rt - .5, 2.4, 6), out = rt > 2.7 ? clamp((3.2 - rt) * 2, 0, 1) : 1;
+      if (k > 0) { g.save(); g.globalAlpha = out; g.translate(92, 104); g.rotate(-.12); g.scale(k, k);
+        rect(g, -86, -22, 172, 44, INK); rect(g, -86, -19, 172, 38, '#e8303c'); rect(g, -86, -19, 172, 3, '#ff7a86');
+        for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + rt * 3; drawStar(g, Math.cos(a) * 94, Math.sin(a) * 30, 2.5, '#fff27a'); }
+        mord(g, '¡NUEVO!', 0, -17, { u: 1.5, r: 1.7, rim: 2, sy: 2, fill: ['#ffffff', '#fff27a', '#ffc23a'] });
+        txt(g, (d && d.name || '') + ' se une a Westie BLVRD', 0, 8, '#ffffff', { align: 'c', out: INK });
+        g.restore(); g.globalAlpha = 1; }
+    }
     if (SAVE.cleared[id]) { const mk = spring(t - .4, 2.5, 6); g.save(); g.translate(236, 144); g.rotate(.3); g.scale(mk, mk); disc(g, 0, 0, 10, INK); disc(g, 0, 0, 9, RAMP.gold[3]); disc(g, -2, -2, 5, RAMP.gold[4]); txt(g, '✓', 0, -4, RAMP.green[1], { align: 'c', bold: true }); g.restore(); }
   },
   drawBot(g) {
@@ -206,6 +233,7 @@ const MENU = {
       panel(g, r.x, r.y + oy, r.w, r.h, on ? col : mixHex(col, '#1d1424', .35), { r: 4, line: INK, hi: on ? mixHex(col, '#ffffff', .4) : null });
       menuTabIcon(g, id, r.x + 10, r.y + 9 + oy);
       tiny(g, label, r.x + 38, r.y + 8 + oy, '#ffffff', { align: 'c' });
+      if (id === 'juguetes' && typeof anyToyNew === 'function' && anyToyNew()) { const k = 1 + Math.abs(Math.sin(this.t * 6)) * .25; g.save(); g.translate(r.x + r.w - 4, r.y + 1 + oy); g.scale(k, k); disc(g, 0, 0, 6, INK); disc(g, 0, 0, 5, '#e8303c'); txt(g, '!', 0, -3, '#ffffff', { align: 'c', bold: true }); g.restore(); }
     });
     this.fx.draw(g);
   },
@@ -213,13 +241,19 @@ const MENU = {
     rect(g, 0, 0, SW, SH, '#57b8ee');
     for (let y = 0; y < 170; y += 12) for (let x = ((y / 12) % 2) * 12; x < SW; x += 24) disc(g, x, y, 3.5, '#77c8f4');
     const list = this.walkers.slice().sort((a, b) => a.y - b.y);
+    for (const w of list) if (w.drop && w.drop.t < 1.4) {
+      const a = w.drop.t < 0 ? clamp(1 + w.drop.t * 3, 0, 1) : w.drop.t < .9 ? 1 : clamp((1.4 - w.drop.t) * 2, 0, 1);
+      g.globalAlpha = .28 * a; polyPx(g, [[w.x - 10, 0], [w.x + 10, 0], [w.x + 22, w.y + 2], [w.x - 22, w.y + 2]], '#fff7ae'); g.globalAlpha = .4 * a; ellipsePx(g, w.x, w.y + 1, 22, 4, '#fff7ae'); g.globalAlpha = 1;
+    }
     for (const w of list) {
       const d = STAGES[w.id], held = w.st === 'held' || this.hold === w && w.st === 'held';
       const frame = held ? 'held' : (w.st === 'walk' ? (fl(w.f * 6) % 2 ? 'walk1' : 'walk0') : this.popFor === w || w.hop > 0 ? 'happy' : 'idle');
-      const img = w.id === 'keiko' ? keikoSide(.34, w.st === 'walk' || w.hop > 0 ? 'wag' : 'stand', w.hop > 0 ? 'happy' : 'normal') : menuChibi(w.id, frame, this.t);
-      const hop = Math.sin(Math.min(1, w.hop) * Math.PI) * 6, sw = held ? Math.sin(this.t * 8) * .25 : 0, s = w.appear != null && w.appear < 1 ? spring(Math.max(0, w.appear), 2.5, 5) : 1;
+      const img = w.id === 'keiko' ? (typeof keikoChibi === 'function' ? keikoChibi(frame, this.t) : keikoSide(.34, w.st === 'walk' || w.hop > 0 ? 'wag' : 'stand', w.hop > 0 ? 'happy' : 'normal')) : menuChibi(w.id, frame, this.t);
+      let hop = Math.sin(Math.min(1, w.hop) * Math.PI) * 6; const sw = held ? Math.sin(this.t * 8) * .25 : 0, s = w.appear != null && w.appear < 1 ? spring(Math.max(0, w.appear), 2.5, 5) : 1;
+      if (w.drop && !w.drop.landed) { if (w.drop.t < 0) continue; hop = (1 - E.inQ(clamp(w.drop.t / .55, 0, 1))) * (w.y + 40); }
       if (!held) shadowOval(g, w.x, w.y + 1, 7, 2, .4);
       if (w.locked) { g.globalAlpha = .75; drawS(g, silhouette(img, '#2b4d7a'), w.x, w.y, { ax: .5, ay: 1 }); g.globalAlpha = 1; txt(g, '?', w.x, w.y - img.height - 8, '#ffffff', { align: 'c', out: INK, bold: true }); continue; }
+      w.iw = img.width; w.ih = img.height;
       drawS(g, img, w.x, w.y - hop, { ax: .5, ay: 1, flip: w.dir < 0 && w.id !== 'keiko' ? true : w.id === 'keiko' && w.dir < 0, rot: sw, s });
       if (w.isNew && w.appear >= 1 && this.popFor !== w) { const bx = rd(w.x), by = rd(w.y - hop - img.height - 7 + Math.sin(this.t * 5 + w.x * .1) * 1.5); panel(g, bx - 13, by - 4, 26, 9, '#e8303c', { r: 2, line: INK }); tiny(g, 'NUEVO', bx, by - 2, '#ffffff', { align: 'c' }); polyPx(g, [[bx - 2, by + 5], [bx + 2, by + 5], [bx, by + 7]], INK); }
     }
@@ -235,7 +269,7 @@ const MENU = {
     }
   },
   // ------------------------------------------------------------ colección --
-  colItems() { return MG_ORDER.filter(id => MG[id].stage && MG[id].stage !== 'test'); },
+  colItems() { const rank = st => { const i = STORY_STAGES.concat(['superwestie', 'bonus']).indexOf(st); return i < 0 ? 99 : i; }; return MG_ORDER.filter(id => MG[id].stage && MG[id].stage !== 'test').sort((a, b) => rank(MG[a].stage) - rank(MG[b].stage)); },
   updColeccion() {
     const items = this.colItems(), cols = 6, cw = 40, ch = 34, x0 = 8, y0 = 8 - (this.scroll || 0);
     if (IN.down && this.dragCol != null) { this.scroll = clamp((this.scroll || 0) - IN.dy, 0, Math.max(0, Math.ceil(items.length / cols) * ch - 150)); if (Math.abs(IN.y - this.dragCol) > 4) this.colMoved = true; }
