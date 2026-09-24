@@ -20,6 +20,8 @@ function boot() {
   if (QS.get('test') === 'audio') { runAudioTest(); return; }
   if (QS.get('test') === 'cut') { runCutTest(); return; }
   if (QS.get('test') === 'thumb') { runThumb(); return; }
+  if (QS.get('test') === 'icon') { runIcon(); return; }
+  if (QS.get('test') === 'perf') { runPerfTest(); return; }
   if (QS.get('test') === 'list') { const d = STAGES[QS.get('id')]; document.documentElement.setAttribute('data-result', d ? stageGames(d).concat(d.boss ? [d.boss] : []).join(' ') : ''); return; }
   if (QS.has('bot')) BOTIN.on = true;
   const f = SCENE_TABLE[SCENE_ARG];

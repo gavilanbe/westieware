@@ -84,12 +84,29 @@ function hermanasAussieSide(who, pose = 'stand', mood = 'normal', k = 1) {
     const c = model(W, H, parts);
     const g = c.g, K = '#140c14', q = v => rd(v * k);
     // eye
-    const ex = q(P.eye[0]), ey = q(P.eye[1]);
-    if (mood === 'happy') { px(g, ex - 1, ey + 1, K); px(g, ex, ey, K); px(g, ex + 1, ey, K); px(g, ex + 2, ey + 1, K); }
-    else if (mood === 'sad') { rect(g, ex - 1, ey + 1, 3, 2, K); px(g, ex, ey + 1, A.eyeN); linePx(g, ex - 2, ey - 1, ex + 1, ey, K); }
-    else if (mood === 'wow') { rect(g, ex - 1, ey - 1, 3, 4, K); px(g, ex, ey, '#fff'); px(g, ex, ey + 1, A.eyeN); }
-    else if (mood === 'focus') { rect(g, ex - 1, ey + 1, 3, 2, K); px(g, ex, ey + 1, A.eyeN); linePx(g, ex - 2, ey - 1, ex + 2, ey, K); }
-    else { rect(g, ex - 1, ey, 3, Math.max(2, q(3)), K); px(g, ex, ey + 1, A.eyeN); px(g, ex - 1, ey, '#ffffff'); }
+    const ex = q(P.eye[0]), ey = q(P.eye[1]), LT = A.base[4];
+    if (k < .8) {
+      // small sizes keep the compact eye
+      if (mood === 'happy') { px(g, ex - 1, ey + 1, K); px(g, ex, ey, K); px(g, ex + 1, ey, K); px(g, ex + 2, ey + 1, K); }
+      else if (mood === 'sad') { rect(g, ex - 1, ey + 1, 3, 2, K); px(g, ex, ey + 1, A.eyeN); linePx(g, ex - 2, ey - 1, ex + 1, ey, K); }
+      else if (mood === 'wow') { rect(g, ex - 1, ey - 1, 3, 4, K); px(g, ex, ey, '#fff'); px(g, ex, ey + 1, A.eyeN); }
+      else if (mood === 'focus') { rect(g, ex - 1, ey + 1, 3, 2, K); px(g, ex, ey + 1, A.eyeN); linePx(g, ex - 2, ey - 1, ex + 2, ey, K); }
+      else { rect(g, ex - 1, ey, 3, Math.max(2, q(3)), K); px(g, ex, ey + 1, A.eyeN); px(g, ex - 1, ey, '#ffffff'); }
+    } else {
+      // big cartoon eye: white sclera, iris looking ahead, a glint; a light lash line so it reads on dark merle
+      const open = (h, brow) => {
+        rect(g, ex - 2, ey - 1, 5, h, K); rect(g, ex - 1, ey - 2, 3, h + 2, K);
+        rect(g, ex - 1, ey - 1, 3, h, '#ffffff');
+        rect(g, ex, ey - 1, 2, h, A.eyeN); rect(g, ex + 1, ey, 1, h - 1, K); px(g, ex, ey - 1, '#ffffff');
+        if (brow) linePx(g, ex - 3, ey - 3 + brow, ex + 2, ey - 3, K);
+      };
+      if (mood === 'happy') { hline(g, ex - 1, ex + 2, ey, K); hline(g, ex - 1, ex + 2, ey - 1, K); px(g, ex - 2, ey + 1, K); px(g, ex + 3, ey + 1, K); hline(g, ex - 1, ex + 2, ey + 1, LT); }
+      else if (mood === 'sad') { open(2, 0); linePx(g, ex - 3, ey - 4, ex + 2, ey - 2, K); }
+      else if (mood === 'wow') { open(4, 0); }
+      else if (mood === 'focus') { open(2, -1); }
+      else open(3, 0);
+      if (mood === 'happy' || mood === 'normal') { rect(g, ex - 2, ey + 4, 3, 2, '#ff8fb8'); px(g, ex - 1, ey + 4, '#ffc2da'); }
+    }
     // mouth
     const mx0 = q(P.muz[0] - 2), my = q(P.muz[1] + 3.5);
     if (P.open || mood === 'happy' || mood === 'wow') {
@@ -142,6 +159,7 @@ function hermanasAussieHead(who, ex = 'normal') {
     else if (ex === 'sad') { hline(g, 29, 35, 42, K); px(g, 28, 43, K); px(g, 36, 43, K); }
     else if (ex === 'focus') { hline(g, 28, 36, 41, K); px(g, 36, 40, K); }
     else { vline(g, 32, 38, 40, K); hline(g, 29, 31, 41, K); hline(g, 33, 35, 41, K); }
+    if (ex === 'happy' || ex === 'wink' || ex === 'love') for (const bx of [16, 45]) { rect(g, bx, 31, 3, 2, '#ff8fb8'); px(g, bx + 1, 31, '#ffc2da'); }
     return c;
   });
 }
@@ -480,7 +498,7 @@ defCut('hermanas_out', {
 defStage({
   id: 'hermanas', name: 'KIRA & NALA', sub: '«Pastoras de playa»', verb: '¡DIBUJA!', mech: 'draw', bpm: 120,
   games: ['pizarra', 'rebano', 'correas', 'rampa', 'lazo'], boss: 'gaviota', bossAt: 10, speedAt: [4, 7], unlockBy: 'pompon',
-  portrait: () => mdl('hermanas:hermPortrait', () => { const c = mkCanvas(100, 112), g = c.g; hermanasDrawAussieSit(g, 34, 108, 'kira', 'happy'); hermanasDrawAussieSit(g, 66, 110, 'nala', 'wink'); return c; }),
+  portrait: (k) => mdl('hermanas:hermPortrait' + (k === 'sad' ? 'S' : ''), () => { const c = mkCanvas(100, 112), g = c.g, sad = k === 'sad'; hermanasDrawAussieSit(g, 34, 108, 'kira', sad ? 'sad' : 'happy'); hermanasDrawAussieSit(g, 66, 110, 'nala', sad ? 'sad' : 'wink'); return c; }),
   face: () => mdl('hermanas:hermFace', () => { const c = mkCanvas(44, 40), g = c.g; drawS(g, hermanasAussieHead('kira', 'happy'), 10, 24, { ax: .5, ay: .5 }); drawS(g, hermanasAussieHead('nala', 'happy'), 34, 26, { ax: .5, ay: .5 }); return c; }),
   peek: (g, x, y, t) => { drawS(g, hermanasAussieHead('kira', 'happy'), x - 12, y - 8, { ax: .5, ay: 1 }); drawS(g, hermanasAussieHead('nala', fl(t) % 3 ? 'happy' : 'wink'), x + 14, y - 4, { ax: .5, ay: 1 }); },
   rim: '#3d93d6', cardCols: ['#2f7cc4', '#3d93d6'], nameFill: ['#ffffff', '#b3d9ff', '#63a0ef'],
@@ -493,3 +511,51 @@ defStage({
     staticCols: ['#243029', '#2c3b35'], cardCol: RAMP.water,
   },
 });
+
+// ---------------------------------------------------------------- chibi -----
+// the two sisters trotting side by side (menu walker); frames walk0 | walk1 | idle | happy | held
+function hermanasChibi(fr = 'idle') {
+  return mdl('chibi:hermanas:' + fr, () => {
+    const W = 38, H = 28, c = mkCanvas(W, H), g = c.g;
+    const layer = fn => { const L = mkCanvas(W, H); fn(L.g); g.drawImage(outlined(L, INK, false), -1, -1); };
+    const st = fr === 'walk0' ? 1 : fr === 'walk1' ? -1 : 0, held = fr === 'held', happy = fr === 'happy';
+    const dog = (who, bx, by, phase) => {
+      const A = HERMANAS_AUS[who], base = A.base[3], mid = A.base[2], dark = A.dark[1], W2 = '#ffffff', Wd = '#c8c6d8', CU = RAMP.copper[3];
+      const s = st * phase, lift = happy ? 3 : held ? 2 : 0, y0 = by - lift;
+      // legs (4), white socks
+      layer(q => {
+        const legs = held ? [[-6, 2], [-3, 2], [3, 2], [6, 2]] : [[-6, s], [-3, -s], [3, s], [6, -s]];
+        for (const [dx, o] of legs) { const lx = bx + dx + (held ? (dx < 0 ? -1 : 1) : 0), top = y0 + 2, bot = y0 + 7 + (held ? 1 : 0) - Math.max(0, -o); rect(q, lx, top, 2, bot - top, dx < 0 ? mid : base); rect(q, lx, bot - 2, 2, 2, W2); }
+      });
+      // body + bob tail + white chest
+      layer(q => {
+        ellipsePx(q, bx, y0, 7, 4.2, base); ellipsePx(q, bx - 1, y0 - 1, 4.5, 2.2, A.base[4]);
+        disc(q, bx - 7, y0 - 3, 1.8, base);
+        for (const [dx, dy, r] of [[-3, 1, 1.6], [1, -2, 1.3], [-5, -1, 1.1]]) disc(q, bx + dx, y0 + dy, r, dark);
+        ellipsePx(q, bx + 5, y0 + 1, 2.4, 2.6, W2); px(q, bx + 5, y0 + 3, Wd);
+      });
+      // head, ears, blaze, muzzle, bandana
+      layer(q => {
+        const hx = bx + 7, hy = y0 - 5 + (happy ? -1 : 0);
+        disc(q, hx, hy, 4.4, base); disc(q, hx - 1, hy - 1, 2.2, A.base[4]);
+        polyPx(q, [[hx - 3, hy - 3], [hx - 1, hy - 8], [hx + 1, hy - 3]], base); px(q, hx - 1, hy - 7, dark); px(q, hx, hy - 6, dark);
+        disc(q, hx + 2, hy - 2, 1.2, dark);
+        rect(q, hx, hy - 4, 1, 4, W2);
+        ellipsePx(q, hx + 4, hy + 1.5, 2.6, 1.9, W2);
+      });
+      layer(q => { const hx = bx + 7, hy = y0 - 5 + (happy ? -1 : 0); polyPx(q, [[hx - 4, hy + 3], [hx + 3, hy + 3], [hx - 1, hy + 7]], A.band[2]); hline(q, hx - 3, hx + 2, hy + 3, A.band[3]); });
+      // face details
+      const hx = bx + 7, hy = y0 - 5 + (happy ? -1 : 0);
+      if (happy) { px(g, hx + 1, hy - 1, INK); px(g, hx + 2, hy - 2, INK); px(g, hx + 3, hy - 1, INK); rect(g, hx + 4, hy + 2, 2, 2, RAMP.pink[2]); }
+      else if (held) { rect(g, hx + 1, hy - 2, 2, 3, INK); px(g, hx + 1, hy - 2, '#ffffff'); rect(g, hx + 5, hy + 2, 1, 2, '#3e0d1c'); }
+      else { rect(g, hx + 1, hy - 2, 2, 2, INK); px(g, hx + 2, hy - 1, who === 'kira' ? A.eyeN : A.eyeF); px(g, hx + 1, hy - 2, '#ffffff'); }
+      px(g, hx + 1, hy - 4, CU);
+      rect(g, hx + 6, hy + 0, 2, 2, INK);
+      px(g, hx + 2, hy + 1, RAMP.pink[3]);
+    };
+    dog('kira', 11, 18, 1);
+    dog('nala', 25, 19, -1);
+    return c;
+  });
+}
+STAGES.hermanas.chibi = hermanasChibi;

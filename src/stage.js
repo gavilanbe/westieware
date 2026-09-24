@@ -123,6 +123,7 @@ const STG = {
       else if (S.levelUp) { S.special = 'level'; S.levelUp = false; }
       else if (result !== null && !d.noSpeed && (d.speedEvery ? this.countSinceBoss() % d.speedEvery === 0 && S.speed < 6 : (d.speedAt || [4, 7]).includes(this.countSinceBoss()))) S.special = 'speed';
     }
+    if (QS.get('force') && result !== null && S.lives > 0) S.special = QS.get('force'); // debug captures
     S.len = S.special ? 8 : 4;
     if (S.lives <= 0) S.len = 3;
     // music: result (2 beats) [+ special 4] + next (2)
@@ -150,7 +151,7 @@ const STG = {
       S.nextId = S.bag.shift();
     }
     S.g = mgNew(S.nextId, S.level, S.bpm);
-    SAVE.seen[S.nextId] = 1;
+    SAVE.seen[S.nextId] = 1; SAVE.seen[S.nextId + ':n'] = (SAVE.seen[S.nextId + ':n'] || 0) + 1;
   },
   updInter() {
     const S = this.S;
@@ -227,7 +228,7 @@ const STG = {
       } else S.nextIsBoss = true; // the boss comes back until it's beaten
     } else {
       const bossAt = S.def.bossAt || 10;
-      if (S.def.boss && this.countSinceBoss() + 1 >= bossAt && !S.practice) S.nextIsBoss = true;
+      if (S.def.boss && MG[S.def.boss] && this.countSinceBoss() + 1 >= bossAt && !S.practice) S.nextIsBoss = true;
     }
     this.startInter(won);
   },
@@ -261,7 +262,9 @@ const STG = {
     S.cleared = cleared;
     const key = S.practice ? 'mg:' + S.practiceId : S.id, best = SAVE.best[key] || 0;
     S.best = Math.max(best, S.count); S.newRecord = S.count > best && S.count > 0;
-    SAVE.best[key] = S.best; persist();
+    SAVE.best[key] = S.best;
+    SAVE.top = SAVE.top || {}; const top = (SAVE.top[key] || []).concat([S.count]).sort((a, b) => b - a).slice(0, 3); SAVE.top[key] = top;
+    persist();
     if (S.newRecord) after(.6, () => playSong(JINGLE.record, { bpm: 140 }));
     S.btns = [{ id: 'again', x: 18, y: 124, w: 104, h: 36, label: 'OTRA VEZ' }, { id: 'menu', x: 134, y: 124, w: 104, h: 36, label: 'MENÚ' }];
     if (navigator.share || QS.has('share')) S.btns.push({ id: 'share', x: 78, y: 76, w: 100, h: 26, label: 'COMPARTIR' });
@@ -306,6 +309,7 @@ const STG = {
       case 'results': this.drawResultsTop(g); break;
       default:
         R.top(g, S);
+        if (R.lifePos && R.lifePos.screen === 'top') this.drawLives(g, S, R.lifePos);
         if (S.phase === 'inter' || S.phase === 'over') this.drawCounter(g, S);
         if (S.phase === 'inter' && S.special) this.drawSpecialTop(g, S);
         if (S.phase === 'clear') this.drawBanner(g, '¡SUPERADO!', S.pt, ['#ffffff', '#fff27a', '#ffc23a'], 34);
@@ -323,7 +327,7 @@ const STG = {
       case 'results': this.drawResultsBot(g); break;
       default:
         R.bot(g, S);
-        this.drawLives(g, S);
+        if (!(R.lifePos && R.lifePos.screen === 'top')) this.drawLives(g, S);
         this.drawPortal(g, S);
         if (S.phase === 'inter' && S.special) this.drawSpecialBot(g, S);
         if (S.phase === 'clear') (R.clearBot || drawClearBotDefault)(g, S);
@@ -352,19 +356,21 @@ const STG = {
   // big announcement across the top screen
   drawBanner(g, word, t, fill, y = 78) {
     const k = clamp(t / .5, 0, 1);
-    g.globalAlpha = .55 * k; rect(g, 0, y - 8, SW, 52, INK); g.globalAlpha = 1;
+    g.globalAlpha = .7 * k; rect(g, 0, y - 8, SW, 52, INK); g.globalAlpha = 1;
     mord(g, word, SW / 2, y, fitMord(word, 244, { u: 2.5, r: 2.5, rim: 2, sy: 3, fill }), { anim: (i, n) => { const lt = t - i * .05; const s = lt <= 0 ? 0 : spring(lt, 2.2, 6); return { s, rot: (1 - Math.min(1, lt * 3)) * (i % 2 ? .3 : -.3), dy: Math.sin(t * 6 + i) * 1.5 }; } });
   },
   drawSpecialTop(g, S) {
     const t = (S.pb - 2) * this.beatDur; if (t < 0) return;
     if (S.special === 'speed') {
-      // speed lines
+      // speed lines + brush lettering + Keiko cheering from below
       for (let i = 0; i < 18; i++) { const y = (i * 37 + fl(t * 400) * 3) % SH, x = (i * 71 + fl(t * 900)) % (SW + 60) - 30; rect(g, SW - x, y, 26 + (i % 3) * 10, 1, '#ffffff'); }
-      this.drawBanner(g, '¡MÁS RÁPIDO!', t, ['#ffffff', '#ffd1e4', '#ff5d9e']);
+      const kk = spring(t - .25, 2.4, 6); if (kk > 0) drawS(g, keikoHead('happy'), SW / 2 + 8, 150, { s: kk, rot: Math.sin(t * 10) * .08 });
+      drawBrushWords(g, ['¡MÁS', 'RÁPIDO!'], SW / 2 - 6, 52, t);
     } else if (S.special === 'boss') {
-      g.globalAlpha = Math.min(.45, t * .8); rect(g, 0, 0, SW, SH, '#7a0018'); g.globalAlpha = 1;
+      g.globalAlpha = Math.min(.45, t * .8); rect(g, 0, 0, SW, SH, '#3a0010'); g.globalAlpha = 1;
       for (const yy of [8, SH - 18]) { rect(g, 0, yy, SW, 10, C.yellow); for (let x = -20 + (fl(t * 60) % 20); x < SW; x += 20) polyPx(g, [[x, yy], [x + 10, yy], [x + 5, yy + 10], [x - 5, yy + 10]], INK); }
-      this.drawBanner(g, '¡JEFE!', t, ['#ffffff', '#ffa39a', '#ec5e5e']);
+      const kk = spring(t - .35, 2.2, 6); if (kk > 0) drawS(g, keikoBossHead(), 196, 128, { s: kk, rot: -.1 + Math.sin(t * 3) * .04 });
+      drawBrushWords(g, ['¡JUEGO', 'DEL JEFE!'], 102, 46, t);
     } else if (S.special === 'level') {
       this.drawBanner(g, '¡NIVEL ' + S.level + '!', t, ['#ffffff', '#d2f5e4', '#5bb593']);
     }
@@ -425,8 +431,8 @@ const STG = {
     const bob = Math.abs(Math.sin(S.pb * Math.PI)) * 5;
     mord(g, '?', x + w / 2, y + h / 2 - 12 - bob, { u: 2, r: 2.2, fill: ['#ffffff', '#fff8e6', '#f2e2b8'] });
   },
-  drawLives(g, S) {
-    const R = S.def.room, n = S.maxLives, sp = R.lifeSpacing || 30, y = R.lifeY || 158, x0 = SW / 2 - (n - 1) * sp / 2;
+  drawLives(g, S, pos) {
+    const R = S.def.room, n = S.maxLives, sp = pos ? pos.sp : (R.lifeSpacing || 30), y = pos ? pos.y : (R.lifeY || 158), x0 = pos ? pos.x0 : SW / 2 - (n - 1) * sp / 2;
     for (let i = 0; i < n; i++) {
       const alive = i < S.lives, breaking = i === S.breakI && S.breakT < 1.2 && S.phase !== 'results';
       const bob = alive ? Math.round(Math.sin(S.pb * Math.PI + i * .8) * 1.5) : 0;
@@ -445,6 +451,7 @@ const STG = {
       g.globalAlpha = k; for (let i = 0; i < 3; i++) { g.fillStyle = col; g.fillRect(i, i, SW - i * 2, 1); g.fillRect(i, SH - 1 - i, SW - i * 2, 1); g.fillRect(i, i, 1, SH - i * 2); g.fillRect(SW - 1 - i, i, 1, SH - i * 2); } g.globalAlpha = 1;
     }
     this.drawBomb(g, S);
+    drawMgHint(g, gm, S.pb, this.beatDur);
     this.drawCmdBot(g, S);
   },
   drawCmdBot(g, S) {
@@ -488,7 +495,10 @@ const STG = {
       const st = fitMord(gm.def.cmd, 190, { u: 1.9, r: 2, rim: 2, sy: 2 }), w = mordW(gm.def.cmd, st);
       mord(g, gm.def.cmd, SW / 2 - 10, y + bob, st);
       drawMechMini(g, SW / 2 - 10 + w / 2 + 22, y + 16 + bob, gm.def.mech === 'mix' ? S.def.mech : gm.def.mech, S.pt);
-      if (k >= 1 && gm.def.name && !gm.def.top) txt(g, gm.def.name, SW / 2, 48 + bob, '#ffffff', { align: 'c', out: INK });
+      if (k >= 1 && !gm.def.top) {
+        if (gm.def.how) { const lines = wrapText(gm.def.how, 220); lines.slice(0, 2).forEach((l, i) => txt(g, l, SW / 2, 48 + i * 11 + bob, '#ffffff', { align: 'c', out: INK })); }
+        else if (gm.def.name) txt(g, gm.def.name, SW / 2, 48 + bob, '#ffffff', { align: 'c', out: INK });
+      }
     }
     this.drawMiniLives(g, S);
     txt(g, String(S.count + 1).padStart(2, '0'), 8, 6, '#ffffff', { out: INK, bold: true });
@@ -499,7 +509,9 @@ const STG = {
     const S = this.S, d = S.def, t = S.pt, cols = d.cardCols || [RAMP.green[1], RAMP.green[2]];
     // a character title card: sunburst in the stage colours, portrait slams in from the left
     rect(g, 0, 0, SW, SH, cols[0]);
-    for (let i = 0; i < 18; i++) { const a = i / 18 * TAU + t * .25; polyPx(g, [[70, 120], [70 + Math.cos(a - .09) * 320, 120 + Math.sin(a - .09) * 320], [70 + Math.cos(a + .09) * 320, 120 + Math.sin(a + .09) * 320]], cols[1]); }
+    if (d.cardBg === 'waves') { g.fillStyle = cols[1]; for (let y = -12; y < SH + 12; y += 16) for (let x = 0; x < SW; x++) { const yy = y + Math.sin(x * .09 + t * 2 + y * .2) * 4; g.fillRect(x, rd(yy), 1, 7); } }
+    else for (let i = 0; i < 18; i++) { const a = i / 18 * TAU + t * .25; polyPx(g, [[70, 120], [70 + Math.cos(a - .09) * 320, 120 + Math.sin(a - .09) * 320], [70 + Math.cos(a + .09) * 320, 120 + Math.sin(a + .09) * 320]], cols[1]); }
+    if (d.slogan) { const sk = clamp((t - .9) / .3, 0, 1); if (sk > 0) { const ls = wrapText(d.slogan, 150); ls.forEach((l, i) => txt(g, l, 176, 150 + i * 12 + (1 - E.outBack(sk)) * 30, '#ffffff', { align: 'c', out: INK, bold: true })); } }
     // diagonal name band
     const bk = E.outBack(clamp((t - .15) / .35, 0, 1));
     g.save(); g.translate(lerp(SW + 120, 170, bk), 58); g.rotate(-.06);
@@ -699,4 +711,39 @@ function shareScore(S) {
   const text = '¡He aguantado ' + S.count + ' microjuegos en WESTIE WARE (' + name + ')! 🐶✂️ Peluquería canina Westie BLVRD, Barcelona.';
   const url = 'https://gavilanbe.github.io/westieware/';
   try { if (navigator.share) navigator.share({ title: 'WESTIE WARE ¡Tocados!', text, url }).catch(() => { }); } catch (e) { }
+}
+
+// Ghost hand: at the start of a microgame (always at level 1, and the first
+// times you meet it) a translucent hand shows the gesture right where it
+// goes. A microgame opts in with hint(g) → { x, y, mech?, path?: [[x,y],…], to?: [x,y] }.
+const HINT_SEEN = {};
+function drawMgHint(g, gm, beat, bd) {
+  if (!gm.def.hint || gm.def.boss) return;
+  const seen = SAVE.seen[gm.id + ':n'] || 0;
+  if (gm.level > 1 && seen > 2) return;
+  const T = beat * bd, dur = Math.max(.9, 1.6 * bd);
+  if (T > dur || gm.state !== 'play') return;
+  if (!HINT_SEEN[gm.id + gm.t0]) { HINT_SEEN[gm.id + gm.t0] = 1; }
+  let h; try { h = gm.def.hint(gm); } catch (e) { return; }
+  if (!h) return;
+  const a = T < dur * .75 ? 1 : 1 - (T - dur * .75) / (dur * .25), mech = h.mech || gm.def.mech, ph = (T * 2.2) % 1;
+  let x = h.x, y = h.y, press = false;
+  if (mech === 'tap') { press = ph > .45 && ph < .7; if (press) { g.globalAlpha = a * .8; ringPx(g, x, y, 5 + (ph - .45) * 30, '#ffffff'); } }
+  else if (mech === 'rub') { x += Math.sin(T * 16) * 14; press = true; }
+  else if (mech === 'spin') { const an = T * 7 * (h.dir || 1), r = h.r || 16; x += Math.cos(an) * r; y += Math.sin(an) * r; press = true; }
+  else if ((mech === 'cut' || mech === 'draw' || mech === 'drag') && (h.path || h.to)) {
+    const P = h.path || [[h.x, h.y], h.to], k = Math.min(1, ph * 1.4), n = P.length - 1, seg = Math.min(n - 1, fl(k * n)), f = k * n - seg;
+    x = lerp(P[seg][0], P[seg + 1][0], f); y = lerp(P[seg][1], P[seg + 1][1], f); press = k < 1;
+    g.globalAlpha = a * .7; for (let i = 0; i < n; i++) { const [x0, y0] = P[i], [x1, y1] = P[i + 1]; const L = Math.hypot(x1 - x0, y1 - y0); for (let q = 0; q < L; q += 4) px(g, lerp(x0, x1, q / L), lerp(y0, y1, q / L), '#ffffff'); }
+  }
+  g.globalAlpha = a * .85; drawHand(g, x, y, press); g.globalAlpha = 1;
+}
+
+// chunky white "brush" lettering with a heavy ink rim (the user's banner style)
+function drawBrushWords(g, lines, x, y, t) {
+  const st = { u: 2.4, r: 2.8, rim: 3, sy: 4, sx: 2, fill: ['#ffffff', '#ffffff', '#ececf2'], line: INK, shadow: INK, slant: .22 };
+  lines.forEach((w, li) => {
+    const s2 = fitMord(w, 220, st), lt0 = t - li * .18;
+    mord(g, w, x + li * 10, y + li * 34, s2, { anim: (i) => { const lt = lt0 - i * .04; if (lt <= 0) return { s: 0 }; return { s: spring(lt, 2.6, 6), rot: -.12 + Math.sin(t * 5 + i) * .03, dy: Math.sin(t * 6 + i * .8) * 1.5 }; } });
+  });
 }

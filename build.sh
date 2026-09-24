@@ -1,7 +1,7 @@
 #!/bin/sh
 # Concatenates the sources into a single index.html (no build tools needed).
 cd "$(dirname "$0")"
-CORE="src/core.js src/gfx.js src/font.js src/audio.js src/art.js src/salon.js src/ui.js src/fx.js"
+CORE="src/core.js src/gfx.js src/font.js src/audio.js src/art.js src/anahi_art.js src/salon.js src/ui.js src/fx.js"
 STAGE_SYS="src/mg.js src/stage.js src/cutscene.js"
 # ONLY="anahi rizos" limits the stages/games bundled (parallel work); OUT=file writes elsewhere
 if [ -n "$ONLY" ]; then

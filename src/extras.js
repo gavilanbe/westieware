@@ -5,7 +5,7 @@
 'use strict';
 
 const TOYS = [
-  { id: 'caricias', name: 'Caricias', how: 'Frota a Bule, tócale la nariz… ¡mímalo!', need: 0 },
+  { id: 'caricias', name: 'Caricias', how: 'Frota a Keiko, tócale la nariz… ¡mímala!', need: 0 },
   { id: 'pizarra', name: 'Pizarra', how: 'Dibuja con tizas de colores y sellos, como la de la puerta.', need: 1 },
   { id: 'piano', name: 'Piano Guau', how: 'Cada perrete ladra una nota. ¡Toca una canción!', need: 3 },
 ];
@@ -49,13 +49,13 @@ function toysDrawTop(M, g) {
   void M;
 }
 function toyIcon(g, id, x, y) {
-  if (id === 'caricias') drawS(g, buleHead('love'), x, y, {});
+  if (id === 'caricias') drawS(g, keikoHead('love'), x, y, {});
   else if (id === 'pizarra') drawS(g, aFrameSign(), x, y + 30, { ax: .5, ay: 1, s: 1 });
   else { for (let i = 0; i < 7; i++) { rect(g, x - 28 + i * 8, y - 14, 8, 30, INK); rect(g, x - 27 + i * 8, y - 13, 6, 28, '#ffffff'); } for (const i of [0, 1, 3, 4, 5]) rect(g, x - 24 + i * 8, y - 14, 5, 17, INK); }
 }
 
 const TOY_IMPL = {
-  // ------------------------------------------------ Caricias: pet Bule --------
+  // ------------------------------------------------ Caricias: pet Keiko -------
   caricias: {
     enter() { this.joy = .3; this.ex = 'normal'; this.exT = 0; this.rub = rubTracker(); this.fx = new FX(); this.wag = 0; this.sneeze = 0; },
     update(dt) {
@@ -70,13 +70,13 @@ const TOY_IMPL = {
     },
     drawBot(g) {
       g.drawImage(salonBotBackdrop(), 0, 0);
-      drawWestieSit(g, 128 + (this.wag > 0 ? Math.sin(NOW * 30) * 1.5 : 0), 150 + 36, this.ex, { tilt: this.sneeze > 0 ? Math.sin(this.sneeze * 30) * .3 : 0 });
+      drawKeikoSit(g, 128 + (this.wag > 0 ? Math.sin(NOW * 30) * 1.5 : 0), 150 + 36, this.ex, { tilt: this.sneeze > 0 ? Math.sin(this.sneeze * 30) * .3 : 0 });
       this.fx.draw(g);
     },
     drawTop(g) {
       rect(g, 0, 0, SW, SH, RAMP.pink[3]); for (let i = 0; i < 12; i++) drawHeart(g, (i * 53 + NOW * 12) % SW, (i * 37 + NOW * 6) % SH, RAMP.pink[4], 1.2);
       mord(g, 'CARICIAS', SW / 2, 20, { u: 1.6, r: 1.8, rim: 2, sy: 2, fill: ['#ffffff', '#ffd1e4', '#ff5d9e'] });
-      txt(g, 'FELICIDAD DE BULE', SW / 2, 80, INK, { align: 'c', bold: true });
+      txt(g, 'FELICIDAD DE KEIKO', SW / 2, 80, INK, { align: 'c', bold: true });
       rect(g, 40, 94, 176, 14, INK); rect(g, 41, 95, 174, 12, '#ffffff'); rect(g, 41, 95, rd(174 * this.joy), 12, '#ff5d9e'); rect(g, 41, 95, rd(174 * this.joy), 3, '#ffd1e4');
       txt(g, 'Frótale la cabeza · tócale la nariz', SW / 2, 124, '#44424f', { align: 'c' });
     },

@@ -1,7 +1,8 @@
 // ============================================================================
-//  FINAL — SÚPER WESTIE · ¡TODO!  (Wario-Man homage)
-//  Bule eats the whole "Pack de Chuches" and becomes Súper Westie. Every
-//  microgame of every stage, faster and faster, then the Mud Monster.
+//  FINAL — SÚPER KEIKO · ¡TODO!  (Wario-Man homage)
+//  Keiko (Anahí's westie) eats the whole "Pack de Chuches" and becomes Súper
+//  Keiko. Every microgame of every stage, faster and faster, then the boss the
+//  user dreamt up in his parody video: ¡PREPARA EL PERRO!
 //  + the extra modes unlocked after the ending: MEZCLA MAESTRA and A UN PELO.
 // ============================================================================
 'use strict';
@@ -52,25 +53,41 @@ function drawSuperWestie(g, x, y, t, o = {}) {
   const dir = o.flip ? -1 : 1, mood = o.mood || 'happy', bob = Math.sin(t * 4) * 2;
   heroCape(g, x + dir * 16, y - 14 + bob, t, dir, 56, o.lift || 0);
   drawS(g, westieSide(1, 'wag', mood), x, y + bob, { flip: o.flip, rot: (o.rot || 0) * dir });
+  // Keiko's green bandana at the neck
+  const nx = x + dir * 13, ny = y - 6 + bob;
+  polyPx(g, [[nx - 7, ny - 4], [nx + 7, ny - 4], [nx + dir * 2, ny + 8]], INK); polyPx(g, [[nx - 6, ny - 3], [nx + 6, ny - 3], [nx + dir * 2, ny + 6]], RAMP.green[2]);
+  px(g, nx, ny, '#ffffff'); px(g, nx - 3 * dir, ny - 2, '#ffffff');
   // domino mask over the eye + gold collar with a star tag
   const ex = x + dir * 28, ey = y - 15 + bob;
   rect(g, ex - 6, ey - 3, 12, 6, INK); rect(g, ex - 5, ey - 2, 10, 4, RAMP.green[2]); rect(g, ex - 2, ey - 1, 4, 2, '#ffffff'); px(g, ex + dir, ey, INK);
   rect(g, x + dir * 14 - 3, y - 12 + bob, 6, 2, RAMP.gold[3]); drawStar(g, x + dir * 15, y - 8 + bob, 2.5, RAMP.gold[4]);
 }
+// Súper Keiko sitting: cape, green domino mask (eyes still show through), W medal
+function swKeikoMask(g, hx, hy) {
+  // hx, hy = top-left of a 64x60 westie head: a green domino mask built from
+  // strips AROUND the eyes, so whatever expression she has still shows
+  const G = RAMP.green[2], L = RAMP.green[3], x0 = hx + 16, y0 = hy + 24;
+  const strip = (x, y, w, h) => { rect(g, x, y, w, h, G); };
+  rect(g, x0, y0, 32, 2, INK); rect(g, x0, y0 + 10, 32, 2, INK);           // top and bottom edges
+  strip(x0, y0 + 2, 32, 2); strip(x0, y0 + 8, 32, 2); hline(g, x0 + 1, x0 + 30, y0 + 2, L);
+  strip(x0, y0 + 4, 4, 4); strip(x0 + 11, y0 + 4, 10, 4); strip(x0 + 28, y0 + 4, 4, 4); // sides + bridge
+  rect(g, x0 - 1, y0, 1, 12, INK); rect(g, x0 + 32, y0, 1, 12, INK);
+  rect(g, x0 + 4, y0 + 4, 7, 1, INK); rect(g, x0 + 21, y0 + 4, 7, 1, INK); // lids of the eye holes
+}
 function heroPortrait() {
-  return mdl('heroPortrait2', () => {
-    const c = mkCanvas(110, 116), g = c.g;
+  return mdl('heroPortraitK', () => {
+    const c = mkCanvas(110, 118), g = c.g;
     // cape billowing to the right behind the sitting hero
-    const pts = [[34, 58], [62, 56], [80, 66], [104, 84], [108, 100], [96, 110], [70, 112], [36, 112], [24, 96]];
+    const pts = [[34, 60], [62, 58], [80, 68], [104, 86], [108, 102], [96, 112], [70, 114], [36, 114], [24, 98]];
     polyPx(g, pts.map(([x, y]) => [x + 1, y + 1]), INK); polyPx(g, pts.map(([x, y]) => [x - 1, y - 1]), INK); polyPx(g, pts, RAMP.green[2]);
-    for (const [a, b] of [[[50, 60], [60, 110]], [[64, 62], [86, 108]], [[76, 70], [102, 100]]]) linePx(g, a[0], a[1], b[0], b[1], RAMP.green[1]);
-    linePx(g, 36, 112, 96, 110, RAMP.gold[3]); linePx(g, 96, 110, 108, 100, RAMP.gold[3]);
-    drawWestieSit(g, 48, 114, 'happy');
-    // domino mask across both eyes (head drawn at 16,31 by drawWestieSit)
-    rect(g, 34, 56, 32, 8, INK); rect(g, 35, 57, 30, 6, RAMP.green[2]); rect(g, 35, 57, 30, 1, RAMP.green[3]);
-    for (const ex of [38, 55]) { rect(g, ex, 58, 5, 4, '#ffffff'); rect(g, ex + 1, 59, 2, 2, INK); }
-    // collar + gold W medal
-    rect(g, 34, 84, 28, 3, RAMP.gold[2]); disc(g, 48, 90, 6, INK); disc(g, 48, 90, 5, RAMP.gold[3]); tiny(g, 'W', 48, 88, RAMP.green[1], { align: 'c' });
+    for (const [a, b] of [[[50, 62], [60, 112]], [[64, 64], [86, 110]], [[76, 72], [102, 102]]]) linePx(g, a[0], a[1], b[0], b[1], RAMP.green[1]);
+    linePx(g, 36, 114, 96, 112, RAMP.gold[3]); linePx(g, 96, 112, 108, 102, RAMP.gold[3]);
+    drawS(g, westieSitBody(), 48, 116, { ax: .5, ay: 1 });
+    // the head (with her bandana), masked
+    const head = mkCanvas(64, 66); head.g.drawImage(keikoHead('happy'), 0, 0); swKeikoMask(head.g, 0, 0);
+    g.drawImage(head, 16, 116 - 36 - 45);
+    // gold W medal pinned to the bandana
+    disc(g, 48, 93, 6, INK); disc(g, 48, 93, 5, RAMP.gold[3]); disc(g, 47, 92, 2, RAMP.gold[4]); tiny(g, 'W', 48, 91, RAMP.green[1], { align: 'c' });
     return c;
   });
 }
@@ -156,32 +173,17 @@ function mudMonsterModel(f) {
   });
 }
 function drawMudMonster(g, x, y, t, s = 1) { drawS(g, mudMonsterModel(fl(t * 3) % 2), x, y, { s, sy: s * (1 + Math.sin(t * 4) * .03) }); }
-// Nube: the giant sheepdog under all that mud
-function nubeModel() {
-  return mdl('nube', () => {
-    const F = RAMP.fur, G2 = RAMP.grey;
-    const bodyS = SD.smooth(8, SD.ellipse(60, 58, 42, 34), SD.ellipse(60, 82, 50, 18));
-    const body = SD.shag(SD.tufts(bodyS, 60, 50, 3.5, 22, 1, 1.5), 1.8, .18, 5);
-    const back = SD.ellipse(60, 80, 48, 20);
-    return model(120, 104, [{ f: back, ramp: G2, z: 0, th: 12, tex: clumpTex(6, .3, 3, 1.3) }, { f: body, fs: bodyS, ramp: F, z: 1, th: 30, tex: clumpTex(6, .32, 9, 1.4) }], { post: g => {
-      // fringe over the eyes, a big black nose, a smile
-      for (let i = 0; i < 26; i++) linePx(g, 38 + i * 1.7, 30 + (i % 3), 38 + i * 1.7 + 1, 44 + (i % 4), F[1 + (i % 2)]);
-      ellipsePx(g, 60, 54, 7, 5, INK); px(g, 58, 52, '#6e6390');
-      hline(g, 52, 68, 64, INK); px(g, 51, 63, INK); px(g, 69, 63, INK); rect(g, 57, 65, 7, 5, RAMP.pink[2]);
-    } });
-  });
-}
-
 defStage({
-  id: 'superwestie', name: 'SÚPER WESTIE', sub: '«¡Por un Eixample sin barro!»', verb: '¡TODO!', mech: 'mix', bpm: 126,
-  games: () => allStoryGames(), boss: 'barro', bossAt: 20, speedAt: [5, 10, 15],
+  id: 'superwestie', name: 'SÚPER KEIKO', sub: '«¡Por un Eixample sin greñas!»', verb: '¡TODO!', mech: 'mix', bpm: 126,
+  games: () => allStoryGames(), boss: 'prepara', bossAt: 20, speedAt: [5, 10, 15],
   unlockBy: ['anahi', 'rizos', 'pompon', 'hermanas', 'ceniza', 'bigotes'],
   portrait: () => heroPortrait(),
-  face: () => mdl('heroFace', () => { const c = mkCanvas(64, 60); c.g.drawImage(buleHead('wink'), 0, 0); rect(c.g, 18, 26, 28, 5, RAMP.green[2]); rect(c.g, 18, 26, 28, 1, INK); rect(c.g, 18, 30, 28, 1, INK); for (const ex of [22, 39]) { rect(c.g, ex, 27, 4, 3, '#fff'); px(c.g, ex + 1, 28, INK); } return faceCrop(c, 12, 4, 40, 40); }),
-  rim: '#ffdf4f', cardCols: ['#141848', '#231f5e'], nameFill: ['#ffffff', '#b3d9ff', '#63a0ef'], tip: 'Todos los microjuegos… ¡y el jefe final!',
+  face: () => mdl('heroFaceK', () => { const c = mkCanvas(64, 66); c.g.drawImage(keikoHead('wink'), 0, 0); swKeikoMask(c.g, 0, 0); return faceCrop(c, 12, 6, 40, 42); }),
+  rim: '#ffdf4f', cardCols: ['#141848', '#231f5e'], nameFill: ['#ffffff', '#b3d9ff', '#63a0ef'], tip: 'Todos los microjuegos… ¡y la clienta más greñuda!',
+  chibi: (frame, t) => swHeroChibi(frame, t),
   songs: HERO_SONGS, intro: 'superwestie_in', outro: 'superwestie_out', creditsOnClear: true,
   room: { top: heroRoomTop, bot: heroRoomBot, frame: 'hero', life: heroLife, lifeY: 150, lifeSpacing: 34, counter: { x: SW / 2, y: 6 },
-    mini: (g, x, y, st) => drawSuperWestie(g, 44, SH - 22, NOW, { mood: st === 'lose' ? 'sad' : 'happy' }),
+    mini: (g, x, y, st) => drawSuperWestie(g, 44, SH - 22, NOW, { mood: st === 'lose' ? 'sad' : 'happy' }), bossLabel: '¡Llega la clienta más greñuda!',
     portal: { x: 64, y: 22, w: 128, h: 96 }, staticCols: ['#231f5e', '#3b2a6e'], playCols: ['#141848', '#231f5e'], cardCol: RAMP.purple },
 });
 
@@ -217,35 +219,42 @@ defStage({
 });
 
 // ---------------------------------------------------------------- story -----
-WHO.nube = { name: 'Nube', col: '#8587ab', voice: 'guru' };
+WHO.nube = { name: 'Nube', col: '#8587ab', voice: 'keiko' };
+WHO.maite = { name: 'Maite', col: '#35a869', voice: 'anahi' };
+// Keiko sitting (her bandana under the chin)
+function swKeikoSit(g, x, y, ex = 'normal', o = {}) {
+  drawS(g, westieSitBody(), x, y, { ax: .5, ay: 1 });
+  drawS(g, keikoHead(ex), x + (o.tilt || 0) * 4, y - 36, { ax: .5, ay: 45 / 66, rot: (o.tilt || 0) * .18 });
+}
 defCut('superwestie_in', {
   song: { spb: 4, loop: true, tracks: HERO_SONGS.play.tracks },
   shots: [
-    { dur: 0, lines: [['narr', 'Esa tarde, en el mostrador de Westie BLVRD…'], ['bule', '¿Un Pack de Chuches? ¿Naturales? ¿Para mí?'], ['bule', '*ñam* *ñam* *ÑAM* *ÑAM*']],
-      top(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 200, 170, 'idle', t); },
-      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); const eating = CUT.li >= 2; drawWestieSit(g, 128, 188, eating ? 'happy' : 'wow', { tilt: eating ? Math.sin(t * 20) * .3 : 0 });
+    { dur: 0, lines: [['narr', 'Esa tarde, en el mostrador de Westie BLVRD…'], ['keiko', '¿Un Pack de Chuches? ¿Naturales? ¿Para mí?'], ['keiko', '*ñam* *ñam* *ÑAM* *ÑAM*'], ['anahi', '¡Keiko! ¡Que eran para vender!']],
+      top(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 200, 170, CUT.li >= 3 ? 'wow' : 'idle', t); },
+      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); const eating = CUT.li >= 2; swKeikoSit(g, 128, 188, eating ? 'happy' : 'wow', { tilt: eating ? Math.sin(t * 20) * .3 : 0 });
         // the kraft treat bag with the round WB label
         const bx = 70, by = 150; rect(g, bx - 14, by - 30, 28, 34, INK); rect(g, bx - 13, by - 29, 26, 32, '#c9a26b'); disc(g, bx, by - 14, 8, '#fffaf0'); ringPx(g, bx, by - 14, 8, RAMP.green[2]); tiny(g, 'WB', bx, by - 16, RAMP.green[2], { align: 'c' });
         if (eating) for (let i = 0; i < 3; i++) { const k = (t * 3 + i * .33) % 1; disc(g, bx + 20 + k * 30, by - 20 - Math.sin(k * Math.PI) * 30, 3, '#d58c4c'); } } },
     { dur: 3.2, box: 'none', sfx: [[.1, 'boom'], [.3, 'sparkle'], [1.2, 'slam']],
       tall(g, t) {
         rect(g, 0, 0, SW, TALL_H, '#ffffff');
-        const k = clamp(t / 1, 0, 1);
         for (let i = 0; i < 24; i++) { const a = i / 24 * TAU + t; polyPx(g, [[SW / 2, TALL_H / 2], [SW / 2 + Math.cos(a) * 400, TALL_H / 2 + Math.sin(a) * 400], [SW / 2 + Math.cos(a + .13) * 400, TALL_H / 2 + Math.sin(a + .13) * 400]], i % 2 ? '#ffdf4f' : '#ff9f4f'); }
-        drawSuperWestie(g, SW / 2, TALL_H / 2 + 10, t, { lift: 1 });
-        if (t > 1.1) mord(g, '¡SÚPER WESTIE!', SW / 2, 40, { u: 2, r: 2.2, rim: 2, sy: 3, fill: ['#ffffff', '#b3d9ff', '#63a0ef'] }, { anim: i => ({ s: Math.max(0, spring(t - 1.1 - i * .04, 2.4, 7)) }) });
-        void k;
+        const rise = E.outBack(clamp(t / .7, 0, 1));
+        drawSuperWestie(g, SW / 2, SH + HINGE + 150 - rise * 56, t, { lift: 1 });
+        for (let i = 0; i < 6; i++) { const a = t * 3 + i * TAU / 6; drawStar(g, SW / 2 + Math.cos(a) * 70, SH + HINGE + 96 + Math.sin(a) * 40, 3 + Math.sin(t * 9 + i) * 1.5, '#ffffff'); }
+        if (t > 1.1) mord(g, '¡SÚPER KEIKO!', SW / 2, 70, { u: 2.2, r: 2.4, rim: 2, sy: 3, fill: ['#ffffff', '#b3d9ff', '#63a0ef'] }, { anim: i => ({ s: Math.max(0, spring(t - 1.1 - i * .04, 2.4, 7)) }) });
       } },
-    { dur: 0, song: HERO_SONGS.boss, lines: [['narr', '¡¡GLOOORGH!!'], ['anahi', '¡Algo sale de la alcantarilla de Viladomat! ¡Y viene directo al escaparate!'], ['bule', '¡Nadie ensucia Westie BLVRD! ¡SÚPER WESTIE, AL RESCATE!']],
+    { dur: 0, song: HERO_SONGS.boss, lines: [['narr', '¡¡GLOOORGH!!'], ['anahi', '¡Algo sale de la alcantarilla de Viladomat! ¡Es… es una bola de barro con patas!'], ['keiko', '¡Nadie ensucia Westie BLVRD! ¡SÚPER KEIKO, AL RESCATE!'], ['anahi', '¡Se escapa por el Eixample! ¡Síguela, Keiko! ¡Y que no se nos escape ni un perro sin peinar!']],
       sfx: [[0, 'boom'], [.2, 'splash', { pitch: .5 }]],
-      tall(g, t) { streetTall(g, 0, 1, t, { sunUp: 1 }); const gy = SH + HINGE; drawMudMonster(g, 128, gy + 150 - clamp(t / 1.2, 0, 1) * 60, t); for (let i = 0; i < 5; i++) { const k = (t * .8 + i * .2) % 1; disc(g, 128 + (i - 2) * 30 * k, gy + 100 - Math.sin(k * Math.PI) * 60, 4, '#5b3a1d'); } if (CUT.li >= 2) drawSuperWestie(g, 200, 80 + Math.sin(t * 3) * 6, t, { flip: true }); } },
+      tall(g, t) { streetTall(g, 0, 1, t, { sunUp: 1 }); const gy = SH + HINGE; drawMudMonster(g, CUT.li >= 3 ? 128 + (t - (CUT.st.fleeT || (CUT.st.fleeT = t))) * 120 : 128, gy + 150 - clamp(t / 1.2, 0, 1) * 60, t); for (let i = 0; i < 5; i++) { const k = (t * .8 + i * .2) % 1; disc(g, 128 + (i - 2) * 30 * k, gy + 100 - Math.sin(k * Math.PI) * 60, 4, '#5b3a1d'); } if (CUT.li >= 2) drawSuperWestie(g, 200, 80 + Math.sin(t * 3) * 6, t, { flip: true }); } },
   ],
 });
 defCut('superwestie_out', {
   get song() { return { spb: 4, loop: true, tracks: SONG_TITLE.tracks }; }, // title.js loads later
   shots: [
-    { dur: 0, lines: [['nube', '¿…Guau?'], ['anahi', '¡Pero si debajo del barro había un perrete! ¡Un pastor gigante!'], ['anahi', 'Se habría caído a la alcantarilla, pobrecito. ¿Cómo te llamas?'], ['nube', '¡Nube! ¡Guau!']],
-      tall(g, t) { streetTall(g, 0, 1, t, { sunUp: 1 }); const gy = SH + HINGE; g.drawImage(nubeModel(), 68, gy + 40); for (let i = 0; i < 6; i++) drawStar(g, 70 + i * 22, gy + 40 + Math.sin(t * 4 + i) * 6, 2.5, '#fff27a'); drawAnahiFull(g, 210, gy + 128, 'win', t); } },
+    { dur: 0, boxY: 4, lines: [['maite', '¡NUBE! ¡Por fin! Se me escapó por una alcantarilla hace un mes…'], ['nube', '¡Guau, guau!'], ['anahi', 'Venía un pelín greñuda, pero ha quedado monísima.'], ['maite', '¡Está preciosa! Toma los diez euros… ¡y quédate con el cambio!'], ['anahi', '…ka-ching.']],
+      top(g, t) { g.drawImage(prepTillRoom(), 0, 0); prepMaite(g, 70, 104, 'happy', t); drawS(g, prepDog('clean', .56, 'proud'), 30, 126, { ax: .5, ay: 1 }); prepLaptop(g, 150, 124, { amount: '10,00 €' }, t); for (let i = 0; i < 4; i++) drawStar(g, 30 + Math.cos(t * 2 + i * 1.6) * 24, 90 + Math.sin(t * 2 + i * 1.6) * 16, 2.5, '#fff27a'); },
+      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); const euro = CUT.li >= 4; drawAnahiFull(g, 128, 196, euro ? 'euro' : CUT.li >= 2 ? 'thumbs' : 'idle', t); if (euro) for (let i = 0; i < 8; i++) { const k = (t * .8 + i / 8) % 1; txt(g, '€', 20 + i * 30, k * 200 - 20, '#fff27a', { out: INK, bold: true }); } swKeikoSit(g, 212, 190, 'happy'); } },
     { dur: 0, lines: [['guru', '¡Ejem! ¿Alguien ha visto mi Peine de Oro?'], ['anahi', 'Todo tuyo, Gurú. Gracias por el préstamo.'], ['anahi', 'Para peinar con cuidado, calma y detalle… me bastan mis tijeras.']],
       top(g, t) { streetTall(TL, 0, 1, t, { sunUp: 1 }); g.drawImage(TALLC, 0, SH + HINGE, SW, SH, 0, 0, SW, SH); drawS(g, guruRat(fl(t * 2) % 2), 110, 150 - Math.min(40, t * 60)); if (CUT.li >= 1) goldComb(g, 140, 120, Math.sin(t * 3) * .2, true); },
       bot(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 128, 176, CUT.li >= 2 ? 'ready' : 'talk', t); } },
@@ -262,9 +271,9 @@ function familyPhoto(g, t) {
   const floor = TALL_H - 40;
   const cast = STORY_STAGES.filter(id => STAGES[id] && STAGES[id].portrait && id !== 'anahi');
   cast.forEach((id, i) => { const p = STAGES[id].portrait('photo', t); const x = 24 + i * (208 / Math.max(1, cast.length - 1)); drawS(g, p, x, floor - 20 - (i % 2) * 12, { ax: .5, ay: 1 }); });
-  drawAnahiFull(g, SW / 2 + 60, floor, t > 4.2 ? 'win' : 'ready', t);
+  drawAnahiFull(g, SW / 2 + 60, floor, t > 4.2 ? 'thumbs' : 'headhand', t);
   drawS(g, heroPortrait(), SW / 2 - 20, floor - 70, { ax: .5, ay: 1 });
-  g.drawImage(nubeModel(), 2, floor - 110);
+  drawS(g, prepDog('clean', 1, 'proud'), 40, floor + 6, { ax: .5, ay: 1 });
   // countdown, flash, polaroid
   if (t > 1.2 && t < 4.2) mord(g, String(3 - fl(t - 1.2)), SW / 2, 150, { u: 4, r: 4 }, { anim: () => ({ s: spring((t - 1.2) % 1, 2.5, 6) }) });
   if (t > 4.2) {
@@ -272,3 +281,60 @@ function familyPhoto(g, t) {
     if (t > 4.8) { const pk = spring(t - 4.8, 2, 6); g.save(); g.translate(SW / 2, SH + HINGE + 90); g.rotate(-.06); g.scale(pk, pk); panel(g, -80, -26, 160, 52, '#fffaf0', { r: 3 }); mord(g, 'FIN', 0, -22, { u: 2, r: 2.2 }); txt(g, 'Westie BLVRD · la familia al completo', 0, 12, INK, { align: 'c' }); g.restore(); }
   }
 }
+
+// ---------------------------------------------------------------- chibis ----
+// tiny walkers for the Touched!-style menu: frames walk0 | walk1 | idle | happy | held
+function swChibiCanvas(key, draw) { return mdl('swchibi:' + key, () => { const c = mkCanvas(30, 34), g = c.g; draw(g); return outlined(c, INK, true); }); }
+function swHeroChibi(frame) {
+  return swChibiCanvas('hero:' + frame, g => {
+    const W = '#ffffff', Sh = '#c8c8dc', G = RAMP.green[2], held = frame === 'held', hap = frame === 'happy', lift = hap ? 3 : 0;
+    // cape
+    polyPx(g, [[13, 14 - lift], [2, 12 - lift + (frame === 'walk1' ? 2 : 0)], [4, 22 - lift], [14, 20 - lift]], G); px(g, 5, 15 - lift, RAMP.green[3]);
+    // legs
+    const legs = held ? [[9, 23, 7], [18, 23, 7]] : frame === 'walk0' ? [[8, 24, 5], [12, 23, 5], [17, 24, 5], [21, 23, 5]] : frame === 'walk1' ? [[9, 23, 5], [11, 24, 5], [18, 23, 5], [20, 24, 5]] : hap ? [[9, 22, 3], [19, 22, 3]] : [[9, 24, 5], [12, 24, 5], [18, 24, 5], [21, 24, 5]];
+    for (const [x, y, h] of legs) rect(g, x, y - lift, 2, h, W);
+    // body + head + ears + tail
+    ellipsePx(g, 15, 21 - lift, 9, 5, W); ellipsePx(g, 15, 23 - lift, 8, 2, Sh);
+    polyPx(g, [[6, 19 - lift], [4, 13 - lift], [8, 17 - lift]], W);
+    disc(g, 22, 13 - lift, 6, W); polyPx(g, [[18, 9 - lift], [18, 3 - lift], [21, 8 - lift]], W); polyPx(g, [[23, 8 - lift], [25, 2 - lift], [26, 8 - lift]], W);
+    ellipsePx(g, 27, 15 - lift, 3, 2, W);
+    // bandana, mask, eye, nose
+    rect(g, 17, 18 - lift, 6, 2, G);
+    rect(g, 20, 11 - lift, 7, 3, G); px(g, held ? 23 : 24, 12 - lift, INK); if (held) px(g, 24, 11 - lift, '#ffffff');
+    px(g, 29, 14 - lift, INK); if (hap) px(g, 27, 17 - lift, RAMP.pink[2]);
+  });
+}
+function swMixChibi(frame) {
+  return swChibiCanvas('mix:' + frame, g => {
+    const hap = frame === 'happy', held = frame === 'held', lift = hap ? 3 : 0, cx0 = 15, cy0 = 13 - lift;
+    const legs = held ? [[11, 24, 7], [18, 24, 7]] : frame === 'walk0' ? [[10, 24, 6], [19, 23, 5]] : frame === 'walk1' ? [[11, 23, 5], [18, 24, 6]] : [[11, 24, 6], [18, 24, 6]];
+    for (const [x, y, h] of legs) { rect(g, x, y - lift, 1, h, '#2b2540'); rect(g, x - 1, y + h - lift - 1, 3, 2, '#ff5d9e'); }
+    disc(g, cx0, cy0, 11, '#2b2540'); for (const r of [4, 7, 9]) ringPx(g, cx0, cy0, r, '#40395e');
+    disc(g, cx0, cy0, 3.5, ['#ff5d9e', '#ffdf4f', '#5bd18b', '#63a0ef'][fl((hap ? 4 : 1) * (frame.length)) % 4]); px(g, cx0, cy0, '#fff8e6');
+    rect(g, cx0 - 8, cy0 - 6, 7, 3, INK); rect(g, cx0 + 1, cy0 - 6, 7, 3, INK); hline(g, cx0 - 1, cx0 + 1, cy0 - 5, INK); px(g, cx0 - 7, cy0 - 6, '#63a0ef'); px(g, cx0 + 2, cy0 - 6, '#63a0ef');
+    if (hap) { hline(g, cx0 - 3, cx0 + 3, cy0 + 4, '#ffffff'); }
+  });
+}
+function swHairChibi(frame) {
+  return swChibiCanvas('hair:' + frame, g => {
+    const hap = frame === 'happy', held = frame === 'held', lift = hap ? 3 : 0, jit = hap ? 1 : 0;
+    const legs = held ? [[11, 25, 6], [18, 25, 6]] : frame === 'walk0' ? [[10, 25, 5], [19, 24, 4]] : frame === 'walk1' ? [[11, 24, 4], [18, 25, 5]] : [[11, 25, 5], [18, 25, 5]];
+    for (const [x, y, h] of legs) { rect(g, x, y - lift, 1, h, '#44424f'); rect(g, x - 1, y + h - lift - 1, 3, 1, INK); }
+    // the clipper body, blade on top, one lonely hair
+    rect(g, 9 + jit, 8 - lift, 13, 18, '#b3202e'); rect(g, 10 + jit, 9 - lift, 3, 16, '#e8505e');
+    rect(g, 9 + jit, 5 - lift, 13, 3, '#e1e7f2'); for (let x = 10; x < 22; x += 2) px(g, x + jit, 4 - lift, '#a5afc4');
+    for (let i = 0; i < 6; i++) px(g, 16 + Math.round(Math.sin(i * .9) * 1.5) + jit, 3 - lift - i, INK);
+    // angry face
+    rect(g, 12 + jit, 13 - lift, 2, 2, '#ffffff'); rect(g, 18 + jit, 13 - lift, 2, 2, '#ffffff'); px(g, 13 + jit, 14 - lift, INK); px(g, 18 + jit, 14 - lift, INK);
+    linePx(g, 11 + jit, 11 - lift, 14 + jit, 12 - lift, INK); linePx(g, 21 + jit, 11 - lift, 18 + jit, 12 - lift, INK);
+    hline(g, 13 + jit, 18 + jit, 18 - lift, held ? INK : '#5a1a2a');
+  });
+}
+STAGES.mezcla.chibi = (frame) => swMixChibi(frame);
+STAGES.unpelo.chibi = (frame) => swHairChibi(frame);
+// debug bench (not reachable from the game): ?escena=cut&id=superwestie_art
+defCut('superwestie_art', { shots: [{ dur: 0, box: 'none', lines: [['narr', '…']],
+  top(g, t) { rect(g, 0, 0, SW, SH, '#8f7fb0'); drawS(g, heroPortrait(), 60, 186, { ax: .5, ay: 1 }); drawS(g, STAGES.superwestie.face(), 150, 60); drawS(g, STAGES.mezcla.face(), 200, 60); drawS(g, STAGES.unpelo.face(), 240, 60); prepKeikoCheer(g, 190, 190, t, 'happy'); },
+  bot(g, t) { rect(g, 0, 0, SW, SH, '#bfe3f7'); for (let y = 0; y < SH; y += 12) for (let x = (y / 12 % 2) * 12; x < SW; x += 24) disc(g, x, y, 3, '#a9d6f0');
+    ['superwestie', 'mezcla', 'unpelo'].forEach((id, r) => ['walk0', 'walk1', 'idle', 'happy', 'held'].forEach((f, i) => drawS(g, STAGES[id].chibi(f, t), 30 + i * 46, 40 + r * 56, { ax: .5, ay: 1, s: 1 })));
+    drawS(g, prepDog('scruffy', .56), 30, 188, { ax: .5, ay: 1 }); drawS(g, prepDog('wet', .56), 90, 188, { ax: .5, ay: 1 }); drawS(g, prepDog('frizzy', .56), 150, 188, { ax: .5, ay: 1 }); drawS(g, prepDog('clean', .56), 210, 188, { ax: .5, ay: 1 }); } }] });

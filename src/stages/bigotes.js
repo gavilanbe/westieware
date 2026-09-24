@@ -9,7 +9,8 @@
 // ---------------------------------------------------------------- palette ---
 RAMP.bigotesSalt = ['#1d1c24', '#383742', '#5b5a67', '#858492', '#b2b1be'];
 RAMP.bigotesBeard = ['#686775', '#9796a3', '#c3c2cc', '#e4e3ea', '#ffffff'];
-RAMP.bigotesCoat = ['#7d879c', '#a9b2c3', '#d0d6e1', '#eaeef4', '#ffffff'];
+// a pale sky-blue lab coat, so the white beard never melts into it
+RAMP.bigotesCoat = ['#3d6690', '#6a98c4', '#98c2e4', '#c8e2f5', '#f0f9ff'];
 RAMP.bigotesLens = ['#0f3f4a', '#1c6b76', '#34a3a6', '#7fe0d6', '#d8fff6'];
 RAMP.bigotesCopper = ['#4a1c0e', '#7e3517', '#b85a26', '#e38a45', '#ffc58a'];
 RAMP.bigotesWall = ['#101a24', '#17283a', '#20394f', '#2e5068', '#4a7390'];
@@ -31,7 +32,7 @@ function bigotesHeadBase(brow = 'n', soot = 0) {
     const cheeks = SD.box(32, 33, 12.5, 7, 5);
     const strap = SD.box(32, 13.5, 14.5, 1.6, .8);
     const gL = SD.circle(25, 12.5, 5.2), gR = SD.circle(39, 12.5, 5.2), lL = SD.circle(25, 12.5, 3.4), lR = SD.circle(39, 12.5, 3.4);
-    const browLs = SD.ellipse(21.5, 21 + bdy, 11, 4.6, ba), browRs = SD.ellipse(42.5, 21 + bdy, 11, 4.6, -ba);
+    const browLs = SD.ellipse(21.5, 20 + bdy, 10.2, 4.2, ba), browRs = SD.ellipse(42.5, 20 + bdy, 10.2, 4.2, -ba);
     const browL = SD.tufts(browLs, 26, 23 + bdy, 2.2, 13, .7, 2.2), browR = SD.tufts(browRs, 38, 23 + bdy, 2.2, 13, 2.1, 2.2);
     const muzzle = SD.box(32, 35.5, 8.5, 6, 4);
     const mouS = SD.union(SD.ellipse(25.5, 38.5, 7.6, 4.8, .35), SD.ellipse(38.5, 38.5, 7.6, 4.8, -.35));
@@ -62,15 +63,19 @@ function bigotesHead(ex = 'normal') {
     const soot = ex === 'soot' ? 1 : 0, base = bigotesHeadBase(BIGOTES_EX[ex] || 'n', soot), c = mkCanvas(base.width, base.height), g = c.g;
     g.drawImage(base, 0, 0);
     const K = '#0b0810', br = BIGOTES_BROWS[BIGOTES_EX[ex] || 'n'][1], ey = 25 + Math.max(0, br * .6);
-    const eye = (x, kind) => {
-      if (kind === 'closed') { hline(g, x, x + 3, ey + 1, K); px(g, x - 1, ey, K); px(g, x + 4, ey, K); return; }
-      if (kind === 'happy') { px(g, x, ey + 1, K); hline(g, x + 1, x + 2, ey, K); px(g, x + 3, ey + 1, K); return; }
+    const eye = (x, kind, side) => {
+      // closed: a droopy lid; happy: a bold ∩; laugh: > <
+      if (kind === 'closed') { hline(g, x, x + 4, ey + 1, K); hline(g, x + 1, x + 3, ey + 2, K); px(g, side < 0 ? x - 1 : x + 5, ey + 2, K); return; }
+      if (kind === 'happy') { hline(g, x + 1, x + 3, ey, K); hline(g, x + 1, x + 3, ey - 1, K); rect(g, x, ey + 1, 1, 2, K); rect(g, x + 4, ey + 1, 1, 2, K); return; }
+      if (kind === 'laugh') { const a = side < 0 ? x : x + 4, b = side < 0 ? x + 4 : x; for (const o of [0, side < 0 ? 1 : -1]) { linePx(g, a + o, ey - 1, b + o, ey + 1, K); linePx(g, b + o, ey + 1, a + o, ey + 3, K); } return; }
       if (kind === 'wide') { rect(g, x, ey - 1, 4, 4, '#ffffff'); rect(g, x + 1, ey, 2, 2, K); ringRect(g, x - 1, ey - 2, 6, 6, 1, K); return; }
       if (kind === 'x') { linePx(g, x, ey - 1, x + 3, ey + 2, K); linePx(g, x + 3, ey - 1, x, ey + 2, K); return; }
-      rect(g, x, ey, 4, 3, K); px(g, x + 1, ey, '#ffffff'); px(g, x + 3, ey + 2, '#5b5a67');
+      rect(g, x, ey, 5, 4, K); rect(g, x + 1, ey - 1, 3, 1, K); rect(g, x + 1, ey, 2, 2, '#ffffff'); px(g, x + 3, ey + 3, '#6b6977');
     };
-    const kinds = { joy: ['happy', 'happy'], laugh: ['closed', 'closed'], shock: ['wide', 'wide'], sad: ['closed', 'closed'], soot: ['x', 'x'], wink: ['', 'closed'], eureka: ['wide', 'wide'] }[ex] || ['', ''];
-    eye(23, kinds[0]); eye(37, kinds[1]);
+    const kinds = { joy: ['happy', 'happy'], laugh: ['laugh', 'laugh'], shock: ['wide', 'wide'], sad: ['closed', 'closed'], soot: ['x', 'x'], wink: ['', 'happy'], eureka: ['wide', 'wide'] }[ex] || ['', ''];
+    eye(23, kinds[0], -1); eye(37, kinds[1], 1);
+    // rosy cheeks peeking over the moustache when he's delighted
+    if (ex === 'joy' || ex === 'laugh' || ex === 'wink' || ex === 'eureka') for (const bx of [16, 45]) { rect(g, bx, ey + 5, 4, 2, '#f08aa8'); px(g, bx + 1, ey + 5, '#ffc2d4'); }
     // mouth peeking under the moustache
     if (ex === 'joy' || ex === 'laugh' || ex === 'eureka' || ex === 'talk') {
       const w = ex === 'talk' ? 4 : 7, x0 = 32 - w / 2;
@@ -420,7 +425,7 @@ function bigotesLabTall(g, t, o = {}) {
 defCut('bigotes_in', {
   song: { spb: 4, loop: true, tracks: BIGOTES_SONGS.play.tracks },
   shots: [
-    { dur: 0, lines: [['bigotes', '¡Bienvenidos a mi laboratorio! ¡Contemplad…!'], ['bigotes', '¡…el SECADOR SUPERSÓNICO 3000! ¡Seca a un perro en cuatro segundos! ¡Ja, ja, JA!'], ['bule', '¿Guau…? ¿Y es seguro?']],
+    { dur: 0, lines: [['bigotes', '¡Bienvenidos a mi laboratorio! ¡Contemplad…!'], ['bigotes', '¡…el SECADOR SUPERSÓNICO 3000! ¡Seca a un perro en cuatro segundos! ¡Ja, ja, JA!'], ['keiko', '¿Guau…? ¿Y es seguro?']],
       sfx: [[.1, 'slam']],
       update(st, t, dt, cut) { if (cut.li >= 1 && st.revT == null) { st.revT = t; sfx('sparkle'); } },
       top(g, t) { g.drawImage(bigotesLabBackdrop(), 0, 0); bigotesTeslaCoil(g, 32, 148, t, .6); drawBigotesFull(g, 128, 176, CUT.li >= 1 ? 'point' : 'ready', t, { hop: CUT.li === 1 ? Math.abs(Math.sin(t * 6)) * 3 : 0 }); if (CUT.li >= 1) { txt(g, '¡JA, JA, JA!', 180, 40, '#ffffff', { out: INK, bold: true }); } },
@@ -434,10 +439,10 @@ defCut('bigotes_in', {
           const k = st.revT == null ? 0 : Math.min(1, spring(t - st.revT, 2.4, 6));
           for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + t; drawStar(g, 128 + Math.cos(a) * 80, 90 + Math.sin(a) * 50, 2.5, '#fff27a', a); }
           if (k > .98) bigotesMachineBig(g, 138, 136, 0, t); else drawS(g, bigotesMachine(0), 138, 136, { ax: .5, ay: 1, s: Math.max(.05, k) });
-          drawS(g, buleHead(cut.li === 2 ? 'wow' : 'normal'), 40, 136, { ax: .5, ay: 1 });
+          drawS(g, keikoHead(cut.li === 2 ? 'wow' : 'normal'), 40, 136, { ax: .5, ay: 1 });
         }
       } },
-    { dur: 0, sfx: [[1.0, 'boom'], [1.05, 'whoosh'], [2.2, 'sparkle']], lines: [['bigotes', 'Primera prueba: una pelota de tenis mojada. ¡A TODO GAS!'], ['bule', '¡Eh! ¡Esa era MI pelota!'], ['bigotes', 'Pequeño ajuste de potencia… ¡Necesito un perro mojado de verdad!']],
+    { dur: 0, sfx: [[1.0, 'boom'], [1.05, 'whoosh'], [2.2, 'sparkle']], lines: [['bigotes', 'Primera prueba: una pelota de tenis mojada. ¡A TODO GAS!'], ['keiko', '¡Eh! ¡Esa era MI pelota!'], ['bigotes', 'Pequeño ajuste de potencia… ¡Necesito un perro mojado de verdad!']],
       tall(g, t, st, cut) {
         const gy = SH + HINGE, fired = t > 1.0;
         bigotesLabTall(g, t, { hole: fired });
@@ -489,7 +494,7 @@ defStage({
   id: 'bigotes', name: 'DON BIGOTES', sub: '«¡La ciencia del secado!»', verb: '¡GIRA!', mech: 'spin', bpm: 122,
   games: ['secador', 'grifo', 'tapon', 'heladera', 'enrolla'], boss: 'supersonico', bossAt: 10, speedAt: [4, 7],
   unlockBy: 'ceniza',
-  portrait: () => mdl('bigotes:bigPortrait', () => { const c = mkCanvas(64, 112); c.g.drawImage(bigotesLegs(), 0, 80); drawBigotes(c.g, 32, 90, 'ready', 0); return c; }),
+  portrait: (k) => mdl('bigotes:bigPortrait' + (k === 'sad' ? 'S' : ''), () => { const c = mkCanvas(64, 112); c.g.drawImage(bigotesLegs(), 0, 80); drawBigotes(c.g, 32, 90, k === 'sad' ? 'over' : 'ready', 0); return c; }),
   face: () => mdl('bigotes:bigFace', () => faceCrop(bigotesHead('joy'), 10, 6, 44, 44)),
   peek: (g, x, y, t) => drawS(g, bigotesHead(fl(t * .7) % 3 === 0 ? 'laugh' : 'normal'), x, y - 6, { ax: .5, ay: 1 }),
   rim: RAMP.steel[3], cardCols: [RAMP.bigotesWall[1], RAMP.bigotesWall[2]], nameFill: ['#ffffff', '#d8fff6', '#7fe0d6'],
@@ -521,3 +526,42 @@ defCut('bigotes_art', { shots: [{ dur: 9999, box: 'none',
     bigotesGear(g, 120, 150, 14, t, RAMP.bigotesCopper);
   },
 }] });
+
+// ---------------------------------------------------------------- chibi -----
+// the inventor pottering about (menu walker); frames walk0 | walk1 | idle | happy | held
+function bigotesChibi(fr = 'idle') {
+  return mdl('chibi:bigotes:' + fr, () => {
+    const W = 30, H = 40, c = mkCanvas(W, H), g = c.g, Gy = RAMP.grey, WH = ['#8a93b0', '#b9c1d6', '#e6eaf4', '#ffffff'], CO = RAMP.bigotesCoat;
+    const layer = fn => { const L = mkCanvas(W, H); fn(L.g); g.drawImage(outlined(L, INK, false), -1, -1); };
+    const st = fr === 'walk0' ? 1 : fr === 'walk1' ? -1 : 0, held = fr === 'held', happy = fr === 'happy', Y = v => v - (happy ? 2 : 0) + 2;
+    const legs = held ? [[9, 1], [18, 1]] : [[11 + st, st > 0 ? -1 : 0], [16 - st, st < 0 ? -1 : 0]];
+    layer(q => { for (const [x, dy] of legs) { rect(q, x, Y(31), 3, 5 + dy, '#44424f'); rect(q, x - 1, Y(35 + dy), 5, 2, '#1b1627'); } });
+    // lab coat
+    layer(q => { rect(q, 8, Y(20), 14, 12, CO[2]); rect(q, 19, Y(20), 3, 12, CO[1]); rect(q, 8, Y(20), 2, 12, CO[3]); polyPx(q, [[9, Y(32)], [21, Y(32)], [22, Y(34)], [8, Y(34)]], CO[2]); vline(q, 15, Y(24), Y(33), CO[0]); rect(q, 17, Y(26), 3, 2, CO[1]); px(q, 17, Y(25), '#e23b4e'); px(q, 18, Y(25), '#3565cc'); });
+    // arms (sleeves + grey paws); a wrench when he's pleased
+    const up = held || happy;
+    for (const [x, u] of [[5, up], [22, up || fr === 'walk0' || fr === 'walk1']]) layer(q => { if (u) { rect(q, x, Y(12), 3, 9, CO[2]); disc(q, x + 1.5, Y(11), 1.8, Gy[3]); } else { rect(q, x, Y(21), 3, 8, CO[2]); disc(q, x + 1.5, Y(29), 1.8, Gy[3]); } });
+    // head: salt-and-pepper block with folded ears
+    layer(q => {
+      polyPx(q, [[6, Y(8)], [10, Y(3)], [11, Y(9)]], Gy[1]); polyPx(q, [[23, Y(8)], [19, Y(3)], [18, Y(9)]], Gy[1]);
+      rect(q, 7, Y(5), 15, 16, Gy[2]); rect(q, 8, Y(4), 13, 1, Gy[2]); rect(q, 8, Y(5), 9, 3, Gy[3]);
+      for (const [x, y] of [[9, 9], [12, 7], [18, 8], [20, 12], [8, 14], [20, 16]]) px(q, x, Y(y), Gy[1]);
+    });
+    // brass goggles up on the head strap
+    layer(q => { hline(q, 7, 22, Y(5), '#3d2512'); hline(q, 7, 22, Y(6), '#57361c'); for (const gx of [10, 19]) { disc(q, gx, Y(5.5), 2, RAMP.gold[2]); disc(q, gx, Y(5.5), 1.1, '#ffb020'); } });
+    // slanting white brows
+    layer(q => { hline(q, 7, 12, Y(9), WH[3]); hline(q, 8, 12, Y(10), WH[2]); hline(q, 17, 22, Y(9), WH[3]); hline(q, 17, 21, Y(10), WH[2]); px(q, 6, Y(8), WH[3]); px(q, 23, Y(8), WH[3]); });
+    // handlebar moustache + short goatee
+    layer(q => { rect(q, 11, Y(19), 8, 3, WH[3]); for (const i of [0, 1, 2, 3]) px(q, 11 + i * 2, Y(22), WH[3]); hline(q, 12, 17, Y(21), WH[1]); });
+    layer(q => { hline(q, 8, 21, Y(16), WH[3]); hline(q, 8, 21, Y(17), WH[3]); hline(q, 9, 20, Y(18), WH[1]); px(q, 7, Y(17), WH[3]); px(q, 7, Y(18), WH[3]); px(q, 22, Y(17), WH[3]); px(q, 22, Y(18), WH[3]); px(q, 6, Y(19), WH[3]); px(q, 23, Y(19), WH[3]); });
+    // eyes, nose, mouth, cheeks
+    for (const ex of [9, 19]) { if (happy) { px(g, ex, Y(12), INK); px(g, ex + 1, Y(11), INK); px(g, ex + 2, Y(12), INK); } else { rect(g, ex, Y(11), 2, 3, INK); px(g, ex, Y(11), '#ffffff'); px(g, ex + 1, Y(13), '#44424f'); } }
+    rect(g, 13, Y(14), 4, 2, INK); px(g, 13, Y(14), '#6f7a92');
+    if (happy || held) { rect(g, 13, Y(19), 4, 1, '#3e0d1c'); }
+    px(g, 8, Y(14), RAMP.pink[3]); px(g, 21, Y(14), RAMP.pink[3]);
+    // green bow tie under the beard
+    polyPx(g, [[15, Y(26)], [11, Y(24)], [11, Y(28)]], RAMP.green[2]); polyPx(g, [[15, Y(26)], [19, Y(24)], [19, Y(28)]], RAMP.green[2]); px(g, 15, Y(26), RAMP.green[4]);
+    return c;
+  });
+}
+STAGES.bigotes.chibi = bigotesChibi;

@@ -97,14 +97,13 @@ defCut('prologo', {
         streetTall(g, shut, shut < 1 ? 1 : 0, t, { sunUp: 1 });
         const gy = SH + HINGE, walkK = clamp(t / 1.4, 0, 1), ax = lerp(-30, 110, E.outQ(walkK));
         const walking = walkK < 1, leg = walking && fl(t * 7) % 2;
-        g.drawImage(anahiLegs(leg ? 'jump' : 'stand'), rd(ax - 32), rd(gy + 128 - 36));
-        drawAnahi(g, ax, gy + 128 - 30 + (walking ? -Math.abs(Math.sin(t * 14)) : 0), t > 1.5 ? (t > 2.3 ? 'win' : 'ready') : 'idle', t);
+        drawAnahiFull(g, ax, gy + 128 + (walking ? -Math.abs(Math.sin(t * 14)) * 2 : 0), t > 1.5 ? (t > 2.3 ? 'cheer' : 'thumbs') : walking && leg ? 'idle' : 'idle', t);
         if (t > 2.3 && t < 3) { const k = (t - 2.3) / .7; for (let i = 0; i < 6; i++) drawStar(g, 45 + i * 20, gy + 22 + Math.sin(i + t * 9) * 4, 3 * (1 - k) + 1, '#fff27a'); }
       } },
-    { dur: 0, lines: [['anahi', 'Bule, arriba, dormilón. Hoy será un día tranquilo…'], ['bule', 'Zzz… ¿guau?… zzz…']],
+    { dur: 0, lines: [['anahi', 'Keiko, arriba, dormilona. Hoy será un día tranquilo…'], ['keiko', 'Zzz… ¿guau?… zzz…']],
       top(g, t) {
         g.drawImage(salonBackdrop(), 0, 0);
-        drawWestieSit(g, 58, 126, 'happy', { sy: 1 + Math.sin(t * 2) * .02 });
+        drawKeikoSit(g, 58, 126, 'happy', { sy: 1 + Math.sin(t * 2) * .02 });
         const zk = (t * .8) % 1; txt(g, 'z', 74 + zk * 10, 56 - zk * 20, '#ffffff', { out: INK }); txt(g, 'Z', 80 + ((zk + .5) % 1) * 12, 48 - ((zk + .5) % 1) * 24, '#ffffff', { out: INK, bold: true });
         drawAnahiFull(g, 190, 170, 'talk', t);
       },
@@ -137,11 +136,11 @@ defCut('prologo', {
         const k = clamp(t / 1.8, 0, 1), sx = lerp(100, 120, k), sy = gy + 80 + (k < .5 ? -Math.sin(k * 2 * Math.PI) * 40 : (k - .5) * 2 * 110);
         if (t < 1.9) drawS(g, scissorsSpr(), sx, Math.min(sy, gy + 182), { rot: t * 14, s: 2 });
         if (t > 1.7 && t < 2.2) shout(g, '¡MIS TIJERAS!', 90, gy + 30, t - 1.7);
-        // Bule dives after them — from the door to the manhole and down
-        if (t > 2.3) { const bk = clamp((t - 2.3) / 1, 0, 1); drawS(g, westieSide(.7, 'wag', 'wow'), lerp(150, 120, bk), lerp(gy + 120, gy + 200, E.inQ(bk)), { rot: bk * 1.4, ax: .5, ay: .5 }); }
+        // Keiko dives after them — from the door to the manhole and down
+        if (t > 2.3) { const bk = clamp((t - 2.3) / 1, 0, 1); drawS(g, keikoSide(.7, 'wag', 'wow'), lerp(150, 120, bk), lerp(gy + 120, gy + 200, E.inQ(bk)), { rot: bk * 1.4, ax: .5, ay: .5 }); }
         if (t > 3.1) { g.globalAlpha = clamp((t - 3.1) * 3, 0, 1); rect(g, 0, 0, SW, TALL_H, INK); g.globalAlpha = 1; }
       } },
-    { dur: 0, song: SONG_SEWER, lines: [['guru', 'Pequeño westie… ¿buscabas esto?'], ['bule', '¡¿Guau?!'], ['guru', 'Y llévate también el Peine de Oro. Con él, cualquier arreglo… ¡en cuatro segundos!'], ['bule', '¡GUAU!'], ['guru', '¡Eh, eh! ¡Que es de PRÉSTAMO!']],
+    { dur: 0, song: SONG_SEWER, lines: [['guru', 'Pequeña westie… ¿buscabas esto?'], ['keiko', '¡¿Guau?!'], ['guru', 'Y llévate también el Peine de Oro. Con él, cualquier arreglo… ¡en cuatro segundos!'], ['keiko', '¡GUAU!'], ['guru', '¡Eh, eh! ¡Que es de PRÉSTAMO!']],
       sfx: [[0, 'splash', { pitch: .6 }]],
       top(g, t) {
         rect(g, 0, 0, SW, SH, '#0d1d24');
@@ -149,7 +148,7 @@ defCut('prologo', {
         // light shaft from the manhole
         g.globalAlpha = .22; polyPx(g, [[108, 0], [148, 0], [190, SH], [66, SH]], '#fff7ae'); g.globalAlpha = 1;
         ellipsePx(g, 128, 4, 22, 6, '#fff7ae');
-        const bk = clamp(t / .8, 0, 1); drawS(g, westieSide(.7, 'wag', 'wow'), 128, lerp(-20, 170, E.inQ(bk)), { rot: 1.2 - bk * 1.2 });
+        const bk = clamp(t / .8, 0, 1); drawS(g, keikoSide(.7, 'wag', 'wow'), 128, lerp(-20, 170, E.inQ(bk)), { rot: 1.2 - bk * 1.2 });
       },
       bot(g, t, st, cut) {
         rect(g, 0, 0, SW, SH, '#0d1d24');
@@ -162,23 +161,23 @@ defCut('prologo', {
         drawS(g, guruRat(fl(t * 2) % 2), 100, gy2 + 4, { ax: .5, ay: .5 });
         if (li < 2) drawS(g, scissorsSpr(), 124, gy2 - 6, { s: 2, rot: -.4 });
         if (li >= 2 && li < 3) { goldComb(g, 124, gy2 - 6, Math.sin(t * 3) * .2, true); drawS(g, scissorsSpr(), 80, gy2 - 8, { s: 2, rot: -.4 }); }
-        // Bule on a floating crate, then dashing off with both
+        // Keiko on a floating crate, then dashing off with both
         const bx = fly ? 180 + (t - (cut.flyT || (cut.flyT = t))) * 200 : 180;
-        if (bx < 300) drawS(g, westieSide(.7, fly ? 'wag' : 'stand', li === 3 ? 'wow' : 'normal'), bx, 118, { ax: .5, ay: 1, flip: true });
+        if (bx < 300) drawS(g, keikoSide(.7, fly ? 'wag' : 'stand', li === 3 ? 'wow' : 'normal'), bx, 118, { ax: .5, ay: 1, flip: true });
         if (li === 3) { goldComb(g, bx - 30, 96, 0, true); }
         if (li >= 4 && t % .2 < .1) g.fx && 0;
       } },
-    { dur: 0, song: SONG_EUREKA, songLoop: false, lines: [['anahi', '¿Mis tijeras? ¡Bule, eres un sol! ¿Y esto…?'], ['anahi', '¿Un peine… de oro?']],
+    { dur: 0, song: SONG_EUREKA, songLoop: false, lines: [['anahi', '¿Mis tijeras? ¡Keiko, eres un sol! ¿Y esto…?'], ['anahi', '¿Un peine… de oro?']],
       sfx: [[.1, 'whoosh'], [.9, 'sparkle'], [1.4, 'ding']],
-      top(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 180, 170, t < 1.4 ? 'boss' : 'win', t); const k = clamp((t - .6) / .8, 0, 1); goldComb(g, lerp(60, 200, E.outBack(k)), lerp(150, 80, E.outQ(k)) - Math.sin(k * Math.PI) * 50, t * 12 * (1 - k), true); if (t > 1.4) for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t; drawStar(g, 200 + Math.cos(a) * 24, 80 + Math.sin(a) * 20, 2.5, '#fff27a'); } },
-      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); drawS(g, westieSide(1, 'wag', 'happy'), 128 + Math.sin(t * 20) * (t < .5 ? 3 : 0), 150, { ax: .5, ay: 1 }); drawS(g, scissorsSpr(), 170, 128, { s: 2, rot: -.2 }); } },
+      top(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 180, 170, t < 1.4 ? 'boss' : 'win', t); const k = clamp((t - .6) / .8, 0, 1); goldComb(g, lerp(40, 208, E.outQ(k)), lerp(150, 86, k) - Math.sin(k * Math.PI) * 95, t * 12 * (1 - k), true); if (t > 1.4) for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t; drawStar(g, 200 + Math.cos(a) * 24, 80 + Math.sin(a) * 20, 2.5, '#fff27a'); } },
+      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); drawS(g, keikoSide(1, 'wag', 'happy'), 128 + Math.sin(t * 20) * (t < .5 ? 3 : 0), 150, { ax: .5, ay: 1 }); drawS(g, scissorsSpr(), 170, 128, { s: 2, rot: -.2 }); } },
     { dur: 0, lines: [['anahi', '¡Ay, que viene uno lleno de barro! ¡Vamos a probarlo!']],
       top(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 180, 170, 'ready', t); goldComb(g, 198, 106, -.5, true); },
       bot(g, t) { rect(g, 0, 0, SW, SH, '#b9cad0'); subwayTiles(g, 0, 0, SW, 60); drawS(g, buleHead('grr', RAMP.mud), 128, 110 + Math.sin(t * 5) * 2); for (let i = 0; i < 6; i++) disc(g, 128 + Math.sin(t * 7 + i) * 30, 150 + Math.cos(t * 5 + i) * 6, 3, '#5b3a1d'); } },
     { play: 'topos', bpm: 108, box: 'none', top(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 180, 170, CUT.mg && CUT.mg.state === 'won' ? 'win' : 'speed', t, { snip: true }); goldComb(g, 150, 100, -.3, true); } },
-    { dur: 0, song: SONG_EUREKA, songLoop: false, lines: [['anahi', '¡Limpio en cuatro segundos! ¡Brillante!'], ['anahi', 'Si cada perro me lleva cuatro segundos… ¡atiendo a toda Barcelona!'], ['bule', '¡Guau, guau!']],
+    { dur: 0, song: SONG_EUREKA, songLoop: false, lines: [['anahi', '¡Limpio en cuatro segundos! ¡Brillante!'], ['anahi', 'Si cada perro me lleva cuatro segundos… ¡atiendo a toda Barcelona!'], ['keiko', '¡Guau, guau!']],
       top(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 150, 170, 'win', t, { jump: Math.abs(Math.sin(t * 5)) * 5 }); goldComb(g, 178, 50, Math.sin(t * 4) * .3, true); },
-      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); drawWestieSit(g, 90, 188, 'happy'); drawWestieSit(g, 170, 188, 'love', { tilt: Math.sin(t * 3) * .4 }); for (let i = 0; i < 5; i++) drawStar(g, 40 + i * 44, 30 + Math.sin(t * 5 + i) * 6, 3, '#fff27a'); } },
+      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); drawWestieSit(g, 90, 188, 'happy'); drawKeikoSit(g, 170, 188, 'love', { tilt: Math.sin(t * 3) * .4 }); for (let i = 0; i < 5; i++) drawStar(g, 40 + i * 44, 30 + Math.sin(t * 5 + i) * 6, 3, '#fff27a'); } },
     { dur: 4.2, box: 'none', sfx: [[.1, 'slam'], [1.6, 'slam'], [1.7, 'sparkle']], tall(g, t) {
         const G = RAMP.green;
         rect(g, 0, 0, SW, TALL_H, G[1]);

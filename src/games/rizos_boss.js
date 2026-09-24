@@ -9,6 +9,9 @@ function rizosAfroWall() {
   return mdl('rizosAfroWall', () => {
     const F = RIZOS_FUR, big = SD.circle(128, 176, 210);
     return model(SW, SH, [{ f: big, ramp: F, z: 0, th: 90, tex: clumpTex(5.2, .44, 31, 1, 1.2), dith: .55, amb: .3 }], { outline: false, post: g => {
+      // depth: darker towards the top corners (the afro curves away from us)
+      for (let y = 0; y < 40; y++) for (let x = 0; x < SW; x++) { const k = (1 - y / 40) * Math.min(1, Math.abs(x - 128) / 128); if (bayer(x, y) < k * .45) { g.fillStyle = F[1]; g.fillRect(x, y, 1, 1); } }
+      for (let i = 0; i < 26; i++) { const x = hash2(i, 31) * SW, y = hash2(32, i) * SH, r = 4 + hash2(i, 33) * 3; for (let a = 3.2; a < 6.4; a += .25) px(g, x + Math.cos(a) * r, y + Math.sin(a) * r, F[1]); }
       // a sprinkle of bright little C-curls on the lit side of the clumps
       for (let i = 0; i < 180; i++) {
         const x = hash2(i, 11) * SW, y = hash2(12, i) * SH, r = 1.6 + hash2(i, 13) * 1.6, a0 = Math.PI * .9 + hash2(i, 14) * .6;
@@ -19,21 +22,25 @@ function rizosAfroWall() {
 }
 function rizosFaceCrop(ex) { return mdl('rizosFaceCrop:' + ex, () => faceCrop(rizosHead(ex), 16, 30, 52, 44)); }
 function rizosDrawKnot(g, x, y, k, t, seed, hot) {
-  // k: 0 (loose) .. 1 (tight); a knot is a snarl of darker hair loops with stray hairs
-  const r = 9 + k * 7, wob = Math.sin(t * 9 + seed) * (hot ? 1.5 : .6);
-  disc(g, x + 1, y + 2, r + 2, '#6e3520');
-  disc(g, x, y, r + 1, INK); disc(g, x, y, r, mixHex('#5a2c16', '#a45a31', 1 - k)); disc(g, x - r * .25, y - r * .3, r * .55, mixHex('#7c3f1f', '#d4874c', 1 - k));
-  // stray hairs sticking out
-  for (let i = 0; i < 7; i++) { const a = hash2(i, seed + 9) * TAU + wob * .05, l = r + 3 + hash2(seed, i + 9) * 5; linePx(g, x + Math.cos(a) * (r - 2), y + Math.sin(a) * (r - 2), x + Math.cos(a + .3) * l, y + Math.sin(a + .3) * l, i % 2 ? '#3e2016' : '#f0b573'); }
-  const n = 8 + fl(k * 12);
+  // k: 0 (loose) .. 1 (tight): a lumpy snarl of dark hair with a frizzy halo
+  const r = 10 + k * 7, wob = Math.sin(t * 9 + seed) * (hot ? 1.5 : .6);
+  // frizz halo sticking out all round
+  for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + hash2(i, seed) * .4, l = r + 4 + hash2(seed, i) * 6; linePx(g, x + Math.cos(a) * (r - 3), y + Math.sin(a) * (r - 3), x + Math.cos(a + .25 + wob * .05) * l, y + Math.sin(a + .25) * l, i % 3 ? '#f0b573' : '#3e2016'); }
+  // lumpy body
+  const pts = []; for (let i = 0; i < 14; i++) { const a = i / 14 * TAU, rr = r * (.78 + hash2(i, seed + 2) * .34) + Math.sin(t * 7 + i) * (hot ? 1 : 0); pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr * .88]); }
+  polyPx(g, pts.map(([a, b]) => [a + 1, b + 2]), '#3e1a0c');
+  polyPx(g, pts, INK); polyPx(g, pts.map(([a, b]) => [lerp(a, x, .1), lerp(b, y, .1)]), mixHex('#4a2210', '#9c5a30', 1 - k));
+  polyPx(g, pts.map(([a, b]) => [lerp(a, x - r * .3, .5), lerp(b, y - r * .3, .5)]), mixHex('#6e3520', '#d4874c', 1 - k));
+  // tangled loops inside
+  const n = 6 + fl(k * 10);
   for (let i = 0; i < n; i++) {
-    const a0 = hash2(i, seed) * TAU, rr = r * (.3 + hash2(seed, i) * .7), ox = (hash2(i, seed + 3) - .5) * r * .8, oy = (hash2(i, seed + 5) - .5) * r * .8;
+    const a0 = hash2(i, seed) * TAU, rr = r * (.25 + hash2(seed, i) * .55), ox = (hash2(i, seed + 3) - .5) * r * .9, oy = (hash2(i, seed + 5) - .5) * r * .8;
     let lx = null, ly = null;
-    for (let a = a0; a < a0 + 4.6; a += .32) { const px0 = x + ox + Math.cos(a + wob * .1) * rr, py0 = y + oy + Math.sin(a) * rr * .8; if (lx != null) linePx(g, lx, ly, px0, py0, i % 4 === 0 ? '#2a130a' : i % 4 === 1 ? '#5a2c16' : i % 4 === 2 ? '#8a4a24' : '#f0b573'); lx = px0; ly = py0; }
+    for (let a = a0; a < a0 + 4.8; a += .34) { const px0 = x + ox + Math.cos(a + wob * .1) * rr, py0 = y + oy + Math.sin(a) * rr * .8; if (lx != null) linePx(g, lx, ly, px0, py0, i % 3 === 0 ? '#1e0c05' : i % 3 === 1 ? '#f0b573' : '#8a4a24'); lx = px0; ly = py0; }
   }
 }
 defMG({
-  id: 'marana', stage: 'rizos', boss: true, name: 'La Gran Maraña', cmd: '¡DESENREDA!', how: 'Frota los nudos del afro; toca a Pulgui para echarlo', mech: 'rub', beats: 16,
+  id: 'marana', stage: 'rizos', boss: true, name: 'La Gran Maraña', cmd: '¡DESENREDA!', how: 'Frota los nudos del afro hasta soltarlos, toca a Pulgui y, al final, cepíllalo fuera', mech: 'rub', beats: 16,
   song: () => RIZOS_SONGS.boss,
   init(g) {
     const hp = [100, 106, 112][g.level - 1];
@@ -80,7 +87,7 @@ defMG({
     }
     // --- rubbing
     const nearKnot = g.knots.find(k => !k.done && dist(IN.x, IN.y, k.x, k.y) < 22);
-    const nearPul = IN.down && dist(IN.x, IN.y, P.x, P.y) < 14 && (P.st === 'sit' || P.st === 'stun' || (g.phase === 2 && P.st === 'jump'));
+    const nearPul = IN.down && dist(IN.x, IN.y, P.x, P.y) < 18 && (P.st === 'sit' || P.st === 'stun' || (g.phase === 2 && P.st === 'jump'));
     const gain = g.rub.update(dt, !!nearKnot || nearPul);
     // knock Pulgui off (phase 1: a touch stuns him; phase 2: every brush is a hit)
     if (nearPul && P.inv <= 0 && (IN.tap || gain > 2)) {
@@ -143,7 +150,7 @@ defMG({
       const fr = P.st === 'jump' || P.st === 'hit' ? 'jump' : P.st === 'stun' ? 'hit' : 'sit';
       const blink = P.inv > 0 && fl(P.inv * 20) % 2;
       if (P.st === 'jump' && P.t / P.dur < .95) shadowOval(c, P.x1, P.y1 + 6, 4, 1.5, .6);
-      if (!blink) drawS(c, rizosPulguiSpr(fr), P.x, P.y, { s: 1.4, rot: P.rot || 0, flip: P.x1 != null && P.x1 < P.x0 });
+      if (!blink) drawS(c, rizosPulguiSpr(fr), P.x, P.y, { s: 2, rot: P.rot || 0, flip: P.x1 != null && P.x1 < P.x0 });
       if (P.st === 'stun') for (let i = 0; i < 3; i++) { const a = g.t * 6 + i * TAU / 3; drawStar(c, P.x + Math.cos(a) * 9, P.y - 12 + Math.sin(a) * 3, 2, '#fff04f'); }
       if (P.taunt > 0 && g.state === 'play') shout(c, g.phase === 2 ? '¡SOCORRO!' : '¡JI, JI!', clamp(P.x + 22, 40, 216), clamp(P.y - 22, 20, 170), .8 - P.taunt);
       if (P.st === 'sit' && g.phase === 1 && P.target >= 0 && !g.knots[P.target].done) txt(c, '~', P.x + 8, P.y - 10 + Math.sin(g.t * 20) * 2, '#ff93bf', { out: INK });
@@ -168,7 +175,7 @@ defMG({
     rect(c, 187, 45, w, 8, col); rect(c, 187, 45, w, 2, '#ffffff');
     if (g.phase === 2 && g.state === 'play') { const k = .9 + Math.sin(g.t * 8) * .1; mord(c, '¡A POR PULGUI!', SW / 2, 120, { u: 1.3, r: 1.4, rim: 1, sy: 2, fill: ['#ffffff', '#ffd1e4', '#ff5d9e'] }, { anim: i => ({ s: k, dy: Math.sin(g.t * 9 + i * .6) * 1.5 }) }); }
     // Pulgui's escape across the top screen
-    if (g.state === 'won' && g.flyT >= 0) { const ty = g.pul.y + SH + HINGE; if (ty > -20 && ty < SH + 20) drawS(c, rizosPulguiSpr('jump'), g.pul.x, ty, { s: 1.4, rot: g.pul.rot || 0 }); }
+    if (g.state === 'won' && g.flyT >= 0) { const ty = g.pul.y + SH + HINGE; if (ty > -20 && ty < SH + 20) drawS(c, rizosPulguiSpr('jump'), g.pul.x, ty, { s: 2, rot: g.pul.rot || 0 }); }
   },
   bot(g) {
     // a human-ish player: the hand travels at a limited speed and rubs ~600px/s

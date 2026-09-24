@@ -10,6 +10,8 @@ const RIZOS_WET = RAMP.apricot.map(c => mixHex(c, '#4f5f80', .42));
 const RIZOS_DAMP = RAMP.apricot.map(c => mixHex(c, '#8a6f86', .22));
 const RIZOS_PINK = ['#5e0f3a', '#a3205f', '#ff3d8b', '#ff8fbd', '#ffd3e6'];
 const RIZOS_NEON = { pink: '#ff4fa3', cyan: '#4ff2ff', yellow: '#fff04f', purple: '#b04fff', green: '#4fff9a' };
+const RIZOS_MUZ = ['#9c6238', '#cf9a66', '#f0c896', '#ffe2bb', '#fff4e0'];   // the cream muzzle (own ramp → own outline)
+const RIZOS_ARM = RIZOS_FUR.slice();                                           // same colours, separate part edges
 
 // ---------------------------------------------------------------- voices ----
 VOICES.rizos = { base: 62, scale: [0, 3, 5, 7, 10, 12], inst: 'pluck', len: .05 };
@@ -47,13 +49,13 @@ function rizosHeadBase(style = 'fluffy') {
     }
     const faceS = SD.ellipse(42, 49, 16, 14), face = SD.curls(faceS, style === 'wet' ? .4 : 1.1, .9, 7);
     const muzzle = SD.ellipse(42, 57, 9.6, 7.2);
-    const curl = style === 'wet' ? clumpTex(3, .24, 4, 2.6, .45) : clumpTex(3.6, .42, 4, 1, 1.35);
-    const curl2 = style === 'wet' ? clumpTex(2.6, .2, 8, 2.2, .4) : clumpTex(2.8, .3, 8, 1, .8);
+    const curl = style === 'wet' ? clumpTex(3, .24, 4, 2.6, .45) : clumpTex(5, .36, 4, 1, 1.15);
+    const curl2 = style === 'wet' ? clumpTex(2.6, .2, 8, 2.2, .4) : clumpTex(3.6, .26, 8, 1, .8);
     return model(84, 80, [
-      { f: afro, fs: afroS, ramp: F, z: 0, th: 22, tex: curl, dith: .5 },
+      { f: afro, fs: afroS, ramp: F, z: 0, th: 22, tex: curl, dith: .22 },
       { f: earL, ramp: F, z: 1, th: 6, tex: curl2 }, { f: earR, ramp: F, z: 1, th: 6, tex: curl2 },
-      { f: face, fs: faceS, ramp: F, z: 2, th: 10, tex: curl2, amb: .32 },
-      { f: muzzle, ramp: F, z: 3, th: 6, tex: curl2, amb: .46 },
+      { f: face, fs: faceS, ramp: F, z: 2, th: 10, tex: curl2, amb: .32, dith: .2 },
+      { f: muzzle, ramp: style === 'fluffy' ? RIZOS_MUZ : F, z: 3, th: 6, amb: .5, dith: .15 },
       { f: SD.box(42, 53, 4.9, 3.4, 2.6), ramp: RAMP.black, z: 4, th: 3, gloss: true, amb: .3 },
     ]);
   });
@@ -80,16 +82,23 @@ function rizosHead(ex = 'cool', style = 'fluffy') {
     g.drawImage(base, 0, 0);
     const K = RAMP.black, P = RAMP.pink, cx0 = 42, ey = 44;
     const eyes = kind => { for (const s of [-1, 1]) dogEye(g, cx0 + s * 8 - 2, ey, kind); };
-    if (ex === 'shock') { eyes('wow'); }
+    const blush = () => { for (const bx of [cx0 - 13, cx0 + 10]) { rect(g, bx, ey + 9, 3, 2, RIZOS_PINK[3]); px(g, bx + 1, ey + 9, '#ffd3e6'); } };
+    if (ex === 'joy') { rizosStarGlasses(g, cx0, ey - 13, { tilt: -1 }); eyes('happy'); blush(); }
+    else if (ex === 'shock') { eyes('wow'); }
     else if (ex === 'happy') { eyes('happy'); }
     else if (ex === 'wink') { dogEye(g, cx0 - 10, ey, ''); dogEye(g, cx0 + 6, ey, 'closed'); }
     else if (ex === 'sadwet') { eyes('sad'); }
     else rizosStarGlasses(g, cx0, ey + 2, { tilt: ex === 'itch' ? 1 : 0, heart: ex === 'love' });
     // mouth
     const my = 61;
-    if (ex === 'grin' || ex === 'love' || ex === 'happy' || ex === 'wink') {
+    if (ex === 'joy') {
+      // a huge open laugh with the tongue out
+      hline(g, cx0 - 6, cx0 + 6, my - 1, K[0]); px(g, cx0 - 7, my - 2, K[0]); px(g, cx0 + 7, my - 2, K[0]);
+      rect(g, cx0 - 5, my, 11, 4, '#3e0d1c'); hline(g, cx0 - 4, cx0 + 4, my, '#ffffff'); rect(g, cx0 - 2, my + 2, 5, 4, P[2]); hline(g, cx0 - 1, cx0 + 1, my + 3, P[1]); hline(g, cx0 - 1, cx0 + 1, my + 6, P[0]);
+    } else if (ex === 'grin' || ex === 'love' || ex === 'happy' || ex === 'wink') {
       hline(g, cx0 - 5, cx0 + 5, my, K[0]); px(g, cx0 - 6, my - 1, K[0]); px(g, cx0 + 6, my - 1, K[0]);
       rect(g, cx0 - 4, my + 1, 8, 3, '#3e0d1c'); rect(g, cx0 - 2, my + 2, 5, 4, P[2]); hline(g, cx0 - 1, cx0 + 1, my + 3, P[1]); hline(g, cx0 - 1, cx0 + 2, my + 6, P[0]);
+      if (ex === 'love' || ex === 'happy' || ex === 'wink') blush();
     } else if (ex === 'itch') {
       hline(g, cx0 - 5, cx0 + 5, my, K[0]); for (let i = -4; i <= 4; i += 2) px(g, cx0 + i, my + 1, '#ffffff'); hline(g, cx0 - 5, cx0 + 5, my + 2, K[0]);
       rect(g, 70, 28, 2, 4, '#9bd6f7'); px(g, 70, 32, '#dff4ff'); rect(g, 13, 32, 2, 3, '#9bd6f7');
@@ -111,8 +120,8 @@ const RIZOS_POSES = {
   //          l hand     r hand     l foot      r foot      head ex
   dance1: { l: [24, 90], r: [74, 60], lf: [38, 128], rf: [60, 128], ex: 'cool', tilt: .06 },
   dance2: { l: [22, 60], r: [72, 90], lf: [36, 128], rf: [58, 128], ex: 'cool', tilt: -.06 },
-  ready: { l: [36, 96], r: [80, 54], lf: [34, 128], rf: [66, 124], ex: 'grin', tilt: .1 },
-  win: { l: [18, 58], r: [78, 58], lf: [30, 124], rf: [66, 124], ex: 'grin', tilt: 0 },
+  ready: { l: [36, 96], r: [80, 54], lf: [34, 128], rf: [66, 124], ex: 'cool', tilt: .1 },
+  win: { l: [18, 58], r: [78, 58], lf: [30, 124], rf: [66, 124], ex: 'joy', tilt: 0 },
   lose: { l: [30, 52], r: [66, 50], lf: [40, 128], rf: [56, 128], ex: 'itch', tilt: .12 },
   speed: { l: [12, 80], r: [84, 80], lf: [42, 128], rf: [54, 124], ex: 'grin', tilt: 0 },
   boss: { l: [32, 70], r: [64, 70], lf: [36, 128], rf: [60, 128], ex: 'shock', tilt: 0 },
@@ -143,10 +152,10 @@ function rizosBodyBase(pose) {
     const denim = (x, y) => (hash2(fl(x), fl(y * .5), 5) - .5) * .12;
     const zA = 3.4;
     const arms = model(96, 132, [
-      { f: upper(sL, eL), ramp: F, z: zA - .2, th: 4, tex: curl2 }, { f: upper(sR, eR), ramp: F, z: zA - .2, th: 4, tex: curl2 },
-      { f: fore(eL, P.l), ramp: F, z: zA, th: 4, tex: curl2 }, { f: fore(eR, P.r), ramp: F, z: zA, th: 4, tex: curl2 },
+      { f: upper(sL, eL), ramp: RIZOS_ARM, z: zA - .2, th: 4, tex: curl2, dith: .25 }, { f: upper(sR, eR), ramp: RIZOS_ARM, z: zA - .2, th: 4, tex: curl2, dith: .25 },
+      { f: fore(eL, P.l), ramp: RIZOS_ARM, z: zA, th: 4, tex: curl2, dith: .25 }, { f: fore(eR, P.r), ramp: RIZOS_ARM, z: zA, th: 4, tex: curl2, dith: .25 },
       { f: sleeve(sL, eL), ramp: RIZOS_SHIRT, z: zA + .1, th: 4, amb: .36 }, { f: sleeve(sR, eR), ramp: RIZOS_SHIRT, z: zA + .1, th: 4, amb: .36 },
-      { f: pawL, ramp: F, z: zA + .3, th: 3, tex: curl2, amb: .38 }, { f: pawR, ramp: F, z: zA + .3, th: 3, tex: curl2, amb: .38 },
+      { f: pawL, ramp: RIZOS_MUZ, z: zA + .3, th: 3, amb: .45 }, { f: pawR, ramp: RIZOS_MUZ, z: zA + .3, th: 3, amb: .45 },
     ]);
     const body = model(96, 132, [
       { f: leg(hL, kL, P.lf), ramp: DN, z: 1, th: 5, tex: denim }, { f: leg(hR, kR, P.rf), ramp: DN, z: 1, th: 5, tex: denim },
@@ -368,7 +377,7 @@ function rizosLife(g, x, y, st, bt) {
 }
 function rizosMiniLife(g, x, y, alive) { if (alive) { disc(g, x, y, 4.5, INK); disc(g, x, y, 3.5, '#cfd6e8'); px(g, x - 1, y - 2, '#ffffff'); px(g, x + 1, y, '#8f98b8'); } else ringPx(g, x, y, 3.5, 'rgba(255,255,255,.5)'); }
 function rizosMini(g, x, y, st, S) {
-  const ex = st === 'win' ? 'grin' : st === 'lose' ? 'shock' : 'cool';
+  const ex = st === 'win' ? 'joy' : st === 'lose' ? 'shock' : 'cool';
   drawS(g, rizosHead(ex), 40, SH + 6 - (st === 'win' ? 6 : 0) + Math.round(Math.sin((S.pb || 0) * Math.PI)) , { ax: .5, ay: 1 });
 }
 function rizosPlayTop(g, S) {
@@ -409,7 +418,7 @@ defStage({
   id: 'rizos', name: 'RIZOS', sub: '«¡A mover el esqueleto!»', verb: '¡FROTA!', mech: 'rub', bpm: 124,
   games: ['espuma', 'toalla', 'vinilo', 'espejo', 'rascar'], boss: 'marana', bossAt: 10, speedAt: [4, 7],
   unlockBy: 'anahi',
-  portrait: () => mdl('rizosPortrait', () => { const c = mkCanvas(96, 136); rizosDraw(c.g, 48, 134, 'ready'); return c; }),
+  portrait: (k) => mdl('rizosPortrait' + (k === 'sad' ? 'S' : ''), () => { const c = mkCanvas(96, 136); rizosDraw(c.g, 48, 134, k === 'sad' ? 'over' : 'ready'); return c; }),
   face: () => mdl('rizosFace', () => faceCrop(rizosHead('cool'), 22, 22, 40, 44)),
   peek: (g, x, y) => drawS(g, rizosHead('grin'), x, y - 8, { ax: .5, ay: 1 }),
   rim: '#ff3d8b', cardCols: ['#2a1052', '#3b1a6a'], nameFill: ['#ffffff', '#ffd49b', '#ff9f4f'],
@@ -492,3 +501,123 @@ defCut('rizos_out', {
       bot(g, t) { g.drawImage(rizosAfroWall(), 0, 0); drawS(g, rizosPulguiSpr(fl(t * 5) % 2 ? 'sit' : 'jump'), 128, 96 - Math.abs(Math.sin(t * 7)) * 10, { s: 2 }); if (t > .9) shout(g, '¡JI, JI, JI!', 128, 56, t - .9); } },
   ],
 });
+
+// ---------------------------------------------------------------- bench -----
+// ?escena=cut&id=polish_art&sid=<stage>&a=<react|card|face|sheet|chibi>&b=… (debug only)
+function polishBenchState(r, t) {
+  const S = { react: r, reactT: t, pb: 1.2 + t, pt: t, phase: 'inter', special: null, count: 7, lives: 3, maxLives: 4 };
+  if (r === 'speed' || r === 'boss') { S.react = 'ready'; S.special = r; S.pb = 3 + t; S.reactT = 2; }
+  if (r === 'clear' || r === 'over') S.phase = r;
+  return S;
+}
+const POLISH_SHEETS = {
+  rizos: g => { Object.keys(RIZOS_POSES).forEach((p, i) => rizosDraw(g, 26 + (i % 5) * 51, i < 5 ? 94 : 190, p, {})); },
+  pompon: g => { Object.keys(POMPON_POSES).forEach((p, i) => pomponDraw(g, 22 + (i % 6) * 43, i < 6 ? 94 : 190, p, {})); },
+  hermanas: g => { ['normal', 'happy', 'wink', 'sad', 'wow', 'grr'].forEach((e, i) => { hermanasDrawAussieSit(g, 22 + i * 43, 94, i % 2 ? 'nala' : 'kira', e); }); ['stand', 'play', 'jump', 'run'].forEach((p, i) => drawS(g, hermanasAussieSide(i % 2 ? 'nala' : 'kira', p, 'happy', .8), 34 + i * 62, 188, { ax: .5, ay: 1 })); },
+  ceniza: g => { Object.keys(CENIZA_POSES).forEach((p, i) => cenizaDraw(g, 22 + (i % 6) * 43, i < 6 ? 94 : 190, p, .3)); },
+  bigotes: g => { Object.keys(BIGOTES_POSES).forEach((p, i) => drawBigotes(g, 26 + (i % 5) * 51, i < 5 ? 94 : 190, p, .3)); },
+};
+function polishPanel(g, what, sid, t) {
+  const d = STAGES[sid];
+  if (what === 'card') {
+    const cols = d.cardCols || [RAMP.green[1], RAMP.green[2]];
+    rect(g, 0, 0, SW, SH, cols[0]); for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; polyPx(g, [[70, 120], [70 + Math.cos(a - .09) * 320, 120 + Math.sin(a - .09) * 320], [70 + Math.cos(a + .09) * 320, 120 + Math.sin(a + .09) * 320]], cols[1]); }
+    if (d.portrait) { drawS(g, d.portrait('card', t), 64, 190, { ax: .5, ay: 1 }); drawS(g, d.portrait('sad', t), 190, 190, { ax: .5, ay: 1 }); }
+    return;
+  }
+  if (what === 'face') {
+    rect(g, 0, 0, SW, SH, '#fff4dc');
+    if (d.face) { const f = d.face(); drawS(g, f, 40, 50); drawS(g, bubbleImg(sid + 'x', 22, f, d.rim || RAMP.gold[3], false), 110, 50); drawS(g, f, 190, 50, { s: 2 }); }
+    if (d.peek) d.peek(g, 60, 190, t);
+    if (d.room && d.room.mini) { g.save(); g.beginPath(); g.rect(128, 100, 128, 92); g.clip(); g.translate(128, 0); d.room.mini(g, 60, 140, 'watch', { pt: t, pb: t }); g.restore(); }
+    return;
+  }
+  if (what === 'heads' || what === 'heads2') {
+    rect(g, 0, 0, SW, SH, '#b9cad0');
+    const H = {
+      rizos: ['cool', 'grin', 'joy', 'love', 'shock', 'itch', 'sad', 'wink'].map(e => rizosHead(e)),
+      pompon: ['idle', 'ready', 'win', 'lose', 'boss', 'clear', 'over', 'angry'].map(p => pomponHead(p)),
+      hermanas: ['normal', 'happy', 'sad', 'wow', 'wink', 'focus', 'love', 'sleep'].map((e, i) => hermanasAussieHead(i % 2 ? 'nala' : 'kira', e)),
+      ceniza: ['smug', 'ready', 'win', 'lose', 'boss', 'over', 'angry', 'talk'].map(p => faceCrop(cenizaBody(p), 8, 16, 48, 44)),
+      bigotes: ['normal', 'joy', 'laugh', 'shock', 'focus', 'sad', 'soot', 'mad'].map(e => bigotesHead(e)),
+    }[sid] || [];
+    const two = what === 'heads2', list = two ? H.slice(0, 4) : H;
+    list.forEach((img, i) => drawS(g, img, two ? 34 + (i % 2) * 128 : 32 + (i % 4) * 64, two ? 48 + fl(i / 2) * 96 : 48 + fl(i / 4) * 96, { s: two ? 2 : 1 }));
+    return;
+  }
+  if (what === 'sheet') { rect(g, 0, 0, SW, SH, '#b9cad0'); (POLISH_SHEETS[sid] || (() => { }))(g); return; }
+  if (what === 'chibi' || what === 'chibi2') {
+    rect(g, 0, 0, SW, SH, '#7fc8f8'); for (let y = 0; y < SH; y += 8) for (let x = (y / 8 % 2) * 8; x < SW; x += 16) disc(g, x + 4, y + 4, 2, '#a8d8ff');
+    const two = what === 'chibi2', ids = two ? [QS.get('sid') || 'rizos'] : ['rizos', 'pompon', 'hermanas', 'ceniza', 'bigotes'];
+    ids.forEach((id, j) => {
+      const D = STAGES[id]; if (!D || !D.chibi) return;
+      ['walk0', 'walk1', 'idle', 'happy', 'held'].forEach((fr, i) => drawS(g, D.chibi(fr, t), two ? 26 + i * 50 : 26 + i * 36, two ? 110 : 34 + j * 38, { ax: .5, ay: 1, s: two ? 2 : 1 }));
+    });
+    return;
+  }
+  d.room.top(g, polishBenchState(what, t));
+}
+defCut('polish_art', { shots: [{ dur: 9999, box: 'none',
+  top(g, t) { polishPanel(g, QS.get('a') || 'ready', QS.get('sid') || 'rizos', +(QS.get('t') || .4) + t * 0); },
+  bot(g, t) { polishPanel(g, QS.get('b') || 'win', QS.get('sid') || 'rizos', +(QS.get('t') || .4) + t * 0); },
+}] });
+
+// ---------------------------------------------------------------- chibis ----
+// Tiny WarioWare-Touched!-menu walkers, hand-built with aliased primitives and
+// auto-outlined in ink. frames: walk0 | walk1 | idle | happy | held.
+// The returned canvas has the feet at the bottom centre.
+function chibiSprite(key, w, h, draw) {
+  return mdl('chibi:' + key, () => { const c = mkCanvas(w, h); draw(c.g); return outlined(c, INK, false); });
+}
+const chibiStep = fr => fr === 'walk0' ? 1 : fr === 'walk1' ? -1 : 0;
+// a tiny 5x4 star (Rizos' glasses, sparkles)
+function chibiStar(g, x, y, col, lens) {
+  px(g, x, y - 2, col); hline(g, x - 2, x + 2, y - 1, col); hline(g, x - 1, x + 1, y, col); px(g, x - 1, y + 1, col); px(g, x + 1, y + 1, col);
+  if (lens) px(g, x, y, lens);
+}
+function rizosChibi(fr = 'idle') {
+  return chibiSprite('rizos:' + fr, 28, 37, g => {
+    const F = RIZOS_FUR, st = chibiStep(fr), held = fr === 'held', happy = fr === 'happy', lift = happy ? 2 : 0;
+    const Y = v => v - lift;
+    // platform shoes + bell-bottoms
+    const legs = held ? [[7, 1], [16, 1]] : [[8 + st, st > 0 ? -1 : 0], [15 - st, st < 0 ? -1 : 0]];
+    for (const [x, dy] of legs) {
+      polyPx(g, [[x + 1, Y(27)], [x + 4, Y(27)], [x + 5, Y(33 + dy)], [x, Y(33 + dy)]], '#3565cc');
+      vline(g, x + 3, Y(28), Y(32 + dy), '#233b8c'); px(g, x + 1, Y(29), '#63a0ef');
+      rect(g, x, Y(33 + dy), 6, 3, '#8959c5'); hline(g, x, x + 5, Y(33 + dy), '#bf95e9'); hline(g, x, x + 5, Y(35 + dy), '#5a3396');
+    }
+    vline(g, 13.5, Y(28), Y(32), INK);
+    // arms, separated from the shirt by an ink seam
+    const armDown = x => { rect(g, x, Y(20), 3, 6, F[3]); rect(g, x, Y(25), 3, 2, F[4]); };
+    const armUp = x => { rect(g, x, Y(11), 3, 9, F[3]); rect(g, x, Y(10), 3, 2, F[4]); };
+    const up = held || happy, walk = fr === 'walk0' || fr === 'walk1';
+    if (up) { armUp(4); armUp(21); } else if (walk) { armDown(5); armUp(20); } else { armDown(5); armDown(20); }
+    // disco shirt with the big collar, belt + buckle
+    rect(g, 8, Y(19), 12, 8, '#f5f3ff'); rect(g, 18, Y(19), 2, 8, '#a79bd0'); hline(g, 8, 19, Y(19), '#ffffff');
+    vline(g, 8, Y(19), Y(26), INK); vline(g, 19, Y(19), Y(26), INK);
+    polyPx(g, [[8, Y(18.5)], [13, Y(19)], [9, Y(23)]], '#dcd6f0'); polyPx(g, [[20, Y(18.5)], [15, Y(19)], [19, Y(23)]], '#dcd6f0');
+    polyPx(g, [[12, Y(19)], [16, Y(19)], [14, Y(23)]], F[3]); px(g, 13, Y(21), RAMP.gold[4]); px(g, 14, Y(22), RAMP.gold[3]); px(g, 15, Y(21), RAMP.gold[4]);
+    rect(g, 8, Y(26), 12, 2, '#2b1a4a'); rect(g, 13, Y(26), 3, 2, RAMP.gold[3]);
+    // the afro: a scalloped puffball, shaded from the top-left
+    const ax = 14, ay = Y(9);
+    for (let i = 0; i < 13; i++) { const a = i / 13 * TAU, bx = ax + Math.cos(a) * 9.3, by = ay + Math.sin(a) * 7.9, lit = Math.cos(a - 3.9); disc(g, bx, by, 3.5, lit > .35 ? F[3] : lit < -.45 ? F[1] : F[2]); }
+    ellipsePx(g, ax, ay, 8.6, 7.3, F[2]);
+    ellipsePx(g, ax - 2.2, ay - 2.2, 5.4, 3.8, F[3]);
+    ellipsePx(g, ax - 3.6, ay - 3.8, 2.2, 1.3, F[4]);
+    for (const [x, y] of [[9, 8], [13, 4], [18, 6], [20, 10], [7, 12], [16, 9], [11, 11], [19, 3], [6, 6], [22, 8]]) { px(g, x, Y(y), F[1]); px(g, x + 1, Y(y + 1), F[1]); }
+    // face under the afro, separated by an ink arc
+    ellipsePx(g, 14, Y(15.5), 5.4, 4.2, '#ffe2b8');
+    for (let x = 9; x <= 19; x++) px(g, x, Y(12) - (Math.abs(x - 14) < 3 ? 0 : 1), INK);
+    ellipsePx(g, 14, Y(17), 3, 2, '#fff4e0');
+    rect(g, 13, Y(15.5), 3, 2, INK); px(g, 13, Y(15.5), '#6e6390');
+    // little star glasses (they slide up onto the afro when he's grabbed)
+    const gy = Y(held ? 9 : 13);
+    for (const gx of [10, 17]) { rect(g, gx, gy, 3, 2, '#ff3d8b'); px(g, gx + 1, gy, '#2b1a4a'); px(g, gx + 1, gy + 1, '#2b1a4a'); px(g, gx + 1, gy - 1, '#ff3d8b'); }
+    hline(g, 13, 16, gy, '#ff3d8b');
+    if (held) { px(g, 11, Y(13), INK); px(g, 17, Y(13), INK); rect(g, 13, Y(18), 3, 2, '#3e0d1c'); }
+    else if (happy) { rect(g, 12, Y(18), 5, 2, '#3e0d1c'); hline(g, 13, 15, Y(19), RAMP.pink[2]); }
+    else { px(g, 12, Y(18), INK); hline(g, 13, 15, Y(19), INK); px(g, 16, Y(18), INK); }
+    px(g, 9, Y(17), RAMP.pink[3]); px(g, 19, Y(17), RAMP.pink[3]);
+  });
+}
+STAGES.rizos.chibi = rizosChibi;

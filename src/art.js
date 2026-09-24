@@ -75,146 +75,6 @@ function buleHead(ex = 'normal', F = RAMP.fur) {
   });
 }
 
-// ---------------------------------------------------------------- ANAHÍ -----
-// Upper body (she works behind the grooming table), 64x76. Poses move the arms
-// (two-bone IK from the shoulders); the face is painted per expression.
-const ANA_POSES = {
-  //        left hand     right hand    expr      tools: l / r
-  idle: { l: [21, 60], r: [44, 57], ex: 'smile', tl: 'comb', tr: 'scissors' },
-  ready: { l: [19, 62], r: [50, 33], ex: 'wink', tl: 'comb', tr: 'scissorsUp' },
-  win: { l: [11, 25], r: [53, 23], ex: 'joy', tl: 'comb', tr: 'scissorsUp' },
-  lose: { l: [25, 31], r: [39, 31], ex: 'shock', tl: null, tr: null },
-  speed: { l: [18, 62], r: [55, 43], ex: 'focus', tl: 'comb', tr: 'scissors' },
-  boss: { l: [16, 44], r: [48, 44], ex: 'gasp', tl: 'comb', tr: 'scissors' },
-  clear: { l: [9, 21], r: [55, 20], ex: 'joy', tl: 'comb', tr: 'scissorsUp' },
-  over: { l: [23, 66], r: [41, 66], ex: 'cry', tl: null, tr: null },
-  talk: { l: [21, 63], r: [52, 42], ex: 'talk', tl: null, tr: null },
-  think: { l: [21, 63], r: [37, 32], ex: 'hmm', tl: null, tr: null },
-};
-function ik2(sx, sy, hx, hy, L1, L2, bend) {
-  const d = Math.min(L1 + L2 - .01, Math.hypot(hx - sx, hy - sy)), a = Math.atan2(hy - sy, hx - sx);
-  const cosA = clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1), A = Math.acos(cosA);
-  const e = a + A * bend; return [sx + Math.cos(e) * L1, sy + Math.sin(e) * L1];
-}
-function anahiBody(pose = 'idle') {
-  return mdl('anahi:' + pose, () => {
-    const P = ANA_POSES[pose] || ANA_POSES.idle, SK = RAMP.skin, HR = RAMP.hair, BL = RAMP.black, GR = RAMP.green;
-    const W = 64, H = 76, cx0 = 32;
-    const sL = [22.5, 42.5], sR = [41.5, 42.5];
-    const eL = ik2(sL[0], sL[1], P.l[0], P.l[1], 12, 13, -1), eR = ik2(sR[0], sR[1], P.r[0], P.r[1], 12, 13, 1);
-    const head = SD.smooth(3, SD.ellipse(cx0, 19.6, 9.3, 10.3), SD.ellipse(cx0, 25.2, 6.3, 6.6));
-    const hairCap = SD.sub(SD.ellipse(cx0, 16.3, 10.4, 9.9), SD.ellipse(cx0, 27.5, 10.3, 13.2));
-    const bun = SD.circle(cx0, 4.8, 5.6), bunTie = SD.box(cx0, 9.6, 3.6, 1.1, .5);
-    const earL = SD.ellipse(cx0 - 9.8, 21.5, 1.9, 2.8), earR = SD.ellipse(cx0 + 9.8, 21.5, 1.9, 2.8);
-    const neck = SD.box(cx0, 33.5, 2.8, 4, 1);
-    const torso = SD.smooth(3.5, SD.ellipse(cx0, 44.5, 11.8, 5), SD.poly([[cx0 - 10.5, 44], [cx0 + 10.5, 44], [cx0 + 8.2, 63], [cx0 + 9.5, 80], [cx0 - 9.5, 80], [cx0 - 8.2, 63]]));
-    const apron = SD.grow(SD.poly([[cx0 - 6.5, 48.5], [cx0 + 6.5, 48.5], [cx0 + 7.2, 58], [cx0 + 9, 80], [cx0 - 9, 80], [cx0 - 7.2, 58]]), .8);
-    const sleeveL = SD.capsule(sL[0], sL[1], lerp(sL[0], eL[0], .55), lerp(sL[1], eL[1], .55), 4.2, 3.6);
-    const sleeveR = SD.capsule(sR[0], sR[1], lerp(sR[0], eR[0], .55), lerp(sR[1], eR[1], .55), 4.2, 3.6);
-    const armL = SD.union(SD.capsule(sL[0], sL[1], eL[0], eL[1], 3, 2.6), SD.capsule(eL[0], eL[1], P.l[0], P.l[1], 2.6, 2.2));
-    const armR = SD.union(SD.capsule(sR[0], sR[1], eR[0], eR[1], 3, 2.6), SD.capsule(eR[0], eR[1], P.r[0], P.r[1], 2.6, 2.2));
-    const handL = SD.circle(P.l[0], P.l[1], 2.9), handR = SD.circle(P.r[0], P.r[1], 2.9);
-    const armsFront = pose === 'lose' || pose === 'think'; // hands on the face sit in front
-    const hairTex = (x, y) => (Math.sin((x - cx0) * 1.7 + y * .35) * .06);
-    const c = model(W, H, [
-      { f: bun, ramp: HR, z: 0, th: 5, tex: hairTex },
-      { f: bunTie, ramp: RAMP.green, z: .5, th: 2 },
-      { f: torso, ramp: BL, z: 1, th: 12 },
-      { f: apron, ramp: GR, z: 1.5, th: 6, edge: true },
-      { f: neck, ramp: SK, z: 1.2, th: 3, amb: .2 },
-      { f: earL, ramp: SK, z: 1.8, th: 2 }, { f: earR, ramp: SK, z: 1.8, th: 2 },
-      { f: head, ramp: SK, z: 2, th: 10, amb: .32 },
-      { f: hairCap, ramp: HR, z: 2.5, th: 7, tex: hairTex },
-      { f: armL, ramp: SK, z: armsFront ? 4 : 1.7, th: 3 }, { f: armR, ramp: SK, z: armsFront ? 4 : 1.7, th: 3 },
-      { f: sleeveL, ramp: BL, z: armsFront ? 4.2 : 1.9, th: 4 }, { f: sleeveR, ramp: BL, z: armsFront ? 4.2 : 1.9, th: 4 },
-      { f: handL, ramp: SK, z: armsFront ? 4.5 : 3, th: 2.5, amb: .35 }, { f: handR, ramp: SK, z: armsFront ? 4.5 : 3, th: 2.5, amb: .35 },
-    ]);
-    const g = c.g;
-    anahiFace(g, cx0, P.ex);
-    // apron: neck strap, WB monogram, waist tie, pocket
-    linePx(g, cx0 - 6, 48, cx0 - 3, 38, GR[1]); linePx(g, cx0 + 6, 48, cx0 + 3, 38, GR[1]);
-    tiny(g, 'WB', cx0 - 3, 51, RAMP.cream[3]); hline(g, cx0 - 3, cx0 + 3, 57, RAMP.gold[2]);
-    hline(g, cx0 - 9, cx0 + 9, 61, GR[0]); hline(g, cx0 - 9, cx0 + 9, 62, GR[3]);
-    rect(g, cx0 - 5, 66, 10, 1, GR[1]); rect(g, cx0 - 5, 67, 1, 5, GR[1]); rect(g, cx0 + 4, 67, 1, 5, GR[1]);
-    // gold bangle on the right wrist, hoop earrings
-    const wx = lerp(eR[0], P.r[0], .72), wy = lerp(eR[1], P.r[1], .72);
-    px(g, wx - 1, wy, RAMP.gold[3]); px(g, wx, wy, RAMP.gold[4]); px(g, wx + 1, wy, RAMP.gold[2]);
-    px(g, cx0 - 10, 25, RAMP.gold[3]); px(g, cx0 + 10, 25, RAMP.gold[3]);
-    return c;
-  });
-}
-// the face: brows, lined eyes, blush, red lips — drawn by hand for each mood
-function anahiFace(g, cx0, ex) {
-  const K = '#1b1016', SK = RAMP.skin, L = RAMP.red, HR = RAMP.hair;
-  // hair: centre parting + shine
-  vline(g, cx0, 8, 11, HR[3]); px(g, cx0 - 4, 9, HR[4]); px(g, cx0 - 5, 10, HR[4]); px(g, cx0 + 5, 10, HR[3]);
-  const ey = 20, lx = cx0 - 6, rx = cx0 + 3;
-  const brow = (x, dy, flip) => { const pts = flip ? [[x, 16 + dy], [x + 1, 15 + dy], [x + 2, 15 + dy], [x + 3, 16 + dy]] : [[x, 16 + dy], [x + 1, 15 + dy], [x + 2, 15 + dy], [x + 3, 16 + dy]]; for (const [a, b] of pts) px(g, a, b, K); };
-  const eyeOpen = (x, look = 0) => {
-    rect(g, x, ey - 1, 4, 1, K); px(g, x + (x < cx0 ? -1 : 4), ey - 2, K); // lid line + liner flick
-    rect(g, x, ey, 4, 3, '#ffffff'); rect(g, x + 1 + look, ey, 2, 3, '#2b1a1a'); px(g, x + 1 + look, ey, '#ffffff'); px(g, x + 2 + look, ey + 2, '#4a2a22');
-    hline(g, x, x + 3, ey + 3, SK[2]);
-  };
-  const eyeHappy = x => { px(g, x, ey + 1, K); hline(g, x + 1, x + 2, ey, K); px(g, x + 3, ey + 1, K); px(g, x + (x < cx0 ? -1 : 4), ey, K); };
-  const eyeClosed = x => { hline(g, x, x + 3, ey + 1, K); px(g, x + (x < cx0 ? -1 : 4), ey, K); };
-  const blush = () => { for (const bx of [cx0 - 8, cx0 + 5]) { px(g, bx, 24, RAMP.pink[3]); px(g, bx + 2, 24, RAMP.pink[3]); px(g, bx + 1, 25, RAMP.pink[3]); } };
-  const lips = (kind) => {
-    const y = 27;
-    if (kind === 'o') { rect(g, cx0 - 1, y - 1, 3, 3, L[1]); px(g, cx0, y, '#3e0d1c'); return; }
-    if (kind === 'open') { hline(g, cx0 - 2, cx0 + 2, y - 1, L[2]); rect(g, cx0 - 2, y, 5, 2, '#3e0d1c'); hline(g, cx0 - 1, cx0 + 1, y + 1, RAMP.pink[2]); hline(g, cx0 - 2, cx0 + 2, y + 2, L[2]); return; }
-    if (kind === 'sad') { hline(g, cx0 - 1, cx0 + 1, y, L[2]); px(g, cx0 - 2, y + 1, L[1]); px(g, cx0 + 2, y + 1, L[1]); return; }
-    if (kind === 'flat') { hline(g, cx0 - 2, cx0 + 2, y, L[1]); px(g, cx0, y + 1, L[2]); return; }
-    // smile
-    px(g, cx0 - 3, y - 1, L[1]); hline(g, cx0 - 2, cx0 + 2, y, L[2]); px(g, cx0 + 3, y - 1, L[1]); hline(g, cx0 - 1, cx0 + 1, y + 1, L[1]); px(g, cx0 - 1, y, L[3]);
-  };
-  px(g, cx0, 24, SK[2]); px(g, cx0 + 1, 23, SK[1] === undefined ? SK[2] : SK[2]); // nose
-  switch (ex) {
-    case 'wink': brow(lx, 0); brow(rx, -1, 1); eyeOpen(lx); eyeClosed(rx); blush(); lips('smile'); break;
-    case 'joy': brow(lx, -1); brow(rx, -1, 1); eyeHappy(lx); eyeHappy(rx); blush(); lips('open'); break;
-    case 'shock': brow(lx, -2); brow(rx, -2, 1); eyeOpen(lx); eyeOpen(rx); lips('o'); rect(g, cx0 + 9, 14, 1, 3, '#9bd6f7'); px(g, cx0 + 9, 17, '#dff4ff'); break;
-    case 'focus': brow(lx, 1); brow(rx, 1, 1); eyeOpen(lx, 1); eyeOpen(rx, 1); lips('flat'); break;
-    case 'gasp': brow(lx, -2); brow(rx, -2, 1); eyeOpen(lx); eyeOpen(rx); lips('open'); break;
-    case 'cry': brow(lx, 0); brow(rx, 0, 1); eyeClosed(lx); eyeClosed(rx); vline(g, lx + 1, ey + 2, ey + 5, '#9bd6f7'); vline(g, rx + 2, ey + 2, ey + 5, '#9bd6f7'); lips('sad'); break;
-    case 'talk': brow(lx, 0); brow(rx, 0, 1); eyeOpen(lx); eyeOpen(rx); blush(); lips('open'); break;
-    case 'hmm': brow(lx, 1); brow(rx, -1, 1); eyeOpen(lx, 1); eyeOpen(rx, 1); lips('flat'); break;
-    default: brow(lx, 0); brow(rx, 0, 1); eyeOpen(lx); eyeOpen(rx); blush(); lips('smile');
-  }
-}
-// tools
-function scissorsSpr() {
-  return mdl('scissors', () => spr([
-    '..kk.......',
-    '.kbbk......',
-    'kb..bk.....',
-    'kb..bkkk...',
-    '.kbbkswsk..',
-    '..kkkkwwsk.',
-    '.kbbkswsssk',
-    'kb..bkkkkk.',
-    'kb..bk.....',
-    '.kbbk......',
-    '..kk.......'], { k: INK, b: '#3565cc', s: '#a5afc4', w: '#e1e7f2' }));
-}
-function combSpr() {
-  return mdl('comb', () => spr([
-    'kkkkkkkkkkk',
-    'kyyyYYYYYyk',
-    'kkkkkkkkkkk',
-    'k.k.k.k.k.k',
-    'k.k.k.k.k.k',
-    'k.k.k.k.k.k'], { k: INK, y: RAMP.gold[3], Y: RAMP.gold[4] }));
-}
-function drawAnahi(g, x, y, pose, t = 0, o = {}) {
-  const P = ANA_POSES[pose] || ANA_POSES.idle, img = anahiBody(pose);
-  const bob = o.bob != null ? o.bob : 0;
-  const X = rd(x - 32), Y = rd(y - 76 + bob);
-  g.drawImage(img, X, Y);
-  // tools in the hands
-  if (P.tr === 'scissors') drawS(g, scissorsSpr(), X + P.r[0] + 2, Y + P.r[1] - 1, { rot: -.5 + Math.sin(t * 20) * (o.snip ? .25 : 0) });
-  if (P.tr === 'scissorsUp') drawS(g, scissorsSpr(), X + P.r[0] + 1, Y + P.r[1] - 5, { rot: -1.9 + Math.sin(t * 22) * .12 });
-  if (P.tl === 'comb') drawS(g, combSpr(), X + P.l[0] - 3, Y + P.l[1] - 3, { rot: -.25 });
-}
-
 // ---------------------------------------------------------------- westie body
 // Side view, facing right; k scales the whole dog (1 → 88x64). pose:
 // stand | wag | wet | sit ; mood painted: normal | happy | sad | itchy | wow
@@ -314,22 +174,52 @@ function lifeWestie(sad) {
     '....kkkkkkkkk.....'], { k: INK, w: '#ffffff', g: '#b3b8d4', p: RAMP.pink[2] }));
 }
 
-// Anahí's legs (black trousers + sneakers) so she can stand on the salon floor
-function anahiLegs(pose = 'stand') {
-  return mdl('anaLegs:' + pose, () => {
-    const BL = RAMP.black, spread = pose === 'jump' ? 3 : 0;
-    const hips = SD.box(32, 3, 9.5, 5, 3);
-    const legL = SD.capsule(28 - spread, 4, 27 - spread * 1.6, 30, 3.8, 3.2), legR = SD.capsule(36 + spread, 4, 37 + spread * 1.6, 30, 3.8, 3.2);
-    const shoeL = SD.box(26 - spread * 1.6, 33, 4.6, 2.4, 1.8), shoeR = SD.box(38 + spread * 1.6, 33, 4.6, 2.4, 1.8);
-    return model(64, 37, [
-      { f: hips, ramp: BL, z: 0, th: 5 }, { f: legL, ramp: BL, z: 1, th: 4 }, { f: legR, ramp: BL, z: 1, th: 4 },
-      { f: shoeL, ramp: RAMP.steel, z: 2, th: 2 }, { f: shoeR, ramp: RAMP.steel, z: 2, th: 2 },
-    ]);
+// ---------------------------------------------------------------- KEIKO -----
+// Anahí's sister's westie and the game's mascot: the westie head plus her
+// Westie-green bandana with tiny white paw prints.
+function keikoHead(ex = 'normal') {
+  return mdl('keikoHead:' + ex, () => {
+    const base = buleHead(ex), c = mkCanvas(base.width, base.height + 6), g = c.g;
+    g.drawImage(base, 0, 0);
+    const G = RAMP.green, pts = [[17, 47], [47, 47], [32, 64]];
+    polyPx(g, pts.map(([x, y]) => [x, y + 1]), INK); polyPx(g, [[18, 47], [46, 47], [32, 62]], G[2]);
+    hline(g, 18, 46, 47, INK); hline(g, 19, 45, 48, G[3]);
+    for (const [x, y] of [[26, 51], [36, 51], [31, 56]]) { px(g, x, y, '#ffffff'); px(g, x + 1, y, '#ffffff'); px(g, x, y - 1, '#d2f5e4'); }
+    disc(g, 32, 48, 2, INK); disc(g, 32, 48, 1.3, G[3]);
+    return c;
   });
 }
-// full figure: feet at (x, y)
-function drawAnahiFull(g, x, y, pose, t = 0, o = {}) {
-  const jump = o.jump || 0, bob = o.bob || 0;
-  g.drawImage(anahiLegs(jump > 0 ? 'jump' : 'stand'), rd(x - 32), rd(y - 36 - jump));
-  drawAnahi(g, x, y - 30 - jump + bob, pose, t, o);
+// Keiko as "la jefa": grumpy, wearing a green Westie BLVRD cap (from the user's video)
+function keikoBossHead() {
+  return mdl('keikoBoss', () => {
+    const base = keikoHead('grr'), c = mkCanvas(base.width + 8, base.height + 4), g = c.g;
+    g.drawImage(base, 4, 4);
+    const G = RAMP.green;
+    // cap dome between the ears, visor to the left
+    ellipsePx(g, 36, 17, 15, 9, INK); ellipsePx(g, 36, 17, 14, 8, G[2]); ellipsePx(g, 33, 14, 9, 4, G[3]);
+    rect(g, 20, 19, 32, 5, INK); rect(g, 21, 20, 30, 3, G[1]);
+    polyPx(g, [[20, 20], [6, 23], [8, 27], [22, 25]], INK); polyPx(g, [[20, 21], [8, 23.5], [9, 26], [22, 24]], G[3]);
+    rect(g, 30, 11, 12, 6, '#fffaf0'); tiny(g, 'WB', 36, 12, G[1], { align: 'c' });
+    disc(g, 36, 8, 1.6, G[3]);
+    // grumpy brows
+    linePx(g, 25, 29, 31, 31, INK); linePx(g, 47, 29, 41, 31, INK);
+    return c;
+  });
+}
+
+// Keiko from the side / sitting, always with her green bandana
+function keikoSide(k = 1, pose = 'stand', mood = 'normal') {
+  return mdl('keikoSide:' + k + pose + mood, () => {
+    const base = westieSide(k, pose, mood), c = mkCanvas(base.width, base.height), g = c.g;
+    g.drawImage(base, 0, 0);
+    const q = v => rd(v * k), G = RAMP.green;
+    polyPx(g, [[q(55), q(29)], [q(64), q(31)], [q(58), q(42)]], INK); polyPx(g, [[q(56), q(30)], [q(63), q(31.5)], [q(58), q(40)]], G[2]);
+    if (k >= .5) px(g, q(58), q(33), '#ffffff');
+    return c;
+  });
+}
+function drawKeikoSit(g, x, y, ex = 'normal', o = {}) {
+  const tilt = o.tilt || 0;
+  drawS(g, westieSitBody(), x, y, { ax: .5, ay: 1, sx: o.sx || 1, sy: o.sy || 1 });
+  drawS(g, keikoHead(ex), x + tilt * 4, y - 36 * (o.sy || 1), { ax: .5, ay: .7, rot: tilt * .18 });
 }

@@ -51,6 +51,8 @@ SFX.czPuaj = (t, d, p, v) => { const lp = filt('lowpass', 600, 2, d); const g = 
 // ---------------------------------------------------------------- CENIZA ----
 // Black cat witch, 64x96: crooked purple hat (ears poke through the brim),
 // Westie-green cape, yellow-green eyes. Poses move the front paws (IK).
+// black cat with a blue sheen: reads against her purple den and purple hat
+const CENIZA_FUR = ['#0a0c15', '#171c2e', '#262f49', '#3d4b6e', '#6479a6'];
 const CENIZA_POSES = {
   //        left paw   right paw   face     extras
   stir0: { l: [11, 59], r: [42, 76], ex: 'normal', ladle: 1 },
@@ -74,7 +76,7 @@ const CENIZA_POSES = {
 function cenizaBody(pose = 'stir0', white = false) {
   return mdl('cz:cen:' + pose + (white ? 'W' : ''), () => {
     const P = CENIZA_POSES[pose] || CENIZA_POSES.stir0;
-    const F = white ? RAMP.fur : RAMP.black, IN_EAR = white ? RAMP.pink : RAMP.lilac, HAT = RAMP.purple, GR = RAMP.green;
+    const F = white ? RAMP.fur : CENIZA_FUR, IN_EAR = white ? RAMP.pink : RAMP.lilac, HAT = ['#241040', '#44207a', '#6a38b0', '#9564d8', '#c8a2f5'], GR = RAMP.green;
     const cx0 = 32;
     const sL = [25, 61], sR = [39, 61];
     const eL = ik2(sL[0], sL[1], P.l[0], P.l[1], 9, 9, -1), eR = ik2(sR[0], sR[1], P.r[0], P.r[1], 9, 9, 1);
@@ -96,20 +98,21 @@ function cenizaBody(pose = 'stir0', white = false) {
     const armR = SD.union(SD.capsule(sR[0], sR[1], eR[0], eR[1], 3.2, 2.9), SD.capsule(eR[0], eR[1], P.r[0], P.r[1], 2.9, 2.6));
     const pawL = SD.circle(P.l[0], P.l[1], 3.4), pawR = SD.circle(P.r[0], P.r[1], 3.4);
     const armsFront = pose === 'lose';
-    const fx = clumpTex(3.5, white ? .24 : .12, 21, 1.3);
+    // big soft clumps, little dither: clean cel bands on the fur
+    const fx = clumpTex(4.4, white ? .24 : .17, 21, 1.3, .9), D = .18;
     const c = model(64, 96, [
-      { f: tail, ramp: F, z: 0, th: 4, tex: fx },
-      { f: cape, ramp: GR, z: .3, th: 6 },
-      { f: haunchL, ramp: F, z: .8, th: 5 }, { f: haunchR, ramp: F, z: .8, th: 5 },
-      { f: bodyS, ramp: F, z: 1, th: 12, tex: fx },
-      { f: armL, ramp: F, z: armsFront ? 3.5 : 1.6, th: 3 }, { f: armR, ramp: F, z: armsFront ? 3.5 : 1.6, th: 3 },
-      { f: pawL, ramp: F, z: armsFront ? 3.6 : 1.7, th: 2.5 }, { f: pawR, ramp: F, z: armsFront ? 3.6 : 1.7, th: 2.5 },
-      { f: headS, ramp: F, z: 2, th: 11, tex: fx, amb: white ? .3 : .34 },
-      { f: cheeks, ramp: F, z: 2.2, th: 4, tex: fx },
-      { f: cone, ramp: HAT, z: 2.4, th: 6 },
+      { f: tail, ramp: F, z: 0, th: 4, tex: fx, dith: D },
+      { f: cape, ramp: GR, z: .3, th: 6, dith: .2 },
+      { f: haunchL, ramp: F, z: .8, th: 5, dith: D }, { f: haunchR, ramp: F, z: .8, th: 5, dith: D },
+      { f: bodyS, ramp: F, z: 1, th: 12, tex: fx, dith: D },
+      { f: armL, ramp: F, z: armsFront ? 3.5 : 1.6, th: 3, dith: D }, { f: armR, ramp: F, z: armsFront ? 3.5 : 1.6, th: 3, dith: D },
+      { f: pawL, ramp: F, z: armsFront ? 3.6 : 1.7, th: 2.5, dith: D }, { f: pawR, ramp: F, z: armsFront ? 3.6 : 1.7, th: 2.5, dith: D },
+      { f: headS, ramp: F, z: 2, th: 11, tex: fx, amb: white ? .3 : .36, dith: D },
+      { f: cheeks, ramp: F, z: 2.2, th: 4, tex: fx, dith: D },
+      { f: cone, ramp: HAT, z: 2.4, th: 6, dith: .2 },
       { f: band, ramp: GR, z: 2.45, th: 2, lit: false, flatV: .72 },
-      { f: brim, ramp: HAT, z: 2.5, th: 2.5 },
-      { f: earL, ramp: F, z: 2.7, th: 3 }, { f: earR, ramp: F, z: 2.7, th: 3 },
+      { f: brim, ramp: HAT, z: 2.5, th: 2.5, dith: .2 },
+      { f: earL, ramp: F, z: 2.7, th: 3, dith: D }, { f: earR, ramp: F, z: 2.7, th: 3, dith: D },
       { f: inL, ramp: IN_EAR, z: 2.75, th: 2, amb: .45, dif: .3, edge: false, out: false }, { f: inR, ramp: IN_EAR, z: 2.75, th: 2, amb: .45, dif: .3, edge: false, out: false },
     ]);
     const g = c.g;
@@ -124,17 +127,17 @@ function cenizaBody(pose = 'stir0', white = false) {
   });
 }
 function cenizaFace(g, cx0, ex, white) {
-  const K = INK, EY = ['#3d5a0a', '#7fb11c', '#b9e04a', '#e6f79a'], ey = 45, lx = cx0 - 9, rx = cx0 + 3;
+  const K = INK, EY = ['#3d5a0a', '#8fc41e', '#c4ec52', '#f0ffb0'], ey = 44, lx = cx0 - 10, rx = cx0 + 3;
   const lid = white ? '#56557a' : '#0b0712';
   // almond eye with a slit pupil; look = pupil shift, open = 0..1 lid opening
   const eye = (x, look = 0, open = 1, round = false) => {
-    const h = open >= 1 ? 5 : open > .5 ? 4 : 3, top = ey + (5 - h);
-    rect(g, x, top, 6, h, EY[1]); rect(g, x, top, 6, 1, EY[0]); rect(g, x + 1, top + h - 1, 4, 1, EY[2]); px(g, x + 1, top + 1, EY[3]);
-    // lid line with a flick outward
-    hline(g, x - 1, x + 6, top - 1, lid); px(g, x < cx0 ? x - 2 : x + 7, top - 2, lid);
-    if (round) { rect(g, x + 2 + look, top + 1, 2, h - 1, K); px(g, x + 2 + look, top + 1, '#ffffff'); }
-    else { vline(g, x + 3 + look, top, top + h - 1, K); if (h > 3) px(g, x + 3 + look, top + 1, K); }
-    px(g, x + 1, top + 1, '#ffffff');
+    // big lamp eyes (7 wide), a slit pupil and a two-pixel glint
+    const h = open >= 1 ? 6 : open > .5 ? 5 : 3, top = ey + (6 - h);
+    rect(g, x, top, 7, h, EY[1]); rect(g, x + 1, top - 1, 5, 1, EY[1]); rect(g, x, top, 7, 1, EY[0]); rect(g, x + 1, top + h - 2, 5, 2, EY[2]); px(g, x + 2, top + h - 1, EY[3]);
+    hline(g, x - 1, x + 7, top - 1 - (h > 4 ? 1 : 0), lid); px(g, x < cx0 ? x - 2 : x + 8, top - 2 - (h > 4 ? 1 : 0), lid);
+    if (round) { rect(g, x + 2 + look, top + 1, 3, h - 2, K); }
+    else { vline(g, x + 3 + look, top, top + h - 1, K); if (h > 3) { px(g, x + 3 + look, top + 1, K); vline(g, x + 4 + look, top + 1, top + h - 2, K); } }
+    rect(g, x + 1, top + 1, 2, 2, '#ffffff');
   };
   const closed = x => { px(g, x, ey + 3, lid); hline(g, x + 1, x + 4, ey + 2, lid); px(g, x + 5, ey + 3, lid); };
   const shut = x => { hline(g, x, x + 5, ey + 3, lid); px(g, x < cx0 ? x - 1 : x + 6, ey + 2, lid); };
@@ -148,8 +151,8 @@ function cenizaFace(g, cx0, ex, white) {
     // the cat "w", with a tiny fang
     px(g, cx0 - 2, y - 1, K); px(g, cx0 - 1, y, K); px(g, cx0, y - 1, K); px(g, cx0 + 1, y, K); px(g, cx0 + 2, y - 1, K); px(g, cx0 + 1, y + 1, '#ffffff');
   };
-  const whiskers = () => { const wc = white ? '#8587ab' : '#9896a4'; for (const s of [-1, 1]) for (let i = 0; i < 3; i++) linePx(g, cx0 + s * 9, 50 + i * 1.5, cx0 + s * 17, 48 + i * 3, wc); };
-  const blush = () => { for (const bx of [cx0 - 11, cx0 + 8]) { px(g, bx, 49, white ? RAMP.pink[3] : '#8f5cc7'); px(g, bx + 2, 49, white ? RAMP.pink[3] : '#8f5cc7'); } };
+  const whiskers = () => { const wc = white ? '#8587ab' : '#6e6390'; for (const s of [-1, 1]) for (let i = 0; i < 2; i++) linePx(g, cx0 + s * 11, 51 + i * 2, cx0 + s * 17, 50 + i * 4, wc); };
+  const blush = () => { for (const bx of [cx0 - 12, cx0 + 9]) { rect(g, bx, 51, 3, 2, white ? RAMP.pink[3] : '#b06cc8'); px(g, bx + 1, 51, white ? '#ffd1e4' : '#d6a0e8'); } };
   whiskers(); nose();
   switch (ex) {
     case 'happy': closed(lx); closed(rx); mouth('open'); blush(); break;
@@ -285,6 +288,15 @@ function cenizaRoomBg() {
   return mdl('cenizaRoomBg', () => {
     const c = mkCanvas(SW, SH), g = c.g;
     cenizaStoneWall(g, 0, 0, SW, 150);
+    // warm candle-light pooled on the wall behind Ceniza (a black cat needs a lit backdrop):
+    // the same bricks, repainted warmer in two hard-edged bands
+    for (const [rx, ry, k] of [[64, 56, .1], [44, 40, .19]]) {
+      const L = mkCanvas(SW, 150);
+      cenizaStoneWall(L.g, 0, 0, SW, 150, [RAMP.purple[0], RAMP.purple[1], '#2a1c44'].map(col => mixHex(col, '#ffb070', k)));
+      const M = mkCanvas(SW, 150); ellipsePx(M.g, 164, 112, rx, ry, '#ffffff');
+      L.g.globalCompositeOperation = 'destination-in'; L.g.drawImage(M, 0, 0); L.g.globalCompositeOperation = 'source-over';
+      g.drawImage(L, 0, 0);
+    }
     // round window with the moon
     disc(g, 40, 40, 19, INK); disc(g, 40, 40, 18, RAMP.wood[2]); disc(g, 40, 40, 15, '#1a1f4a'); disc(g, 40, 40, 14, '#232a5e');
     disc(g, 45, 35, 6, '#fff2c0'); disc(g, 48, 33, 5, '#232a5e');
@@ -463,7 +475,7 @@ PORTAL_FRAMES.gothic = function (g, x, y, w, h, beat) {
 defStage({
   id: 'ceniza', name: 'CENIZA', sub: '«Magia… y mucha espuma»', verb: '¡ARRASTRA!', mech: 'drag', bpm: 116,
   games: ['pocion', 'estante', 'lazo2', 'banera', 'correa2'], boss: 'pocima', bossAt: 10, speedAt: [4, 7], unlockBy: 'hermanas',
-  portrait: () => mdl('cz:cenPortrait', () => { const c = mkCanvas(80, 112); cenizaDraw(c.g, 36, 110, 'ready', .3); drawS(c.g, cenizaPatoSpr('grin'), 66, 26, { flip: true }); return c; }),
+  portrait: (k) => mdl('cz:cenPortrait' + (k === 'sad' ? 'S' : ''), () => { const c = mkCanvas(80, 112), sad = k === 'sad'; cenizaDraw(c.g, 36, 110, sad ? 'over' : 'ready', .3); drawS(c.g, cenizaPatoSpr(sad ? 'laugh' : 'grin'), 66, 26, { flip: true }); return c; }),
   face: () => mdl('cz:cenFace', () => faceCrop(cenizaBody('smug'), 12, 20, 40, 42)),
   rim: RAMP.purple[3], cardCols: [RAMP.purple[1], RAMP.purple[2]], nameFill: ['#ffffff', '#e5d3fa', '#bf95e9'],
   tip: 'Arrastra con el dedo: ingredientes, lazos, correas…',
@@ -526,7 +538,7 @@ defCut('ceniza_out', {
         // the foam explosion fills both screens
         if (t > 1.9) { const k = clamp((t - 1.9) / .6, 0, 1); for (let i = 0; i < 44; i++) { const a = i * 2.4, r = k * (40 + (i % 7) * 30); disc(g, cx0 + Math.cos(a) * r, cy0 - 40 + Math.sin(a) * r * 1.7, (10 + (i % 5) * 4) * k, i % 3 ? '#ffffff' : '#ffd1e4'); } if (t < 2.05) { rect(g, 0, 0, SW, TALL_H, '#ffffff'); } }
       } },
-    { dur: 0, sfx: [[.2, 'czMeow', { pitch: 1.3 }], [2.2, 'bark']], lines: [['narr', 'Cuando la espuma se disipó…'], ['ceniza', '…¿Qué? ¿Por qué me miráis así?'], ['bule', '¿…Hermana?'], ['ceniza', 'Ni. Una. Palabra.'], ['pato', '¡CUAC, JA, JA, JA!']],
+    { dur: 0, sfx: [[.2, 'czMeow', { pitch: 1.3 }], [2.2, 'bark']], lines: [['narr', 'Cuando la espuma se disipó…'], ['ceniza', '…¿Qué? ¿Por qué me miráis así?'], ['keiko', '¿…Hermana?'], ['ceniza', 'Ni. Una. Palabra.'], ['pato', '¡CUAC, JA, JA, JA!']],
       top(g, t) {
         g.drawImage(cenizaRoomBg(), 0, 0);
         for (let i = 0; i < 14; i++) { const x = (i * 37) % SW, y = 150 + (i % 3) * 6; disc(g, x, y, 5 + (i % 3), '#ffffff'); }
@@ -540,3 +552,53 @@ defCut('ceniza_out', {
       bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); for (let i = 0; i < 5; i++) { const x = 60 + i * 34, y = 130; rect(g, x - 7, y - 26, 14, 28, INK); rect(g, x - 6, y - 25, 12, 26, '#ff93bf'); rect(g, x - 3, y - 32, 6, 7, INK); rect(g, x - 2, y - 31, 4, 6, '#ffffff'); rect(g, x - 5, y - 17, 10, 9, '#fff8e6'); tiny(g, 'N5', x, y - 15, RAMP.purple[2], { align: 'c' }); px(g, x - 4, y - 22, '#ffffff'); } txt(g, 'NOVEDAD · Pócima Nº 5', SW / 2, 146, INK, { align: 'c', bold: true }); } },
   ],
 });
+
+// ---------------------------------------------------------------- chibi -----
+// the witch cat walking, Pato bobbing over her shoulder; frames walk0 | walk1 | idle | happy | held
+function cenizaChibi(fr = 'idle', t = 0) {
+  const ph = fl((t || 0) * 3) % 4;
+  return mdl('chibi:ceniza:' + fr + ph, () => {
+    const W = 32, H = 42, c = mkCanvas(W, H), g = c.g, B = CENIZA_FUR, RIM = '#8ea4d6', HAT = RAMP.purple, GR = RAMP.green;
+    const layer = fn => { const L = mkCanvas(W, H); fn(L.g); g.drawImage(outlined(L, INK, false), -1, -1); };
+    const st = fr === 'walk0' ? 1 : fr === 'walk1' ? -1 : 0, held = fr === 'held', happy = fr === 'happy', Y = v => v - (happy ? 2 : 0) + 2;
+    // cape
+    layer(q => { polyPx(q, [[8, Y(24)], [19, Y(24)], [23, Y(36)], [4, Y(36)]], GR[2]); polyPx(q, [[16, Y(24)], [19, Y(24)], [23, Y(36)], [19, Y(36)]], GR[1]); });
+    // tail curling up
+    layer(q => { thickLine(q, 20, Y(33), 25, Y(29), 1.4, B[2]); thickLine(q, 25, Y(29), 25, Y(23), 1.3, B[2]); disc(q, 24, Y(22), 1.6, B[3]); });
+    // legs
+    const legs = held ? [[9, 1], [16, 1]] : [[10 + st, st > 0 ? -1 : 0], [15 - st, st < 0 ? -1 : 0]];
+    layer(q => { for (const [x, dy] of legs) { rect(q, x, Y(31), 3, 5 + dy, B[2]); rect(q, x - 1, Y(35 + dy), 4, 2, B[3]); px(q, x, Y(36 + dy), RAMP.lilac[3]); } });
+    // body
+    layer(q => { ellipsePx(q, 13.5, Y(28), 5.6, 5, B[2]); ellipsePx(q, 12, Y(26.5), 2.6, 2.4, B[3]); for (let y = Y(24); y < Y(32); y++) px(q, 8 + (y % 2 ? 0 : 0), y, RIM); });
+    // arms
+    const up = held || happy;
+    for (const x of [6, 20]) layer(q => { if (up) { rect(q, x, Y(15), 3, 9, B[2]); disc(q, x + 1.5, Y(15), 1.8, B[3]); } else { rect(q, x, Y(23), 3, 7, B[2]); disc(q, x + 1.5, Y(29), 1.8, B[3]); } });
+    // head with cheek tufts and ears under the brim
+    layer(q => {
+      polyPx(q, [[6, Y(16)], [7, Y(9)], [11, Y(13)]], B[2]); polyPx(q, [[21, Y(16)], [20, Y(9)], [16, Y(13)]], B[2]);
+      disc(q, 13.5, Y(19), 7, B[2]); disc(q, 12, Y(17.5), 4, B[3]);
+      polyPx(q, [[6, Y(19)], [3, Y(22)], [7, Y(23)]], B[2]); polyPx(q, [[21, Y(19)], [24, Y(22)], [20, Y(23)]], B[2]);
+      for (let a = 3.3; a < 4.8; a += .12) px(q, 13.5 + Math.cos(a) * 6.6, Y(19) + Math.sin(a) * 6.6, RIM);
+      px(q, 8, Y(11), RAMP.lilac[2]); px(q, 19, Y(11), RAMP.lilac[2]);
+    });
+    // the crooked hat
+    layer(q => {
+      ellipsePx(q, 13.5, Y(13), 10.5, 2.4, HAT[2]); hline(q, 5, 22, Y(12), HAT[3]);
+      polyPx(q, [[8, Y(12)], [19, Y(12)], [17, Y(4)], [22, Y(-1)], [14, Y(2)]], HAT[2]); polyPx(q, [[16, Y(12)], [19, Y(12)], [17, Y(4)], [22, Y(-1)], [18, Y(3)]], HAT[1]);
+      rect(q, 9, Y(9), 10, 2, GR[2]); rect(q, 12, Y(9), 3, 2, RAMP.gold[3]);
+    });
+    // big lamp eyes, pink nose, cat mouth
+    for (const ex of [9, 15]) {
+      if (happy) { px(g, ex, Y(19), INK); px(g, ex + 1, Y(18), INK); px(g, ex + 2, Y(18), INK); px(g, ex + 3, Y(19), INK); }
+      else { rect(g, ex, Y(17), 4, 4, '#b8e04a'); rect(g, ex + 1, Y(16), 2, 6, '#b8e04a'); rect(g, ex + 1, Y(18), 2, 1, '#e8ff9a'); vline(g, ex + (held ? 1 : 2), Y(17), Y(20), INK); px(g, ex + 1, Y(17), '#ffffff'); }
+    }
+    px(g, 13, Y(22), RAMP.pink[2]); px(g, 14, Y(22), RAMP.pink[2]);
+    if (held) rect(g, 13, Y(24), 2, 2, '#3e0d1c'); else { px(g, 12, Y(23), INK); px(g, 13, Y(24), INK); px(g, 14, Y(24), INK); px(g, 15, Y(23), INK); }
+    // Pato floats at her shoulder
+    const py = 2 + [0, 1, 2, 1][ph];
+    layer(q => { disc(q, 27, py + 6, 3.2, '#ffdf4f'); disc(q, 27, py + 2.5, 2.3, '#ffdf4f'); rect(q, 29, py + 2, 2, 1, '#ff9f4f'); px(q, 25, py, '#e23b4e'); px(q, 28, py, '#e23b4e'); px(q, 26, py + 6, '#fff7ae'); });
+    px(g, 27, py + 2, INK);
+    return c;
+  });
+}
+STAGES.ceniza.chibi = cenizaChibi;

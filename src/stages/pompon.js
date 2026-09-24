@@ -5,8 +5,8 @@
 // ============================================================================
 'use strict';
 
-const POMPON_FUR = ['#7a2e4f', '#b5507a', '#e27fa6', '#ffb3cf', '#ffe1ec'];   // cotton-candy curls
-const POMPON_SKIN = ['#8c4a55', '#c77886', '#eea5ae', '#ffd0d2', '#fff0ee'];  // the shaved parts
+const POMPON_FUR = ['#7a1f4c', '#c2427f', '#f06aa4', '#ffa8cc', '#ffe0ee'];   // cotton-candy curls
+const POMPON_SKIN = ['#9a5e58', '#d09384', '#f4c6b4', '#ffe4d8', '#fff6f0'];  // the shaved parts (warm cream)
 const POMPON_BOW = ['#5e0c33', '#a3185a', '#f0327f', '#ff82b4', '#ffd1e4'];
 const POMPON_VAN_FUR = ['#5e4024', '#9c7646', '#d2ad73', '#efd7a4', '#fff4da'];   // Afghan silk
 const POMPON_VAN_LILAC = ['#2b1450', '#4c2a86', '#7a4fc0', '#a987e6', '#d8c6fa'];
@@ -17,7 +17,7 @@ VOICES.pompon = { base: 81, scale: [0, 4, 7, 9, 12], inst: 'p12', len: .04 };
 VOICES.vanesa = { base: 62, scale: [0, 1, 5, 7], inst: 'p50', len: .055 };
 
 // ---------------------------------------------------------------- textures --
-const pomponCurlTex = (seed = 1, sz = 3.2) => { const c = clumpTex(sz, .42, seed, 1, 1.15); return (x, y) => c(x, y) + .04; };
+const pomponCurlTex = (seed = 1, sz = 3.2) => { const c = clumpTex(sz * 1.15, .34, seed, 1, 1.05); return (x, y) => c(x, y) + .05; };
 const pomponSilkTex = (x, y) => Math.sin(x * 1.25 + Math.sin(y * .11) * 2.2) * .13 + (hash2(fl(x), 0, 3) - .5) * .06;
 const pomponCurlEdge = (f, seed = 0, amp = 1.1) => SD.curls(f, amp, 1.15, seed);
 
@@ -56,7 +56,7 @@ function pomponBody(pose = 'idle') {
     const pawL = SD.circle(P.l[0], P.l[1], 2.5), pawR = SD.circle(P.r[0], P.r[1], 2.5);
     const earLS = SD.ellipse(19.3, 38, 5.8, 11.8), earRS = SD.ellipse(44.7, 38, 5.8, 11.8);
     const headS = SD.ellipse(cx0, 29.5, 11, 10.4);
-    const face = SD.smooth(2.5, SD.ellipse(cx0, 32, 7.8, 7.4), SD.ellipse(cx0, 36.2, 5.4, 4.8));
+    const face = SD.smooth(2.5, SD.ellipse(cx0, 32, 8.8, 8), SD.ellipse(cx0, 36.4, 5.8, 5));
     const knotS = SD.circle(cx0, 15, 11.4), knot = pomponCurlEdge(knotS, 7, 1.2);
     const aZ = front ? 8 : 3.5;
     const c = model(64, 100, [
@@ -96,17 +96,17 @@ function pomponBowAt(g, x, y, s) {
 }
 // idol face: big glossy eyes with lashes, blush, singing mouth
 function pomponFace(g, cx0, ex) {
-  const K = '#2a0f22', L = RAMP.pink, ey = 28, lx = cx0 - 7, rx = cx0 + 3;
+  const K = '#2a0f22', L = RAMP.pink, ey = 28, lx = cx0 - 8, rx = cx0 + 2;
   const eye = (x, look = 0) => {
-    rect(g, x + 1, ey, 3, 6, K); rect(g, x, ey + 1, 5, 4, K);
-    rect(g, x + 1, ey + 1, 3, 4, '#5a2350'); rect(g, x + 1, ey + 3, 3, 2, '#9c3f7d');
-    px(g, x + 1 + look, ey + 1, '#ffffff'); px(g, x + 2 + look, ey + 1, '#ffffff'); px(g, x + 1 + look, ey + 2, '#ffffff'); px(g, x + 3, ey + 4, '#ffd1e4');
+    rect(g, x + 1, ey - 1, 4, 8, K); rect(g, x, ey, 6, 6, K);
+    rect(g, x + 1, ey, 4, 6, '#5a2350'); rect(g, x + 1, ey + 3, 4, 3, '#b0508f'); hline(g, x + 2, x + 3, ey + 5, '#ff9ccb');
+    rect(g, x + 1 + look, ey, 2, 2, '#ffffff'); px(g, x + 1 + look, ey + 2, '#ffffff'); px(g, x + 4, ey + 4, '#ffd1e4');
     // lashes on the outer corner
-    if (x < cx0) { px(g, x - 1, ey, K); px(g, x - 2, ey - 1, K); px(g, x, ey - 1, K); } else { px(g, x + 5, ey, K); px(g, x + 6, ey - 1, K); px(g, x + 4, ey - 1, K); }
+    if (x < cx0) { px(g, x - 1, ey, K); px(g, x - 2, ey - 1, K); px(g, x, ey - 2, K); } else { px(g, x + 6, ey, K); px(g, x + 7, ey - 1, K); px(g, x + 5, ey - 2, K); }
   };
   const shut = (x, up) => { if (up) { px(g, x, ey + 3, K); hline(g, x + 1, x + 3, ey + 2, K); px(g, x + 4, ey + 3, K); } else { hline(g, x, x + 4, ey + 3, K); } if (x < cx0) px(g, x - 1, ey + 2, K); else px(g, x + 5, ey + 2, K); };
   const star = x => { drawStar(g, x + 2.5, ey + 3, 3.6, '#fff27a'); px(g, x + 2, ey + 3, '#ffffff'); };
-  const blush = () => { for (const bx of [cx0 - 9, cx0 + 6]) { px(g, bx, 35, L[3]); px(g, bx + 2, 35, L[3]); px(g, bx + 1, 36, L[3]); } };
+  const blush = () => { for (const bx of [cx0 - 9, cx0 + 6]) { rect(g, bx, 35, 3, 2, '#ff8fb8'); px(g, bx + 1, 35, '#ffc2da'); } };
   const mouth = kind => {
     const y = 40;
     if (kind === 'sing') { rect(g, cx0 - 1, y - 1, 3, 3, INK); px(g, cx0, y, L[2]); return; }
@@ -374,9 +374,9 @@ const POMPON_SONGS = {
 defStage({
   id: 'pompon', name: 'POMPÓN', sub: '«Un pompón, mil corazones»', verb: '¡CORTA!', mech: 'cut', bpm: 126,
   games: ['flequillo', 'pompones', 'nudos', 'chuches', 'cinta'], boss: 'gala', bossAt: 10, speedAt: [4, 7], unlockBy: 'rizos',
-  portrait: () => mdl('pomponPortrait', () => { const c = mkCanvas(64, 112); c.g.drawImage(pomponBody('ready'), 0, 12); return c; }),
+  portrait: (k) => mdl('pomponPortrait' + (k === 'sad' ? 'S' : ''), () => { const c = mkCanvas(64, 112); c.g.drawImage(pomponBody(k === 'sad' ? 'over' : 'ready'), 0, 12); return c; }),
   face: () => pomponHead('idle'),
-  rim: POMPON_BOW[3], cardCols: [POMPON_BOW[1], POMPON_BOW[2]], nameFill: ['#ffffff', '#ffd1e4', '#ff5d9e'], tip: 'Desliza el dedo rápido y en línea: ¡tijeretazo!',
+  rim: POMPON_BOW[3], cardCols: ['#2b1557', '#4b2590'], nameFill: ['#ffffff', '#ffd1e4', '#ff5d9e'], tip: 'Desliza el dedo rápido y en línea: ¡tijeretazo!',
   songs: POMPON_SONGS, intro: 'pompon_in', outro: 'pompon_out',
   peek: (g, x, y, t) => drawS(g, pomponHead(fl(t * .7) % 2 ? 'win' : 'idle'), x, y - 8, { ax: .5, ay: 1 }),
   room: {
@@ -445,3 +445,37 @@ function pomponGum(g, x, y, t, s = 1) {
   // strings stretching down
   for (let i = 0; i < 3; i++) { const sx = x + (-8 + i * 8) * s, len = (10 + Math.sin(t * 3 + i) * 3) * s; for (let q = 0; q < len; q++) px(g, sx + Math.sin(q * .4 + i) * s, y + 5 * s + q, q % 3 ? '#7fe3b0' : '#c8ffe0'); }
 }
+
+// ---------------------------------------------------------------- chibi -----
+// menu walker (WarioWare-Touched! style); frames walk0 | walk1 | idle | happy | held
+function pomponChibi(fr = 'idle') {
+  return mdl('chibi:pompon:' + fr, () => {
+    const W = 26, H = 37, c = mkCanvas(W, H), g = c.g, F = ['#8e2a5e', '#d4508f', '#ff86ba', '#ffc2dc', '#fff0f6'], SK = '#ffe8dd', SKs = '#f4c3b8';
+    const st = fr === 'walk0' ? 1 : fr === 'walk1' ? -1 : 0, held = fr === 'held', happy = fr === 'happy', Y = v => v - (happy ? 2 : 0) + 1;
+    // every piece gets its own ink outline, then they stack like a cartoon cel
+    const layer = fn => { const L = mkCanvas(W, H); fn(L.g); g.drawImage(outlined(L, INK, false), -1, -1); };
+    const puff = (q, x, y, r) => { for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; disc(q, x + Math.cos(a) * r * .72, y + Math.sin(a) * r * .72, r * .5, Math.sin(a) > .3 ? F[1] : F[2]); } disc(q, x, y, r * .78, F[2]); disc(q, x - r * .28, y - r * .28, r * .42, F[3]); px(q, x - r * .35, y - r * .45, F[4]); };
+    layer(q => puff(q, 20, Y(22), 2.8));
+    const legs = held ? [[8, 1], [16, 1]] : [[10 + st, st > 0 ? -1 : 0], [14 - st, st < 0 ? -1 : 0]];
+    layer(q => { for (const [x, dy] of legs) { rect(q, x, Y(26), 2, 6 + dy, SK); px(q, x + 1, Y(27), SKs); rect(q, x - 1, Y(34 + dy), 4, 2, SK); } });
+    layer(q => { for (const [x, dy] of legs) puff(q, x + 1, Y(31 + dy), 2.5); });
+    layer(q => { for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; disc(q, 13 + Math.cos(a) * 5.1, Y(22) + Math.sin(a) * 3.5, 2.4, i > 4 ? F[1] : F[2]); } ellipsePx(q, 13, Y(22), 5.4, 3.8, F[2]); ellipsePx(q, 12, Y(21), 3, 1.8, F[3]); });
+    const up = held || happy, rUp = up || fr === 'walk0' || fr === 'walk1';
+    for (const [x, u] of [[5, up], [19, rUp]]) layer(q => { if (u) { rect(q, x, Y(13), 2, 8, SK); puff(q, x + 1, Y(13), 2.2); } else { rect(q, x, Y(20), 2, 6, SK); puff(q, x + 1, Y(25), 2.2); } });
+    layer(q => { for (const ex of [5, 21]) { for (let j = 0; j < 3; j++) disc(q, ex, Y(11 + j * 3), 2.9, j === 2 ? F[1] : F[2]); disc(q, ex - 1, Y(11), 1.3, F[3]); } });
+    layer(q => { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; disc(q, 13 + Math.cos(a) * 5.2, Y(10) + Math.sin(a) * 4.3, 2.3, a > .3 && a < 2.8 ? F[1] : F[2]); } ellipsePx(q, 13, Y(10), 5.4, 4.6, F[2]); ellipsePx(q, 13, Y(12.5), 4.8, 3.8, SK); ellipsePx(q, 13, Y(14.5), 2.8, 1.8, '#fff4ee'); });
+    layer(q => puff(q, 13, Y(3.5), 4));
+    layer(q => { polyPx(q, [[13, Y(0)], [9, Y(-2)], [9, Y(2)]], POMPON_BOW[2]); polyPx(q, [[13, Y(0)], [17, Y(-2)], [17, Y(2)]], POMPON_BOW[2]); px(q, 10, Y(-1), POMPON_BOW[3]); px(q, 16, Y(-1), POMPON_BOW[3]); });
+    // face details (no outline)
+    for (const ex of [10, 15]) {
+      if (happy) { px(g, ex, Y(12), INK); px(g, ex + 1, Y(11), INK); px(g, ex + 2, Y(12), INK); }
+      else { rect(g, ex - (ex < 13 ? 1 : 0), Y(10), 3, 3, '#2a0f22'); px(g, ex - (ex < 13 ? 1 : 0), Y(10), '#ffffff'); px(g, ex + 1 - (ex < 13 ? 1 : 0), Y(10), '#ffffff'); px(g, ex + 1 - (ex < 13 ? 1 : 0), Y(12), '#b0508f'); px(g, ex + (ex < 13 ? -2 : 3), Y(9), '#2a0f22'); }
+    }
+    rect(g, 12, Y(13), 3, 1, INK);
+    if (held) rect(g, 12, Y(15), 3, 2, '#3e0d1c'); else if (happy) { rect(g, 11, Y(15), 5, 2, '#3e0d1c'); hline(g, 12, 14, Y(16), RAMP.pink[2]); } else { px(g, 11, Y(15), INK); hline(g, 12, 14, Y(16), INK); px(g, 15, Y(15), INK); }
+    px(g, 9, Y(14), RAMP.pink[2]); px(g, 17, Y(14), RAMP.pink[2]);
+    linePx(g, 18, Y(12), 16, Y(15), INK); px(g, 16, Y(15), '#6f7a92');
+    return c;
+  });
+}
+STAGES.pompon.chibi = pomponChibi;

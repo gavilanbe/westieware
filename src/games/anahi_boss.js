@@ -1,133 +1,194 @@
 // ============================================================================
-//  BOSS — El Rey Pulgón. Tap him while he sits; squash his minions before they
-//  bite; he leaps to the top screen and crashes down where his shadow shows.
+//  BOSS — El Inspector de Hacienda (¡PAPELEO!).
+//  He turns up at Westie BLVRD at the worst moment. Hand him the form he asks
+//  for (tap it) while clients' dogs pop up over the counter and the phone
+//  rings. His patience is the clock. The pay-off: "APROBADO"… and his own
+//  scruffy dog: "¿Tienes hueco para un corte?".
 // ============================================================================
 'use strict';
-function fleaKing(frame) {
-  return mdl('fleaKing' + frame, () => fleaKingAt(frame, 1.6));
-}
-function fleaKingAt(frame, k) {
-  return mdl('fleaKingK' + frame + k, () => {
-    const Bn = RAMP.mud, R = RAMP.red, Gd = RAMP.gold, S = (f) => (x, y) => f(x / k, y / k) * k;
-    const leg = frame === 'jump';
-    const legs = S(SD.union(...[0, 1, 2].map(i => leg ? SD.capsule(14 + i * 6, 26, 8 + i * 8, 36, 1.3, 1) : SD.capsule(14 + i * 6, 26, 12 + i * 7, 33, 1.3, 1.1))));
-    const body = S(SD.ellipse(22, 22, 12, 9)), head = S(SD.circle(33, 15, 6.5));
-    const cape = S(SD.poly([[12, 12], [26, 12], [20, 30], [6, 28]]));
-    const crown = S(SD.poly([[28, 9], [28, 3], [30.5, 6], [33, 1], [35.5, 6], [38, 3], [38, 9]]));
-    return model(Math.ceil(44 * k), Math.ceil(38 * k), [
-      { f: legs, ramp: Bn, z: 0, th: 1.5 },
-      { f: cape, ramp: R, z: .5, th: 4 },
-      { f: body, ramp: Bn, z: 1, th: 8, gloss: true },
-      { f: head, ramp: Bn, z: 2, th: 5 },
-      { f: crown, ramp: Gd, z: 3, th: 2, flatV: .8 },
-    ], { post: g => {
-      const K = INK, q = v => rd(v * k);
-      rect(g, q(33.5), q(12.5), 3, 3, '#ffffff'); px(g, q(34.5) + 1, q(13.5), K); rect(g, q(29.5), q(12.5), 3, 3, '#ffffff'); px(g, q(30.5) + 1, q(13.5), K);
-      linePx(g, q(28.5), q(10.5), q(32), q(12), K); linePx(g, q(37.5), q(10.5), q(34), q(12), K); // angry brows
-      hline(g, q(29), q(38), q(18), K); hline(g, q(29), q(38), q(18) + 1, '#3d2512'); px(g, q(28), q(19), K); px(g, q(39), q(19), K); px(g, q(27), q(20), K); px(g, q(40), q(20), K); // moustache
-      disc(g, q(33), q(3), 1.2, '#ff4060'); px(g, q(30.5), q(6), '#63a0ef'); px(g, q(35.5), q(6), '#63a0ef');
-      thickLine(g, q(38), q(16), q(43), q(20), 1, K); // proboscis
-    } });
+
+const HACIENDA_SONG = { spb: 4, loop: true, tracks: [
+  { i: 'brass', v: .5, n: 'E4 . G4 . B4 . G4 . A4 . C5 . B4 . G4 . E4 . G4 . B4 . E5 . D#5 . B4 . F#4 . B4 .' },
+  { i: 'pluck', v: .45, n: 'E5 E5 . E5 G5 . E5 . A5 A5 . A5 G5 . F#5 . E5 E5 . E5 G5 . B5 . C6 B5 A5 G5 F#5 . D#5 .' },
+  { i: 'bass', v: .9, n: 'E2 . E2 E3 . E2 B2 . A2 . A2 A3 . A2 E3 . E2 . E2 E3 . E2 B2 . B1 . B1 B2 . B1 F#2 .' },
+  { i: 'd', v: .85, n: 'k r h r s r h r k r h r s r s r k r h r s r h r k k h r s s s+x s' }] };
+
+// his own dog, for the punchline: a scruffy grey mop with a tongue
+function hacScruffy() {
+  return mdl('hacScruffy', () => {
+    const G = ['#5d5b69', '#8f8c99', '#c4c1cc', '#eceaf2'];
+    const bodyS = SD.ellipse(24, 26, 14, 11), headS = SD.circle(24, 13, 10);
+    return model(48, 42, [
+      { f: SD.shag(bodyS, 2.6, .35, 2), fs: bodyS, ramp: G, z: 0, th: 8, tex: clumpTex(3.5, .3, 3, 1.5) },
+      { f: SD.shag(headS, 2.8, .4, 6), fs: headS, ramp: G, z: 1, th: 8, tex: clumpTex(3, .3, 5, 1.6) },
+    ], { post: g => { disc(g, 24, 16, 2.2, INK); px(g, 23, 15, '#6e6390'); rect(g, 22, 19, 5, 4, RAMP.pink[2]); rect(g, 23, 19, 3, 1, RAMP.pink[1]); for (const x of [18, 29]) { hline(g, x - 2, x + 2, 11, G[0]); px(g, x, 12, '#ffffff'); } } });
   });
 }
+// the counter top at Westie BLVRD, seen from above (bottom screen)
+function hacCounter() {
+  return mdl('hacCounter', () => {
+    const c = mkCanvas(SW, SH), g = c.g, CR = RAMP.cream;
+    rect(g, 0, 0, SW, SH, CR[3]);
+    for (let y = 0; y < SH; y += 6) for (let x = (y / 6 % 2) * 24; x < SW; x += 48) rect(g, x, y, 24, 1, CR[2]);
+    for (let i = 0; i < 140; i++) px(g, hash2(i, 3) * SW, hash2(3, i) * SH, CR[4]);
+    rect(g, 0, 0, SW, 8, RAMP.gold[2]); rect(g, 0, 8, SW, 2, RAMP.gold[1]); rect(g, 0, 1, SW, 1, RAMP.gold[4]);
+    rect(g, 0, 176, SW, 16, CR[2]); rect(g, 0, 176, SW, 2, RAMP.gold[2]); rect(g, 0, 178, SW, 1, RAMP.gold[4]);
+    // pen pot with Anahí's scissors, the little WB bell
+    rect(g, 226, 18, 18, 22, INK); rect(g, 227, 19, 16, 20, RAMP.green[2]); rect(g, 227, 19, 16, 3, RAMP.green[3]);
+    drawS(g, scissorsSpr(), 232, 14, { rot: -1.4 }); linePx(g, 238, 18, 242, 6, INK); px(g, 242, 5, '#e23b4e');
+    disc(g, 16, 30, 7, INK); disc(g, 16, 30, 6, RAMP.gold[3]); disc(g, 14, 28, 2, RAMP.gold[4]); rect(g, 15, 21, 3, 3, INK);
+    return c;
+  });
+}
+function hacPhone(ring) {
+  return mdl('hacPhone' + (ring ? 'R' : ''), () => {
+    const c = mkCanvas(40, 30), g = c.g, CR = ['#c9b99a', '#efe3c8', '#fffaf0'];
+    polyPx(g, [[5, 28], [35, 28], [31, 12], [9, 12]], INK); polyPx(g, [[6, 27], [34, 27], [30, 13], [10, 13]], CR[1]); hline(g, 10, 30, 14, CR[2]);
+    for (const [x, y] of [[14, 18], [20, 18], [26, 18], [14, 22], [20, 22], [26, 22]]) { disc(g, x, y, 1.6, INK); px(g, x, y, CR[0]); }
+    const lift = ring ? -2 : 0; rect(g, 4, 6 + lift, 32, 6, INK); rect(g, 5, 7 + lift, 30, 4, CR[1]); rect(g, 3, 5 + lift, 7, 8, INK); rect(g, 30, 5 + lift, 7, 8, INK); rect(g, 4, 6 + lift, 5, 6, CR[1]); rect(g, 31, 6 + lift, 5, 6, CR[1]);
+    return c;
+  });
+}
+const HAC_DOGS = () => [RAMP.fur, RAMP.apricot, RAMP.grey, RAMP.caramel, RAMP.cream];
+
 defMG({
-  id: 'pulgon', stage: 'anahi', boss: true, name: 'El Rey Pulgón', cmd: '¡CAZA AL REY!', how: 'Toca al rey cuando se pare y aplasta a sus súbditos', mech: 'tap', beats: 16,
-  song: () => ANAHI_SONGS.boss,
+  id: 'hacienda', stage: 'anahi', boss: true, name: 'El Inspector de Hacienda', cmd: '¡PAPELEO!', mech: 'tap', beats: 16,
+  how: 'Dale el formulario que pide y atiende a perros y teléfono antes de que pierda la paciencia',
+  song: () => HACIENDA_SONG,
   init(g) {
-    g.hp = g.maxHp = [6, 7, 8][g.level - 1]; g.itch = 0; g.mins = [];
-    g.k = { x: 120, y: 120, st: 'sit', t: 0, sit: 1.1, air: false, high: false, flash: 0 };
-    g.taunt = 0; g.face = 'normal'; g.deadT = -1;
+    g.rounds = [4, 5, 6][g.level - 1]; g.round = 0; g.patience = 100; g.pile = 3;
+    g.used = []; g.forms = []; g.fly = null; g.denyT = -9; g.stampT = -9; g.nextAt = .4;
+    g.dogs = []; g.dogT = 1.3; g.phone = { ring: false, t: 0, next: [5.5, 4.5, 3.6][g.level - 1] };
+    g.mood = 'neutral'; g.endT = -1; g.hitT = -9;
   },
-  landSpot(g) { const x = g.r(40, 178); const y = 196 - 92 * Math.sqrt(Math.max(0, 1 - ((x - 118) / 150) ** 2)) + g.r(14, 44); return [x, y]; },
-  jump(g, high) {
-    const K = g.k, [x1, y1] = this.landSpot(g);
-    K.st = 'jump'; K.t = 0; K.x0 = K.x; K.y0 = K.y; K.x1 = x1; K.y1 = y1; K.high = high; K.dur = high ? 1.25 : .5; K.h = high ? 330 : g.r(30, 60);
-    sfx('boing', { pitch: high ? .8 : 1.2, vol: .5 });
+  newRound(g) {
+    const pool = MODELO_REQ.filter(r => !g.used.includes(r.n));
+    g.req = pool[fl(g.r(pool.length))]; g.used.push(g.req.n);
+    const n = [3, 4, 5][g.level - 1], opts = [g.req.n], wr = shuffle(MODELO_REQ.filter(r => r.n !== g.req.n).map(r => r.n).concat(MODELO_FAKE));
+    while (opts.length < n) opts.push(wr.pop());
+    shuffle(opts);
+    const slots = shuffle([[46, 52], [110, 48], [174, 52], [68, 116], [134, 118], [200, 114], [30, 118]]).slice(0, n);
+    g.forms = opts.map((num, i) => ({ num, x: -40, y: slots[i][1], tx: slots[i][0], ty: slots[i][1], rot: g.r(-.15, .15), wob: g.r(TAU) }));
+    g.shufAt = g.level >= 2 ? g.t + [9, 1.4, 1][g.level - 1] : -1;
+    sfx('swoosh', { pitch: .9 }); g.pile++;
   },
   update(g, dt) {
-    const K = g.k, rage = 1 + (g.maxHp - g.hp) * .12;
-    K.flash = Math.max(0, K.flash - dt * 5); g.taunt = Math.max(0, g.taunt - dt);
-    if (g.state === 'won') { K.x += 160 * dt; K.y -= 260 * dt; K.spin = (K.spin || 0) + dt * 14; return; }
-    if (g.state === 'lost') return;
-    K.t += dt;
-    if (K.st === 'sit') {
-      if (K.t > K.sit / rage) { g.itch = Math.min(100, g.itch + 7); g.fx.add({ k: 'txt', s: '¡ÑAM!', x: K.x, y: K.y - 18, life: .5, c: '#ff93bf' }); sfx('squish', { pitch: .6, vol: .4 }); this.jump(g, g.r() < .3 + (g.maxHp - g.hp) * .05); }
-    } else if (K.st === 'jump') {
-      const k = Math.min(1, K.t / K.dur);
-      K.x = lerp(K.x0, K.x1, k); K.y = lerp(K.y0, K.y1, k) - Math.sin(k * Math.PI) * K.h;
-      if (k >= 1) {
-        K.st = 'sit'; K.t = 0; K.sit = g.r(.7, 1.1);
-        if (K.high) { g.shake(4, .25); sfx('stamp'); g.fx.burst(K.x, K.y + 6, 12, { k: 'puff', c: ['#ffffff', '#dfe3f1'], sp0: 30, sp1: 90, r: 4 }); }
-        const n = g.hp <= g.maxHp / 2 ? 2 : 1;
-        for (let i = 0; i < n; i++) { const [mx, my] = this.landSpot(g); g.mins.push({ x: K.x, y: K.y, x0: K.x, y0: K.y, x1: mx, y1: my, j: 0, bite: 1.6 / rage, dead: false }); }
-        if (g.r() < .5) { g.taunt = .8; sfx('yip', { pitch: 2.2, vol: .4 }); }
+    if (g.state === 'play') {
+      g.patience -= [2, 2.8, 3.6][g.level - 1] * dt;
+      // rounds
+      if (!g.forms.length && !g.fly && g.t > g.nextAt) this.newRound(g);
+      for (const f of g.forms) { f.x = lerp(f.x, f.tx, .16); f.y = lerp(f.y, f.ty, .16); f.wob += dt * 3; }
+      if (g.shufAt > 0 && g.t > g.shufAt && g.forms.length) { const ps = shuffle(g.forms.map(f => [f.tx, f.ty])); g.forms.forEach((f, i) => { f.tx = ps[i][0]; f.ty = ps[i][1]; }); g.shufAt = g.level >= 3 ? g.t + 1.6 : -1; sfx('swoosh', { pitch: 1.4, vol: .5 }); }
+      // clients' dogs pop up over the counter edge
+      g.dogT -= dt;
+      if (g.dogT <= 0) {
+        g.dogT = g.r(...[[2.2, 3], [1.6, 2.4], [1.2, 1.9]][g.level - 1]);
+        const free = [40, 96, 152, 208].filter(x => !g.dogs.some(d => Math.abs(d.x - x) < 30 && d.st !== 'gone'));
+        if (free.length) { g.dogs.push({ x: g.pick(free), t: 0, st: 'up', wait: [1.7, 1.45, 1.2][g.level - 1], ramp: g.pick(HAC_DOGS()) }); sfx('boing', { pitch: 1.7, vol: .35 }); }
       }
-    } else if (K.st === 'hit') {
-      K.x += K.vx * dt; K.y += K.vy * dt; K.vy += 300 * dt;
-      if (K.t > .35) this.jump(g, false);
-    }
-    for (const m of g.mins) {
-      if (m.dead) { m.dt = (m.dt || 0) + dt; continue; }
-      if (m.j < 1) { m.j = Math.min(1, m.j + dt * 2.6); m.x = lerp(m.x0, m.x1, m.j); m.y = lerp(m.y0, m.y1, m.j) - Math.sin(m.j * Math.PI) * 30; continue; }
-      m.bite -= dt;
-      if (m.bite <= 0) { g.itch = Math.min(100, g.itch + 12); m.dead = true; m.dt = 0; m.bitten = true; g.fx.add({ k: 'txt', s: '¡pica!', x: m.x, y: m.y - 10, life: .5, c: '#ff93bf' }); g.shake(1.5, .1); }
-    }
-    // taps
-    if (IN.tap) {
-      const onKing = K.st !== 'jump' || !K.high || K.t / K.dur > .9;
-      if (onKing && dist(IN.x, IN.y, K.x, K.y - 8) < 28 && K.st !== 'hit') {
-        g.hp--; K.flash = 1; K.st = 'hit'; K.t = 0; K.vx = (K.x < 128 ? 1 : -1) * 60; K.vy = -120; HITSTOP = 5; buzz(20);
-        sfx('squish', { pitch: .7 }); sfx('stamp'); g.shake(3, .2);
-        g.fx.burst(K.x, K.y, 14, { k: 'star', c: [C.yellow, '#fff', C.pinkL], sp0: 60, sp1: 160 });
-        g.fx.add({ k: 'txt', s: pick(['¡AUCH!', '¡OUCH!', '¡MI CORONA!']), x: K.x, y: K.y - 24, life: .6, c: '#ffffff' });
-        if (g.hp <= 0) { g.win(); g.deadT = g.t; sfx('whoosh'); for (const m of g.mins) if (!m.dead) { m.dead = true; m.dt = 0; } }
-      } else {
-        let best = null, bd = 15; for (const m of g.mins) if (!m.dead) { const d = dist(IN.x, IN.y, m.x, m.y); if (d < bd) { bd = d; best = m; } }
-        if (best) { best.dead = true; best.dt = 0; sfx('squish', { pitch: 1.4 }); HITSTOP = 2; g.fx.burst(best.x, best.y, 6, { k: 'star', c: [C.yellow, '#fff'] }); }
+      for (const d of g.dogs) {
+        d.t += dt;
+        if (d.st === 'up' && d.t > d.wait + .25) { d.st = 'bark'; d.t = 0; g.patience -= 10; g.hitT = g.t; sfx('bark', { n: 2 }); g.shake(2, .15); }
+        else if ((d.st === 'bark' || d.st === 'happy') && d.t > .6) d.st = 'gone';
       }
+      g.dogs = g.dogs.filter(d => d.st !== 'gone');
+      // the phone
+      const P = g.phone; P.next -= dt;
+      if (!P.ring && P.next <= 0) { P.ring = true; P.t = 0; }
+      if (P.ring) { P.t += dt; if (FRAME % 18 === 0) sfx('blip', { pitch: 2.2 }); if (P.t > 2) { P.ring = false; P.next = g.r(3.5, 5.5); g.patience -= 8; g.hitT = g.t; sfx('buzz', { vol: .5 }); } }
+      // taps: dogs and phone first (they're quick), then forms
+      if (IN.tap) {
+        const d = g.dogs.find(d => d.st === 'up' && Math.abs(IN.x - d.x) < 24 && IN.y > 128);
+        if (d) { d.st = 'happy'; d.t = 0; sfx('gulp'); sfx('yip', { pitch: 1.4, delay: .08 }); g.fx.burst(d.x, 150, 6, { k: 'heart', c: '#ff5d9e', sp0: 20, sp1: 60 }); }
+        else if (P.ring && dist(IN.x, IN.y, 212, 150) < 22) { P.ring = false; P.next = g.r(3.5, 5.5); sfx('select'); g.fx.add({ k: 'txt', s: '¡Ahora no!', x: 212, y: 128, life: .6, c: '#ffffff' }); }
+        else if (!g.fly) {
+          const f = g.forms.find(f => Math.abs(IN.x - f.x) < 26 && Math.abs(IN.y - f.y) < 32);
+          if (f) {
+            if (f.num === g.req.n) { g.fly = { f, t: 0 }; g.forms = g.forms.filter(q => q !== f); sfx('swoosh', { pitch: 1.6 }); }
+            else { g.denyT = g.t; g.patience -= 20; g.hitT = g.t; sfx('stamp'); sfx('buzz'); HITSTOP = 4; g.shake(4, .25); buzz([40, 30, 40]); f.tx = f.tx + g.r(-10, 10); }
+          }
+        }
+      }
+      if (g.fly) {
+        g.fly.t += dt;
+        if (g.fly.t > .3 && !g.fly.done) {
+          g.fly.done = true; g.stampT = g.t; g.round++; g.patience = Math.min(100, g.patience + 9); sfx('stamp'); sfx('coin', { delay: .1 }); HITSTOP = 3;
+          g.forms.forEach(q => { q.tx = -60; }); // clear the counter for the next round
+          if (g.round >= g.rounds) { g.win(); g.endT = g.t; g.mood = 'happy'; sfx('sparkle', { delay: .2 }); sfx('bark', { pitch: .8, delay: .9 }); }
+          else g.nextAt = g.t + .6;
+        }
+        if (g.fly.t > .8) { g.fly = null; if (g.state === 'play') g.forms = []; }
+      }
+      if (g.patience <= 0) { g.patience = 0; g.lose(); g.endT = g.t; g.mood = 'angry'; sfx('boom'); g.shake(5, .4); }
+      else g.mood = g.t - g.hitT < .6 || g.t - g.denyT < .6 ? 'angry' : g.patience < 35 ? 'glare' : 'neutral';
     }
-    g.itch = Math.max(0, g.itch - dt * 2);
-    if (g.itch >= 100) { g.lose(); sfx('whine'); }
   },
   draw(g, c) {
-    c.drawImage(tilesBg(), 0, 0);
-    c.drawImage(westieBackBig(), 0, 0);
-    const face = g.state === 'won' ? 'happy' : g.state === 'lost' ? 'dizzy' : g.itch > 66 ? 'grr' : g.itch > 33 ? 'wow' : 'normal';
-    drawS(c, buleHead(face), 214, 70 + (g.itch > 66 ? Math.sin(g.t * 40) * 1.5 : 0), { rot: -.12 });
-    for (const m of g.mins) { if (m.dead) { if (m.dt < .5 && !m.bitten) drawS(c, splatSpr(), m.x, m.y, { alpha: 1 - m.dt / .5 }); continue; } drawS(c, fleaSpr(fl(g.t * 10) % 2), m.x, m.y); }
-    const K = g.k;
-    if (K.st === 'jump' && K.high) { const k = K.t / K.dur; shadowOval(c, K.x1, K.y1 + 6, 10 * k + 2, 3 * k + 1, .7); if (k > .6 && fl(g.t * 12) % 2) ringPx(c, K.x1, K.y1 + 6, 12, '#ff4060'); }
-    const onBottom = !(K.st === 'jump' && K.high && K.y < -20);
-    if (onBottom) {
-      const img = K.flash > 0 && fl(K.flash * 10) % 2 ? silhouette(fleaKing('sit'), '#ffffff') : fleaKing(K.st === 'jump' ? 'jump' : 'sit');
-      drawS(c, img, K.x, K.y, { ay: .8, rot: K.spin || 0, flip: K.st === 'jump' && K.x1 < K.x0 });
-      if (g.taunt > 0 && g.state === 'play') shout(c, '¡JA, JA!', K.x + 20, K.y - 30, .8 - g.taunt);
+    c.drawImage(hacCounter(), 0, 0);
+    // the paper pile grows with every round
+    for (let i = 0; i < Math.min(14, g.pile); i++) { rect(c, 6 + (i % 2), 150 - i * 3, 34, 20, INK); rect(c, 7 + (i % 2), 151 - i * 3, 32, 18, i % 3 ? '#fdfbf5' : '#eef1f6'); }
+    // forms on the counter
+    for (const f of g.forms) drawS(c, modeloForm(f.num), f.x, f.y + Math.sin(f.wob) * 1, { rot: f.rot });
+    if (g.fly) { const k = Math.min(1, g.fly.t / .3); drawS(c, modeloForm(g.fly.f.num), lerp(g.fly.f.x, 128, k), lerp(g.fly.f.y, -40, E.inQ(k)), { rot: g.fly.f.rot * (1 - k) }); }
+    // the phone
+    const P = g.phone, shakeX = P.ring ? Math.sin(g.t * 60) * 2 : 0;
+    drawS(c, hacPhone(P.ring && fl(g.t * 12) % 2), 212 + shakeX, 152, {});
+    if (P.ring) { txt(c, '¡RIIING!', 212, 126 + Math.sin(g.t * 20), '#e23b4e', { align: 'c', out: '#ffffff', bold: true }); ringPx(c, 212, 150, 18 + (g.t * 40 % 8), '#e23b4e'); }
+    // dogs popping over the counter edge
+    for (const d of g.dogs) {
+      const up = d.st === 'up' ? Math.min(1, d.t / .22) : d.st === 'happy' ? 1 - Math.min(1, d.t / .4) : d.st === 'bark' ? 1 : 0;
+      const ex = d.st === 'happy' ? 'love' : d.st === 'bark' ? 'grr' : 'wow';
+      c.save(); c.beginPath(); c.rect(0, 0, SW, 178); c.clip();
+      drawS(c, buleHead(ex, d.ramp), d.x, 204 - up * 60, {});
+      c.restore();
+      // paws on the counter edge
+      if (up > .6) for (const s of [-1, 1]) { ellipsePx(c, d.x + s * 14, 176, 6, 4, INK); ellipsePx(c, d.x + s * 14, 175, 5, 3, d.ramp[3]); }
+      if (d.st === 'bark') txt(c, '¡GUAU!', d.x, 124, '#ffffff', { align: 'c', out: INK, bold: true });
+      if (d.st === 'up' && d.t > d.wait * .6 && fl(g.t * 8) % 2) txt(c, '!', d.x + 22, 138, '#e23b4e', { out: '#ffffff', bold: true });
     }
-    if (g.state === 'won' && g.t - g.deadT < 1.4) shout(c, '¡VOLVERÉ!', clamp(K.x, 40, 216), clamp(K.y + 30, 30, 170), g.t - g.deadT);
+    // DENEGADO
+    if (g.t - g.denyT < .7) { const k = spring(g.t - g.denyT, 2.6, 7); drawS(c, hacStamp('DENEGADO', '#e0283c'), 128, 90, { rot: -.18, s: lerp(2.4, 1, Math.min(1, k)) }); }
   },
   top(g, c) {
-    // boss HUD: name, crown hearts, itch meter
-    const K = g.k;
-    panel(c, 6, 26, 118, 38, '#fff8e6', { r: 5 });
-    drawS(c, fleaKingAt('sit', 1), 24, 46, { s: 1 });
-    txt(c, 'REY PULGÓN', 44, 32, INK, { bold: true });
-    for (let i = 0; i < g.maxHp; i++) drawHeart(c, 48 + i * 10, 50, i < g.hp ? '#ff4060' : '#c8c6d3', 1);
-    panel(c, 132, 26, 118, 38, '#fff8e6', { r: 5 });
-    txt(c, 'PICOR', 140, 32, INK, { bold: true });
-    rect(c, 140, 45, 102, 10, INK); rect(c, 141, 46, 100, 8, '#dce7ea');
-    const w = rd(g.itch), col = g.itch > 66 ? '#ff4060' : g.itch > 33 ? '#ffb020' : '#5bd18b';
-    rect(c, 141, 46, w, 8, col); rect(c, 141, 46, w, 2, '#ffffff');
-    // the king flying over the top screen during a high jump
-    if (K.st === 'jump' && K.high) {
-      const k = K.t / K.dur, yy = lerp(K.y0, K.y1, k) - Math.sin(k * Math.PI) * K.h;
-      const ty = yy + SH + HINGE; // same world, shifted up one screen
-      if (ty > -30 && ty < SH + 30) drawS(c, fleaKing('jump'), K.x, ty, { ay: .8 });
-    }
+    c.drawImage(salonBackdrop(), 0, 0);
+    c.globalAlpha = .35; rect(c, 0, 0, SW, SH, INK); c.globalAlpha = 1;
+    // the inspector behind the reception counter
+    const shake = g.mood === 'angry' ? Math.sin(g.t * 50) * 1.5 : 0;
+    drawS(c, funcionario('inspector', g.mood), 70 + shake, 150, { ax: .5, ay: 1 });
+    if (g.mood === 'angry') for (const s of [-1, 1]) { const k = (g.t * 2) % 1; disc(c, 70 + s * 18, 70 - k * 12, 3 + k * 3, '#ffffff'); }
+    if (g.state === 'won' && g.t - g.endT > .6) { const k = spring(g.t - g.endT - .6, 2.4, 6); drawS(c, hacScruffy(), 108, 146 - Math.abs(Math.sin(g.t * 6)) * 3, { ax: .5, ay: 1, s: 1.35 * Math.min(1.1, k) }); }
+    rect(c, 10, 140, 124, 36, INK); rect(c, 11, 141, 122, 34, RAMP.cream[3]); rect(c, 11, 141, 122, 3, RAMP.gold[2]);
+    for (const x of [20, 60, 100]) { rect(c, x, 148, 30, 22, RAMP.cream[2]); ringRect(c, x, 148, 30, 22, 1, RAMP.gold[1]); disc(c, x + 15, 159, 1.6, RAMP.gold[1]); }
+    // his last stamped form in hand
+    if (g.t - g.stampT < .9 && g.stampT > 0) { const k = spring(g.t - g.stampT, 2.4, 7); drawS(c, modeloForm(g.used[g.used.length - 1] || '303'), 108, 118, { rot: .08, s: .7 + .3 * Math.min(1, k) }); drawS(c, hacStamp('APROBADO', '#2a9a5a'), 108, 118, { rot: -.2, s: .5 }); }
+    // speech bubble
+    const bx = 138, by = 50, bw = 112, bh = 62;
+    panel(c, bx, by, bw, bh, '#ffffff', { r: 8 }); polyPx(c, [[bx + 4, by + 30], [bx - 14, by + 40], [bx + 4, by + 42]], INK); polyPx(c, [[bx + 5, by + 32], [bx - 10, by + 39], [bx + 5, by + 40]], '#ffffff');
+    let say;
+    if (g.state === 'won') say = g.t - g.endT > .6 ? 'Por cierto… ¿tienes hueco para un corte?' : '¡Todo en regla!';
+    else if (g.state === 'lost') say = '¡Se acabó! ¡Multa por desorden!';
+    else if (g.req && g.forms.length) say = g.req.a + (g.level < 3 ? ' (el ' + g.req.n + ')' : '') + '. ¡Rapidito!';
+    else say = g.round ? 'Muy bien… ¡el siguiente!' : 'Inspección de Hacienda. Papeles, por favor.';
+    txt(c, say, bx + 8, by + 8, INK, { wrap: bw - 14 });
+    // rounds: little forms, stamped ones get a tick
+    for (let i = 0; i < g.rounds; i++) { const x = 140 + i * 18, y = 118; rect(c, x, y, 13, 16, INK); rect(c, x + 1, y + 1, 11, 14, i < g.round ? '#d2f5e4' : '#fdfbf5'); if (i < g.round) { linePx(c, x + 3, y + 8, x + 5, y + 11, '#2a9a5a'); linePx(c, x + 5, y + 11, x + 10, y + 4, '#2a9a5a'); } }
+    // patience meter
+    panel(c, 64, 170, 186, 18, '#fff8e6', { r: 4 });
+    txt(c, 'PACIENCIA', 70, 175, INK, { bold: true });
+    const w = rd(clamp(g.patience, 0, 100) * 1.08), col = g.patience > 55 ? '#5bd18b' : g.patience > 25 ? '#ffb020' : '#e23b4e';
+    rect(c, 134, 174, 110, 10, INK); rect(c, 135, 175, 108, 8, '#dce7ea'); rect(c, 135, 175, w, 8, col); rect(c, 135, 175, w, 2, '#ffffff');
+    if (g.state === 'won' && g.t - g.endT < .75) { const k = spring(g.t - g.endT, 2.4, 6); drawS(c, hacStamp('¡APROBADO!', '#2a9a5a'), 96, 96, { rot: -.12, s: lerp(2.2, 1, Math.min(1, k)), alpha: g.t - g.endT > .55 ? (.75 - (g.t - g.endT)) / .2 : 1 }); }
+    if (g.state === 'lost') { const k = spring(g.t - g.endT, 2.4, 6); drawS(c, hacStamp('¡MULTA!', '#e0283c'), 128, 96, { rot: .1, s: lerp(2.4, 1.2, Math.min(1, k)) }); }
   },
   bot(g) {
-    const K = g.k, m = g.mins.find(m => !m.dead && m.j >= 1);
-    if (K.st === 'sit' && K.t > .05) return { x: K.x, y: K.y - 4, down: fl(g.t * 20) % 3 === 0 };
-    if (m) return { x: m.x, y: m.y, down: fl(g.t * 20) % 3 === 0 };
+    const pulse = fl(g.t * 20) % 3 === 0;
+    const d = g.dogs.find(d => d.st === 'up' && d.t > .2); if (d) return { x: d.x, y: 160, down: pulse };
+    if (g.phone.ring && g.phone.t > .25) return { x: 212, y: 150, down: pulse };
+    if (!g.fly && g.req) { const f = g.forms.find(f => f.num === g.req.n && Math.abs(f.x - f.tx) < 3 && Math.abs(f.y - f.ty) < 3); if (f) return { x: f.x, y: f.y, down: pulse }; }
     return { down: false };
+  },
+  hint(g) {
+    const d = g.dogs.find(d => d.st === 'up'); if (d) return { x: d.x, y: 160, mech: 'tap' };
+    const f = g.req && g.forms.find(f => f.num === g.req.n); return f ? { x: f.tx, y: f.ty, mech: 'tap' } : null;
   },
 });

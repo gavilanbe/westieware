@@ -14,7 +14,8 @@ function playCut(id, done) { _cutDone = done; go(CUT, { id }); }
 
 const WHO = {
   anahi: { name: 'Anahí', col: '#2a7356', voice: 'anahi' },
-  bule: { name: 'Bule', col: '#8587ab', voice: 'bule' },
+  keiko: { name: 'Keiko', col: '#8587ab', voice: 'keiko' },
+  bule: { name: 'Keiko', col: '#8587ab', voice: 'keiko' }, // old key, kept as an alias
   guru: { name: 'Gurú', col: '#6b3fb0', voice: 'guru' },
   narr: { name: '', col: '#1d1424', voice: 'narr' },
 };

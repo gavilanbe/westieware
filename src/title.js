@@ -21,7 +21,7 @@ function drawLogo(g, x, y, t, o = {}) {
     // a gilt sunburst medallion behind the westie
     for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + T * .4; polyPx(g, [[ex, ey + 2], [ex + Math.cos(a - .1) * 36 * ek, ey + 2 + Math.sin(a - .1) * 36 * ek], [ex + Math.cos(a + .1) * 36 * ek, ey + 2 + Math.sin(a + .1) * 36 * ek]], i % 2 ? RAMP.gold[3] : RAMP.gold[2]); }
     disc(g, ex, ey + 2, 31 * ek, INK); disc(g, ex, ey + 2, 30 * ek, RAMP.gold[3]); disc(g, ex, ey + 2, 27 * ek, RAMP.green[2]); disc(g, ex - 2, ey, 22 * ek, RAMP.green[3]);
-    if (ek > .6) drawS(g, buleHead(fl(T * 1.3) % 5 === 0 ? 'wink' : 'happy'), ex, ey + 4, { s: 1 });
+    if (ek > .6) drawS(g, keikoHead(fl(T * 1.3) % 5 === 0 ? 'wink' : 'happy'), ex, ey + 6, { s: 1 });
   }
   // WESTIE WARE: letters drop in one by one, then keep a lazy wave
   mord(g, 'WESTIE WARE', x, y - 6, LOGO_ST, { anim: (i) => {
@@ -92,8 +92,8 @@ function drawPawPrint(g, x, y, col, rot = 0) {
 }
 // who peeks on the title screen: everyone you've met so far
 function titlePeekers() {
-  const out = [(g, x, y) => drawS(g, buleHead('happy'), x, y - 12, { ax: .5, ay: 1 })];
-  out.push((g, x, y, t) => drawAnahi(g, x, y + 40, fl(t * .5) % 2 ? 'win' : 'ready', t));
+  const out = [(g, x, y) => drawS(g, keikoHead('happy'), x, y - 8, { ax: .5, ay: 1 })];
+  out.push((g, x, y, t) => drawAnahiFull(g, x, y + 86, fl(t * .5) % 2 ? 'thumbs' : 'idle', t, { k: .6 }));
   for (const id of STORY_STAGES.concat(['superwestie'])) {
     const d = STAGES[id]; if (!d || id === 'anahi' || !stageUnlocked(id) || !d.face) continue;
     out.push((g, x, y) => { const f = d.face(); drawS(g, f, x, y + 4, { ax: .5, ay: 1 }); });

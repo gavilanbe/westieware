@@ -17,7 +17,9 @@ const LAB = {
   },
   drawBot(g) {
     if (this.page === 2) { g.drawImage(salonBackdrop(), 0, 0); drawS(g, westieSide(1, 'stand', 'normal'), 60, 150, { ax: .5, ay: 1 }); drawS(g, westieSide(.55, 'wag', 'happy'), 160, 150, { ax: .5, ay: 1 }); drawS(g, westieSide(.55, 'wet', 'sad'), 215, 150, { ax: .5, ay: 1 }); drawWestieSit(g, 120, 190, 'happy'); drawS(g, lifeWestie(), 150, 20); drawS(g, lifeWestie(true), 175, 20); drawS(g, wbSign(), 128, 60); return; }
-    if (this.page % 2 === 1) { rect(g, 0, 0, SW, SH, '#dce7ea'); const ps = Object.keys(ANA_POSES); ps.forEach((p, i) => drawAnahi(g, 32 + (i % 5) * 48, 96 + fl(i / 5) * 90, p, 0)); return; }
+    if (this.page === 3) { rect(g, 0, 0, SW, SH, '#8fd0ff'); g.drawImage(anahiSprite('thumbs', 1), 8, -12); g.drawImage(anahiSprite('headhand', 1), 110, -12); return; }
+    if (this.page === 4) { rect(g, 0, 0, SW, SH, '#ffd1e4'); ['idle', 'thumbs', 'sad', 'wow', 'euro', 'work', 'cheer', 'talk'].forEach((p, i) => drawAnahiFull(g, 18 + i * 31, 186, p, 0, { k: .45 })); return; }
+    if (this.page % 2 === 1) { rect(g, 0, 0, SW, SH, '#dce7ea'); ['idle', 'thumbs', 'sad', 'wow', 'euro'].forEach((p, i) => drawAnahiFull(g, 26 + i * 51, 188, p, 0, { k: .6 })); return; }
     rect(g, 0, 0, SW, SH, '#8f7fb0');
     const exs = ['normal', 'happy', 'wow', 'sad', 'wink', 'grr'];
     exs.forEach((e, i) => drawS(g, buleHead(e), 36 + (i % 3) * 92, 40 + fl(i / 3) * 70));
@@ -65,6 +67,29 @@ function runMgTests() {
   document.documentElement.setAttribute('data-result', JSON.stringify(out));
 }
 
+// ?test=perf[&only=rizos] — what one frame of each microgame costs (update + draw), bot playing
+function runPerfTest() {
+  const only = QS.get('only'), out = {};
+  const ids = MG_ORDER.filter(id => MG[id].stage !== 'test' && (!only || only.split(',').includes(id) || only.split(',').includes(MG[id].stage)));
+  BOTIN.on = true;
+  for (const id of ids) {
+    const def = MG[id]; RNG = mulberry32(77);
+    const g = mgNew(id, 2, 140); IN.down = false; BOTIN.down = false;
+    const times = [], maxT = def.boss ? 20 : def.beats * g.spb; let first = 0, n = 0;
+    while (g.t < maxT && n < 600 && !(def.boss && g.state !== 'play')) {
+      const o = def.bot ? def.bot(g) || {} : {};
+      BOTIN.x = o.x != null ? o.x : BOTIN.x; BOTIN.y = o.y != null ? o.y : BOTIN.y; BOTIN.down = !!o.down;
+      pollInput(); botInput(); if (HITSTOP > 0) HITSTOP = 0;
+      const t0 = performance.now(); mgUpdate(g, STEP); mgDraw(g); const ms = performance.now() - t0;
+      if (n++ === 0) first = ms; else times.push(ms);
+    }
+    times.sort((a, b) => a - b);
+    const avg = times.reduce((a, b) => a + b, 0) / Math.max(1, times.length);
+    out[id] = { first: +first.toFixed(0), avg: +avg.toFixed(2), p95: +(times[fl(times.length * .95)] || 0).toFixed(1), max: +(times[times.length - 1] || 0).toFixed(1), n };
+  }
+  document.documentElement.setAttribute('data-result', JSON.stringify(out));
+}
+
 // ?test=stage&id=anahi&secs=240 — a whole stage played by the bot, synchronously
 function runStageTest() {
   BOTIN.on = true; RNG = mulberry32(+(QS.get('seed') || 5));
@@ -92,8 +117,8 @@ const ICON = {
     g.save(); g.beginPath(); g.rect(x0, 0, s, s); g.clip();
     const R = mask ? 58 : 74;
     disc(g, cx0, cy0 + 4, R + 4, INK); disc(g, cx0, cy0 + 4, R + 2, RAMP.gold[3]); disc(g, cx0, cy0 + 4, R - 3, RAMP.green[2]); disc(g, cx0 - 4, cy0, R - 14, RAMP.green[3]);
-    const head = buleHead('happy'); g.save(); g.translate(cx0, cy0 + 8); const k = mask ? 1.6 : 2; g.scale(k, k); g.drawImage(head, -32, -32); g.restore();
-    if (!mask) mord(g, 'WW', cx0, s - 44, { u: 1.9, r: 2.1, rim: 2, sy: 3 });
+    const head = keikoHead('happy'); g.save(); g.translate(cx0, cy0 + (mask ? 10 : -2)); const k = mask ? 1.6 : 1.85; g.scale(k, k); g.drawImage(head, -32, -33); g.restore();
+    if (!mask) mord(g, 'WW', cx0, s - 38, { u: 1.9, r: 2.1, rim: 2, sy: 3 });
     g.restore();
   },
   drawBot(g) { rect(g, 0, 0, SW, SH, '#000'); },
@@ -154,6 +179,12 @@ function runCutTest() {
     _cutDone = null; TRANS = null;
   }
   document.documentElement.setAttribute('data-result', JSON.stringify(rep));
+}
+// ?test=icon[&mask=1] — the app icon at its native 192x192 (tools/icons.sh scales it)
+function runIcon() {
+  const c = mkCanvas(SW, SH); ICON.drawTop(c.g);
+  const o = mkCanvas(192, 192); o.g.drawImage(c, 32, 0, 192, 192, 0, 0, 192, 192);
+  document.documentElement.setAttribute('data-result', o.toDataURL('image/png'));
 }
 // ?test=thumb — the 320x200 portfolio label (scaled x2 to 640x400 by tools)
 function runThumb() {

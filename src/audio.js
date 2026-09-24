@@ -194,7 +194,8 @@ function barkOne(t, d, p, v, len = .12) {
 // dialogue voices: a short pitched blip per syllable
 const VOICES = {
   anahi: { base: 72, scale: [0, 2, 4, 7, 9], inst: 'p25', len: .045 },
-  bule: { base: 79, scale: [0, 3, 5, 7], inst: 'p12', len: .035 },
+  keiko: { base: 81, scale: [0, 3, 5, 7, 10], inst: 'p12', len: .035 },
+  bule: { base: 81, scale: [0, 3, 5, 7, 10], inst: 'p12', len: .035 },
   guru: { base: 55, scale: [0, 2, 3, 7], inst: 'tri', len: .06 },
   narr: { base: 67, scale: [0, 2, 4, 7, 9, 12], inst: 'p50', len: .03 },
 };
