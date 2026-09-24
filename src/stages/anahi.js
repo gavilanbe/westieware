@@ -99,8 +99,8 @@ function anahiRoomBot(g, S) {
 function anahiLife(g, x, y, st, bt, S) {
   const sadNow = S && S.phase === 'inter' && S.react === 'lose' && S.reactT < 1.3;
   if (st === 'gone') return;
-  if (st === 'break') { const k = clamp(bt / .9, 0, 1); if (k < 1) drawS(g, lifeWestie(true), x, y + E.inQ(k) * 6, { s: 1 - E.inQ(k), rot: k * .6 }); return; }
-  drawS(g, lifeWestie(sadNow), x, y + (sadNow ? 1 : 0));
+  if (st === 'break') { const k = clamp(bt / .9, 0, 1); if (k < 1) drawS(g, lifeKeiko(true), x, y + E.inQ(k) * 6, { s: 1 - E.inQ(k), rot: k * .6 }); return; }
+  drawS(g, lifeKeiko(sadNow), x, y + (sadNow ? 1 : 0));
 }
 function anahiMini(g, x, y, st, S) {
   const pose = st === 'win' ? 'win' : st === 'lose' ? 'lose' : 'idle';

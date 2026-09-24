@@ -175,7 +175,7 @@ function lifeWestie(sad) {
 }
 
 // ---------------------------------------------------------------- KEIKO -----
-// Anahí's sister's westie and the game's mascot: the westie head plus her
+// Anahí's westie and the game's mascot: the westie head plus her
 // Westie-green bandana with tiny white paw prints.
 function keikoHead(ex = 'normal') {
   return mdl('keikoHead:' + ex, () => {
@@ -186,6 +186,16 @@ function keikoHead(ex = 'normal') {
     hline(g, 18, 46, 47, INK); hline(g, 19, 45, 48, G[3]);
     for (const [x, y] of [[26, 51], [36, 51], [31, 56]]) { px(g, x, y, '#ffffff'); px(g, x + 1, y, '#ffffff'); px(g, x, y - 1, '#d2f5e4'); }
     disc(g, 32, 48, 2, INK); disc(g, 32, 48, 1.3, G[3]);
+    return c;
+  });
+}
+// a life on Anahí's top screen: Keiko's little head, bandana and all
+function lifeKeiko(sad) {
+  return mdl('lifeK' + (sad ? 's' : ''), () => {
+    const h = lifeWestie(sad), c = mkCanvas(h.width, h.height + 4), g = c.g, G = RAMP.green;
+    g.drawImage(h, 0, 0);
+    polyPx(g, [[2, 12], [15, 12], [8.5, 18.5]], INK); polyPx(g, [[3, 12], [14, 12], [8.5, 17]], G[2]);
+    hline(g, 3, 14, 12, G[3]); px(g, 6, 13, '#ffffff'); px(g, 11, 13, '#ffffff'); px(g, 8, 15, '#ffffff');
     return c;
   });
 }
