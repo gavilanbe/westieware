@@ -1,0 +1,12 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;background:#222;display:flex;gap:16px;padding:16px;align-items:flex-start}
+iframe{border:0;border-radius:18px;background:#000}
+</style></head><body>
+<script>
+// tools/phone.html?page=index.html&q=escena=title%26ff=2 — shows the game in common phone viewports
+const P = new URLSearchParams(location.search), page = P.get('page') || '../index.html', q = P.get('q') || '';
+for (const [w, h] of [[390, 844], [390, 664], [360, 740], [414, 896]]) {
+  const f = document.createElement('iframe'); f.width = w; f.height = h; f.src = page + '?nosave=1&seed=7&' + q; document.body.appendChild(f);
+}
+</script></body></html>

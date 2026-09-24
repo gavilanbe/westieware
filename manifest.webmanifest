@@ -1,0 +1,18 @@
+{
+  "name": "WESTIE WARE ¡Tocados!",
+  "short_name": "Westie Ware",
+  "description": "Microjuegos de 4 segundos en la peluquería canina Westie BLVRD (by Anahí Gavilán, Barcelona). Un homenaje a WarioWare: Touched! en pixel art, para jugar en el móvil en vertical.",
+  "lang": "es",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0b2a20",
+  "theme_color": "#0b2a20",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
