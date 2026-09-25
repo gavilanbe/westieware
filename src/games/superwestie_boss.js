@@ -23,14 +23,19 @@ defMG({
   nextPhase(g) {
     g.ph++; g.phT = 0; g.phaseCmdT = 0; sfx('slam'); sfx('bark', { pitch: 1.2 }); HITSTOP = 4; g.shake(3, .25);
     g.fx.burst(g.mx, g.my - 30, 16, { k: 'star', c: [C.yellow, '#fff', C.pinkL], sp0: 60, sp1: 180 });
+    // the monster takes the hit: it squashes, its eyes cross, mud flies and it shrinks a little
+    g.hurtT = .6; g.stepPop = { i: g.ph - 1, t: 0 };
+    g.fx.burst(g.mx, g.my - 34, 14, { k: 'puff', c: ['#7c5530', '#5b3a1d', '#a07748'], sp0: 60, sp1: 170, r: 4, g: 260 });
+    if (g.ph < 6) g.fx.add({ k: 'txt', s: ['¡GLORGH!', '¡BLURP!', '¡GLUP!', '¡PLOF!', '¡BLOB!'][(g.ph - 1) % 5], x: g.mx, y: g.my - 88, life: .8, c: '#ffdf4f' });
     if (g.ph === 1) for (let i = 0; i < g.dirt.length; i++) g.dirt[i] = Math.max(g.dirt[i], g.r() < .55 ? g.r(.6, 1) : g.dirt[i]);
     if (g.ph === 2) g.tent = [0, 1, 2].map(i => ({ ang: -2.2 + i * .6, cut: false, sw: g.r(TAU) }));
-    if (g.ph === 6) { g.win(); sfx('sparkle'); flash('bot', '#ffffff', .3); }
+    if (g.ph === 6) { g.win(); sfx('sparkle'); flash('bot', '#ffffff', .3); g.fx.burst(g.mx, g.my - 40, 30, { k: 'conf', c: [C.yellow, C.pink, C.mint, C.sky, '#ffffff'], sp0: 80, sp1: 220, g: 200 }); }
   },
   update(g, dt) {
     g.phT += dt; g.phaseCmdT += dt; g.shakeM = Math.max(0, g.shakeM - dt * 3);
+    g.hurtT = Math.max(0, (g.hurtT || 0) - dt); if (g.stepPop) g.stepPop.t += dt; g.jet = Math.max(0, (g.jet || 0) - dt * 4);
     for (const tn of g.tent) if (tn.cut) tn.fall = (tn.fall || 0) + dt; // cut tentacles keep falling in every phase
-    if (g.state !== 'play') { g.wash = Math.min(1, g.wash + dt * .8); return; }
+    if (g.state !== 'play') { if (g.state === 'won') g.wash = Math.min(1, g.wash + dt * .8); return; } // only a win washes it off
     // the shop gets dirtier if you dawdle
     if (g.phT > 7) g.mud = Math.min(100, g.mud + dt * 5);
     const sp = [1, 1.15, 1.3][g.level - 1];
@@ -74,10 +79,10 @@ defMG({
       else if (!B.done) { B.x = lerp(B.x, 40, .1); B.y = lerp(B.y, 150, .1); }
     } else if (g.ph === 5) { // SPIN the hydrant
       const d = g.spin.update(dt);
-      if (Math.abs(d) > 0) { g.wash = clamp(Math.abs(g.spin.ang) / (TAU * [2.5, 3, 3.5][g.level - 1]), 0, 1); if (FRAME % 5 === 0) sfx('ratchet', { vol: .5 }); if (FRAME % 2 === 0) g.fx.add({ k: 'drop', x: 214, y: 150, vx: -g.r(160, 240), vy: -g.r(60, 140), g: 260, life: .7, c: pick(['#9bd6f7', '#dff4ff', '#5aaee6']) }); }
+      if (Math.abs(d) > 0) { g.jet = 1; g.wash = clamp(Math.abs(g.spin.ang) / (TAU * [2.5, 3, 3.5][g.level - 1]), 0, 1); if (FRAME % 5 === 0) sfx('ratchet', { vol: .5 }); if (FRAME % 2 === 0) g.fx.add({ k: 'drop', x: 214, y: 150, vx: -g.r(160, 240), vy: -g.r(60, 140), g: 260, life: .7, c: pick(['#9bd6f7', '#dff4ff', '#5aaee6']) }); }
       if (g.wash >= 1) this.nextPhase(g);
     }
-    if (g.mud >= 100) { g.lose(); sfx('boom'); }
+    if (g.mud >= 100) { g.lose(); sfx('boom'); sfx('splash', { pitch: .5 }); g.shake(5, .4); }
   },
   draw(g, c) {
     c.drawImage(streetBottom(), 0, 0);
@@ -85,7 +90,18 @@ defMG({
     for (let j = 0; j < 5; j++) for (let i = 0; i < 10; i++) { const d = g.dirt[j * 10 + i]; if (d > .1) { const x = BARRO_WIN.x + i * BARRO_WIN.w / 10, y = BARRO_WIN.y + j * BARRO_WIN.h / 5; c.globalAlpha = Math.min(1, d); disc(c, x + 5, y + 6, 6, '#5b3a1d'); disc(c, x + 3, y + 4, 3, '#7c5530'); c.globalAlpha = 1; } }
     // the monster (or Nube underneath, as the water washes it)
     const mx = g.mx + Math.sin(g.t * 20) * g.shakeM * 3, my = g.my;
-    if (g.wash < 1) drawMudMonster(c, mx, my - 30, g.t, 1);
+    const hurt = g.hurtT > 0 ? g.hurtT / .6 : 0, sc = 1 - Math.min(g.ph, 5) * .045, sq = hurt ? Math.sin((1 - hurt) * Math.PI * 3) * .14 * hurt : 0;
+    if (g.wash < 1) {
+      drawS(c, mudMonsterModel(fl(g.t * 3) % 2), mx, my - 30, { sx: sc * (1 + sq), sy: sc * (1 - sq) * (1 + Math.sin(g.t * 4) * .03) });
+      if (hurt > .15) for (const ex of [-16, 14]) { const x0 = rd(mx + ex * sc), y0 = rd(my - 38 * sc - 30 + 30 * (1 - sc)); disc(c, x0, y0, 6 * sc, '#5b3a1d'); linePx(c, x0 - 4, y0 - 4, x0 + 4, y0 + 4, INK); linePx(c, x0 + 4, y0 - 4, x0 - 4, y0 + 4, INK); }
+    }
+    // the fire hydrant's jet, arcing onto the monster while you spin the valve
+    if (g.ph === 5 && g.jet > 0) {
+      const x0 = 214, y0 = 150, x1 = mx + 10, y1 = my - 44, w = 3 + g.jet * 2;
+      for (let q = 0; q <= 1.001; q += .04) { const x = lerp(x0, x1, q), y = lerp(y0, y1, q) - Math.sin(q * Math.PI) * 40; disc(c, x, y, w + 1, '#2f6fb0'); }
+      for (let q = 0; q <= 1.001; q += .04) { const x = lerp(x0, x1, q), y = lerp(y0, y1, q) - Math.sin(q * Math.PI) * 40; disc(c, x, y, w, '#9bd6f7'); if (((q * 25 + fl(g.t * 30)) % 3) < 1) px(c, x, y - w + 1, '#ffffff'); }
+      if (FRAME % 2 === 0) g.fx.add({ k: 'drop', x: x1 + g.r(-14, 14), y: y1 + g.r(-8, 8), vx: g.r(-120, 120), vy: -g.r(40, 140), g: 380, life: .5, c: pick(['#9bd6f7', '#dff4ff']) });
+    }
     if (g.wash > 0) { c.save(); c.beginPath(); c.rect(mx - 60, my - 90 + (1 - g.wash) * 112, 120, 112 * g.wash + 4); c.clip(); c.drawImage(prepDog('clean', 1, g.wash >= 1 ? 'proud' : 'happy'), rd(mx - 52), rd(my - 90)); c.restore(); }
     // tentacles: tapered, curling mud with drips
     if (g.ph === 2 || g.tent.some(t => t.cut && (t.fall || 0) < .8)) for (const tn of g.tent) {
@@ -105,21 +121,72 @@ defMG({
     // live drawing trace for the loop phase
     if (g.ph === 3 && IN.down && IN.path.length > 1) for (let i = 1; i < IN.path.length; i++) thickLine(c, IN.path[i - 1].x, IN.path[i - 1].y, IN.path[i].x, IN.path[i].y, 1.2, '#ffffff');
     // the shampoo bottle
-    if (g.ph === 4 && !g.bottle.done) { const B = g.bottle; rect(c, B.x - 10, B.y - 34, 20, 34, INK); rect(c, B.x - 9, B.y - 33, 18, 32, '#5bb593'); rect(c, B.x - 9, B.y - 33, 4, 32, '#94dcbc'); rect(c, B.x - 5, B.y - 42, 10, 9, INK); rect(c, B.x - 4, B.y - 41, 8, 8, '#ffffff'); disc(c, B.x, B.y - 18, 5, '#fffaf0'); tiny(c, 'WB', B.x, B.y - 20, RAMP.green[2], { align: 'c' }); if (!B.held) drawHand(c, B.x + 16, B.y - 20 + Math.sin(g.t * 6) * 2, false); }
+    if (g.ph === 4 && !g.bottle.done) {
+      const B = g.bottle, near = B.held && dist(B.x, B.y - 14, g.mx, g.my - 40) < 44;
+      // the same Westie BLVRD shampoo as in the salon; the monster's bubble glows when it's close enough to drop
+      if (near) { ringPx(c, g.mx, g.my - 40, 50 + Math.sin(g.t * 12) * 2, '#5bd18b'); ringPx(c, g.mx, g.my - 40, 49 + Math.sin(g.t * 12) * 2, '#5bd18b'); }
+      if (typeof prepBottle === 'function') prepBottle(c, B.x, B.y - 6, B.held ? .4 : 0);
+      else { rect(c, B.x - 10, B.y - 34, 20, 34, INK); rect(c, B.x - 9, B.y - 33, 18, 32, '#5bb593'); }
+      if (!B.held) drawHand(c, B.x + 16, B.y - 20 + Math.sin(g.t * 6) * 2, false);
+    }
     // the hydrant + its valve
     if (g.ph >= 5) { rect(c, 218, 150, 18, 30, INK); rect(c, 219, 151, 16, 29, '#e23b4e'); rect(c, 219, 151, 4, 29, '#ff6b7a'); disc(c, 226, 160, 10, INK); disc(c, 226, 160, 9, RAMP.steel[3]); const a = g.spin.ang; for (let i = 0; i < 4; i++) { const q = a + i * Math.PI / 2; thickLine(c, 226, 160, 226 + Math.cos(q) * 12, 160 + Math.sin(q) * 12, 1.5, INK); } disc(c, 226, 160, 3, RAMP.gold[3]); if (g.wash < .1) ringPx(c, 226, 160, 16 + Math.sin(g.t * 8) * 2, '#ffffff'); }
-    // phase command slam
-    if (g.state === 'play' && g.phaseCmdT < 1.2) { const [cmd, sub] = BARRO_PH[g.ph] || BARRO_PH[0]; mord(c, cmd, SW / 2, 12, { u: 1.8, r: 2, rim: 2, sy: 2 }, { anim: i => ({ s: Math.max(0, spring(g.phaseCmdT - i * .03, 2.6, 8)), a: g.phaseCmdT > .9 ? 1 - (g.phaseCmdT - .9) / .3 : 1 }) }); txt(c, sub, SW / 2, 46, '#ffffff', { align: 'c', out: INK }); }
+    // phase caption: a comic box drops in at the top-left with the gesture, then flies off
+    if (g.state === 'play' && g.phaseCmdT < 1.5) {
+      const [cmd, sub] = BARRO_PH[g.ph] || BARRO_PH[0], out = g.phaseCmdT > 1.2 ? E.inQ((g.phaseCmdT - 1.2) / .3) : 0, dy = rd((1 - E.outBack(clamp(g.phaseCmdT / .3, 0, 1))) * -60 - out * 70);
+      c.save(); c.translate(0, dy);
+      rect(c, 8, 4, 176, 44, INK); rect(c, 10, 6, 172, 40, '#ffdf4f'); for (let y = 8; y < 44; y += 3) for (let x = 12 + (y % 2) * 2; x < 180; x += 5) px(c, x, y, '#f2c330');
+      rect(c, 10, 6, 172, 2, '#fff7ae');
+      mord(c, cmd, 92, 8, fitMord(cmd, 150, { u: 1.6, r: 1.8, rim: 2, sy: 2, fill: ['#ffffff', '#ffd1e4', '#ff5d9e'] }), { anim: i => ({ s: Math.max(0, spring(g.phaseCmdT - .06 - i * .03, 2.6, 8)) }) });
+      txt(c, sub, 92, 34, INK, { align: 'c' });
+      if (typeof drawMechMini === 'function') drawMechMini(c, 200, 26, ['tap', 'rub', 'cut', 'draw', 'drag', 'spin'][g.ph] || 'tap', g.t);
+      c.restore();
+    }
+    if (g.state === 'lost') { // the shop drowns in mud
+      const k = clamp((g.t - g.decidedAt) / .5, 0, 1);
+      for (let x = 0; x < SW; x += 6) { const h = k * (70 + Math.sin(x * .2 + g.t * 3) * 10); rect(c, x, SH - h, 6, h, x % 12 ? '#5b3a1d' : '#6b4527'); }
+      shout(c, '¡PUAJ! ¡BARRO!', SW / 2, 60, g.t - g.decidedAt - .3, '#e0b070');
+    }
     if (g.state === 'won' && g.wash >= 1) shout(c, '¿¡…GUAU!?', g.mx, g.my - 96, g.t - g.decidedAt - 1);
   },
   top(g, c) {
-    panel(c, 6, 26, 244, 44, '#fff8e6', { r: 6 });
-    drawS(c, mudMonsterModel(0), 30, 48, { s: .32 });
-    txt(c, 'MONSTRUO DE BARRO', 54, 31, INK, { bold: true });
-    for (let i = 0; i < 6; i++) { const done = i < g.ph; panel(c, 54 + i * 32, 44, 28, 10, done ? '#c8c6d3' : '#5b3a1d', { r: 2 }); tiny(c, BARRO_PH[i][0].replace(/[¡!]/g, '').slice(0, 5), 68 + i * 32, 47, done ? '#6b6977' : '#fff8e6', { align: 'c' }); }
-    txt(c, 'BARRO EN LA TIENDA', 54, 58, '#6b6977');
-    rect(c, 150, 58, 94, 8, INK); rect(c, 151, 59, 92, 6, '#dce7ea'); rect(c, 151, 59, rd(g.mud * .92), 6, g.mud > 66 ? '#e23b4e' : g.mud > 33 ? '#ffb020' : '#7c5530');
-    drawSuperWestie(c, 200, 130 + Math.sin(g.t * 3) * 4, g.t, { flip: true, mood: g.state === 'lost' ? 'sad' : 'happy' });
+    // a comic page under the command: the monster's panel, the six gestures, the mud meter, Súper Keiko
+    rect(c, 0, 44, SW, SH - 44, '#231f5e'); for (let y = 46; y < SH; y += 4) for (let x = (y % 8) / 2; x < SW; x += 4) px(c, x, y, '#2c2870');
+    const pan = (x, y, w, h, fill) => { rect(c, x - 2, y - 2, w + 4, h + 4, INK); rect(c, x, y, w, h, fill); };
+    // the villain's panel: halftone red, the monster wobbling, its name
+    pan(6, 48, 92, 84, '#c0392b'); for (let y = 50; y < 130; y += 4) for (let x = 8 + (y % 8) / 2; x < 96; x += 4) px(c, x, y, '#d9534f');
+    const hurt = g.hurtT > 0 ? Math.sin(g.t * 40) * 2 * (g.hurtT / .6) : 0;
+    drawS(c, mudMonsterModel(fl(g.t * 3) % 2), 52 + hurt, 86, { s: .62 * (1 - Math.min(g.ph, 5) * .045), sy: .62 * (1 + Math.sin(g.t * 4) * .04) });
+    rect(c, 6, 118, 92, 14, INK); tiny(c, 'EL MONSTRUO', 52, 121, '#ffdf4f', { align: 'c' }); tiny(c, 'DE BARRO', 52, 127, '#ffffff', { align: 'c' });
+    // the six gestures, ticked off as they're done
+    pan(104, 48, 146, 44, '#fff8e6');
+    tiny(c, 'SEIS GESTOS PARA LAVARLO', 177, 51, INK, { align: 'c' });
+    const mechs = ['tap', 'rub', 'cut', 'draw', 'drag', 'spin'];
+    for (let i = 0; i < 6; i++) {
+      const x = 108 + i * 23, y = 60, done = i < g.ph, cur = i === g.ph && g.state === 'play';
+      const pop = g.stepPop && g.stepPop.i === i && g.stepPop.t < .6 ? 1 + Math.sin(Math.min(1, g.stepPop.t / .6) * Math.PI) * .35 : 1;
+      c.save(); c.translate(x + 10, y + 10); c.scale(pop, pop); c.translate(-(x + 10), -(y + 10));
+      panel(c, x, y + (cur ? Math.sin(g.t * 8) * 1.5 : 0), 20, 20, done ? '#9be3b8' : cur ? '#ffdf4f' : '#ffffff', { r: 3, line: INK });
+      if (typeof drawMechMini === 'function') drawMechMini(c, x + 10, y + 10 + (cur ? Math.sin(g.t * 8) * 1.5 : 0), mechs[i], g.t);
+      if (done) { disc(c, x + 17, y + 3, 4, INK); disc(c, x + 17, y + 3, 3, '#35a869'); px(c, x + 16, y + 3, '#ffffff'); px(c, x + 17, y + 4, '#ffffff'); px(c, x + 18, y + 2, '#ffffff'); }
+      c.restore();
+    }
+    // the mud meter: if it fills up, the shop is lost
+    pan(104, 98, 146, 34, '#fff8e6');
+    txt(c, 'BARRO EN LA TIENDA', 110, 102, INK, { bold: true });
+    const shake = g.mud > 66 && g.state === 'play' ? Math.sin(g.t * 50) : 0;
+    rect(c, 110 + shake, 116, 134, 10, INK); rect(c, 111 + shake, 117, 132, 8, '#dce7ea');
+    const w = rd(132 * g.mud / 100); rect(c, 111 + shake, 117, w, 8, g.mud > 66 ? '#e23b4e' : g.mud > 33 ? '#ffb020' : '#7c5530'); rect(c, 111 + shake, 117, w, 2, 'rgba(255,255,255,.4)');
+    for (let i = 1; i < 4; i++) vline(c, 111 + i * 33 + shake, 117, 124, 'rgba(29,20,36,.25)');
+    // Súper Keiko in her inset, with a word for the moment
+    pan(104, 136, 146, 31, '#63a0ef'); for (let y = 138; y < 167; y += 4) for (let x = 106 + (y % 8) / 2; x < 250; x += 4) px(c, x, y, '#7ab3f5');
+    // her little menu self fits the inset: walking on the spot, cheering when it's over
+    const hero = STAGES.superwestie.chibi ? STAGES.superwestie.chibi(g.state === 'won' ? 'happy' : g.state === 'lost' ? 'idle' : (fl(g.t * 6) % 2 ? 'walk1' : 'walk0'), g.t) : null;
+    if (hero) drawS(c, hero, 222, 166 - (g.state === 'won' ? Math.abs(Math.sin(g.t * 8)) * 3 : 0), { ax: .5, ay: 1, flip: true });
+    else drawSuperWestie(c, 220, 154, g.t, { flip: true });
+    const say = g.state === 'lost' ? '¡Nooo!' : g.state === 'won' ? '¡Lo logramos!' : g.mud > 66 ? '¡Rápido!' : ['¡A por él!', '¡Frota fuerte!', '¡Zas, zas!', '¡Rodéalo!', '¡Espuma!', '¡Agua va!'][g.ph] || '¡Vamos!';
+    panel(c, 110, 142, 76, 18, '#ffffff', { r: 5, line: INK }); polyPx(c, [[184, 148], [192, 151], [184, 154]], INK);
+    txt(c, say, 148, 147, g.mud > 66 ? '#e23b4e' : INK, { align: 'c', bold: true });
   },
   bot(g) {
     if (g.ph === 0) { const b = g.balls.find(b => !b.dead && b.t > .15); return b ? { x: b.cx, y: b.cy, down: fl(g.t * 20) % 3 === 0 } : { down: false }; }

@@ -157,8 +157,8 @@ defMG({
     drawS(c, funcionario('inspector', g.mood), 70 + shake, 150, { ax: .5, ay: 1 });
     if (g.mood === 'angry') for (const s of [-1, 1]) { const k = (g.t * 2) % 1; disc(c, 70 + s * 18, 70 - k * 12, 3 + k * 3, '#ffffff'); }
     if (g.state === 'won' && g.t - g.endT > .6) { const k = spring(g.t - g.endT - .6, 2.4, 6); drawS(c, hacScruffy(), 108, 146 - Math.abs(Math.sin(g.t * 6)) * 3, { ax: .5, ay: 1, s: 1.35 * Math.min(1.1, k) }); }
-    rect(c, 10, 140, 124, 36, INK); rect(c, 11, 141, 122, 34, RAMP.cream[3]); rect(c, 11, 141, 122, 3, RAMP.gold[2]);
-    for (const x of [20, 60, 100]) { rect(c, x, 148, 30, 22, RAMP.cream[2]); ringRect(c, x, 148, 30, 22, 1, RAMP.gold[1]); disc(c, x + 15, 159, 1.6, RAMP.gold[1]); }
+    rect(c, 10, 140, 124, 31, INK); rect(c, 11, 141, 122, 29, RAMP.cream[3]); rect(c, 11, 141, 122, 3, RAMP.gold[2]);
+    for (const x of [20, 60, 100]) { rect(c, x, 147, 30, 19, RAMP.cream[2]); ringRect(c, x, 147, 30, 19, 1, RAMP.gold[1]); disc(c, x + 15, 156, 1.6, RAMP.gold[1]); }
     // his last stamped form in hand
     if (g.t - g.stampT < .9 && g.stampT > 0) { const k = spring(g.t - g.stampT, 2.4, 7); drawS(c, modeloForm(g.used[g.used.length - 1] || '303'), 108, 118, { rot: .08, s: .7 + .3 * Math.min(1, k) }); drawS(c, hacStamp('APROBADO', '#2a9a5a'), 108, 118, { rot: -.2, s: .5 }); }
     // speech bubble
@@ -172,11 +172,12 @@ defMG({
     txt(c, say, bx + 8, by + 8, INK, { wrap: bw - 14 });
     // rounds: little forms, stamped ones get a tick
     for (let i = 0; i < g.rounds; i++) { const x = 140 + i * 18, y = 118; rect(c, x, y, 13, 16, INK); rect(c, x + 1, y + 1, 11, 14, i < g.round ? '#d2f5e4' : '#fdfbf5'); if (i < g.round) { linePx(c, x + 3, y + 8, x + 5, y + 11, '#2a9a5a'); linePx(c, x + 5, y + 11, x + 10, y + 4, '#2a9a5a'); } }
-    // patience meter
-    panel(c, 64, 170, 186, 18, '#fff8e6', { r: 4 });
-    txt(c, 'PACIENCIA', 70, 175, INK, { bold: true });
-    const w = rd(clamp(g.patience, 0, 100) * 1.08), col = g.patience > 55 ? '#5bd18b' : g.patience > 25 ? '#ffb020' : '#e23b4e';
-    rect(c, 134, 174, 110, 10, INK); rect(c, 135, 175, 108, 8, '#dce7ea'); rect(c, 135, 175, w, 8, col); rect(c, 135, 175, w, 2, '#ffffff');
+    // patience meter (right column, clear of the stage's little lives at the bottom)
+    const pshake = g.patience < 25 && g.state === 'play' ? Math.sin(g.t * 50) : 0;
+    panel(c, 138, 140, 112, 28, '#fff8e6', { r: 4 });
+    txt(c, 'PACIENCIA', 144, 144, INK, { bold: true });
+    const w = rd(clamp(g.patience, 0, 100) * .98), col = g.patience > 55 ? '#5bd18b' : g.patience > 25 ? '#ffb020' : '#e23b4e';
+    rect(c, 144 + pshake, 155, 100, 9, INK); rect(c, 145 + pshake, 156, 98, 7, '#dce7ea'); rect(c, 145 + pshake, 156, w, 7, col); rect(c, 145 + pshake, 156, w, 2, '#ffffff');
     if (g.state === 'won' && g.t - g.endT < .75) { const k = spring(g.t - g.endT, 2.4, 6); drawS(c, hacStamp('¡APROBADO!', '#2a9a5a'), 96, 96, { rot: -.12, s: lerp(2.2, 1, Math.min(1, k)), alpha: g.t - g.endT > .55 ? (.75 - (g.t - g.endT)) / .2 : 1 }); }
     if (g.state === 'lost') { const k = spring(g.t - g.endT, 2.4, 6); drawS(c, hacStamp('¡MULTA!', '#e0283c'), 128, 96, { rot: .1, s: lerp(2.4, 1.2, Math.min(1, k)) }); }
   },

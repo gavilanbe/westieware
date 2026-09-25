@@ -4,7 +4,7 @@
 'use strict';
 const SCENE_TABLE = {
   lab: () => go(LAB),
-  stage: () => go(STG, { id: QS.get('id') || 'anahi', story: !QS.has('nostory') }),
+  stage: () => go(STG, { id: QS.get('id') || 'anahi', story: !QS.has('nostory'), practice: QS.get('practice') || null }), // practice=<mg id> plays just that one
   mg: () => go(MGT),
   title: () => go(TITLE),
   icon: () => go(ICON),

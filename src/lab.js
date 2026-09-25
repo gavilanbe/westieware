@@ -203,18 +203,24 @@ function runIcon() {
   const o = mkCanvas(192, 192); o.g.drawImage(c, 32, 0, 192, 192, 0, 0, 192, 192);
   document.documentElement.setAttribute('data-result', o.toDataURL('image/png'));
 }
-// ?test=thumb — the 320x200 portfolio label (scaled x2 to 640x400 by tools)
+// ?test=thumb — the 320x200 portfolio label (scaled x2 to 640x400 by tools):
+// the title's green damask, the cast along a gilt counter, Anahí and Súper Keiko
 function runThumb() {
   const c = mkCanvas(320, 200), g = c.g, t = 3.2;
-  rect(g, 0, 0, 320, 200, '#ffb347');
-  for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; polyPx(g, [[160, 96], [160 + Math.cos(a - .1) * 400, 96 + Math.sin(a - .1) * 400], [160 + Math.cos(a + .1) * 400, 96 + Math.sin(a + .1) * 400]], '#ffc56b'); }
-  for (let i = 0; i < 14; i++) drawPawPrint(g, (i * 47) % 330, (i * 83) % 210, '#ffd28c', i % 2 ? .5 : -.4);
+  // the salon damask of the title, drawn at the label's own size (no seams)
+  { const G = RAMP.green, Au = RAMP.gold, W = 320, H = 200;
+    rect(g, 0, 0, W, H, G[1]);
+    for (let k = -H; k < W + H; k += 18) { linePx(g, k, 0, k + H, H, G[2]); linePx(g, k + H, 0, k, H, G[2]); }
+    for (let y = 0; y <= H + 9; y += 9) for (let x = ((y / 9) % 2) * 9; x <= W + 9; x += 18) { px(g, x, y, G[3]); px(g, x - 1, y, G[2]); px(g, x + 1, y, G[2]); px(g, x, y - 1, G[3]); px(g, x, y + 1, G[2]); }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = Math.hypot((x - W / 2) / (W / 2), (y - H / 2) / (H / 2)); if (v > 1 && bayerK(x, y) < (v - 1) * 1.6) px(g, x, y, G[0]); }
+    ringRect(g, 3, 3, W - 6, H - 6, 1, Au[2]); ringRect(g, 6, 6, W - 12, H - 12, 1, Au[1]); }
+  for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; g.globalAlpha = .1; polyPx(g, [[160, 80], [160 + Math.cos(a - .08) * 400, 80 + Math.sin(a - .08) * 400], [160 + Math.cos(a + .08) * 400, 80 + Math.sin(a + .08) * 400]], '#ffd23f'); } g.globalAlpha = 1;
   // the cast along the bottom
   const cast = STORY_STAGES.filter(id => STAGES[id] && STAGES[id].face && id !== 'anahi');
-  rect(g, 0, 150, 320, 50, RAMP.green[2]); rect(g, 0, 150, 320, 2, INK); for (let x = 0; x < 320; x += 16) rect(g, x, 152, 8, 48, RAMP.green[3]);
+  rect(g, 0, 150, 320, 50, RAMP.green[1]); rect(g, 0, 150, 320, 2, RAMP.gold[3]); rect(g, 0, 152, 320, 1, INK); for (let x = 0; x < 320; x += 16) rect(g, x, 153, 8, 47, RAMP.green[2]);
   cast.forEach((id, i) => { const d = STAGES[id]; drawS(g, bubbleImg(id, 19, d.face(), d.rim || RAMP.gold[3], false), 104 + i * 42, 172); });
   drawAnahi(g, 40, 206, 'win', 0);
-  drawSuperWestie(g, 272, 124, 1, { flip: true });
-  drawLogo(g, 150, 70, t, { noSparkle: true });
+  drawSuperWestie(g, 292, 134, 1, { flip: true });
+  drawLogo(g, 140, 72, t, { noSparkle: true });
   document.documentElement.setAttribute('data-result', c.toDataURL('image/png'));
 }

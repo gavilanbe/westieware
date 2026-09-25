@@ -311,9 +311,10 @@ function rizosRoomTop(g, S) {
   rizosNeonText(g, 'CHAMPÚ', 214, 50, RIZOS_NEON.cyan, NOW + 3, 1);
   ringPx(g, 238, 34, 4, RIZOS_NEON.cyan); ringPx(g, 244, 42, 3, RIZOS_NEON.pink);
   rizosDiscoBall(g, 44, 30, 13, NOW);
-  // the plate the counter sits on
+  // the plate the counter sits on; in the story it shows the club's clock instead
   panel(g, SW / 2 - 24, 2, 48, 30, '#1a0a38', { r: 6, line: RIZOS_NEON.pink });
   ringRect(g, SW / 2 - 22, 4, 44, 26, 1, '#5a2a9a');
+  if (S.clock) { rizosNeonText(g, S.clock, SW / 2, 9, RIZOS_NEON.cyan, NOW, 1); if (fl(NOW * 2) % 2) { px(g, SW / 2 - 1, 10, '#1a0a38'); px(g, SW / 2 - 1, 14, '#1a0a38'); } tiny(g, 'SÁBADO', SW / 2, 22, RIZOS_NEON.pink); }
   rizosDanceFloor(g, 150, beat);
   const pose = rizosPoseFor(S);
   const jump = pose === 'win' ? Math.max(0, Math.sin(Math.min(1, rt / .5) * Math.PI)) * 12 : pose === 'clear' ? Math.abs(Math.sin(rt * 5)) * 8 : pose === 'speed' ? Math.abs(Math.sin(t * 16)) * 3 : 0;
@@ -416,7 +417,29 @@ function rizosAnnWord(g, W, x, y, t, t0, o = {}) {
   const lit = i => { const on = t0 + i * (o.step || .06); if (t < on) return false; if (t < on + .22) return hash2(fl(t * 30), i, 9) > .42; return (t * (o.buzz || 1.3) + i * .37) % 3.1 >= (o.gap || .06); };
   return cardWord(g, W.w, x, y, i => lit(i) ? W.on : W.off, o.anim ? { anim: o.anim } : {});
 }
-function rizosAnnPrewarm() { if (typeof cardPrewarm === 'function' && typeof CARD_RIZOS_ON !== 'undefined') cardPrewarm(rizosAnnFaces().warm); }
+function rizosAnnPrewarm() { if (typeof cardPrewarm === 'function' && typeof CARD_RIZOS_ON !== 'undefined') { cardPrewarm(rizosAnnFaces().warm); cardPrewarm(rizosStampFaces().warm); } }
+// ---- the Club Champú win stamp: a small neon marquee drops on its chains and
+// the word buzzes on tube by tube (one fixed face, so its letters can be prewarmed)
+const RIZOS_STAMP_WORDS = ['¡AFRO LIBRE!', '¡AFRO DE ESPUMA!', '¡AFRO LISTO!', '¡OTRA, OTRA!', '¡GUAPÍSIMO!', '¡QUÉ GUSTAZO!', '¡QUÉ SUAVECITO!', '¡SIN BICHOS!', '¡A BAILAR!', '¡AFRO XXL!'];
+let RIZOS_STAMP_F = null;
+function rizosStampFaces() {
+  if (RIZOS_STAMP_F) return RIZOS_STAMP_F;
+  const on = Object.assign({}, CARD_RIZOS_ON, { id: 'rizosStampOn', u: 1.7, r: 1.2 }), off = Object.assign({}, CARD_RIZOS_OFF, { id: 'rizosStampOff', u: 1.7, r: 1.2 });
+  return (RIZOS_STAMP_F = { on, off, warm: RIZOS_STAMP_WORDS.flatMap(w => [[w, on], [w, off]]) });
+}
+function rizosStamp(c, g, word, x, y, delay = 0) {
+  const t = g.t - g.decidedAt - delay; if (t < 0) return;
+  if (typeof cardWord !== 'function' || typeof CARD_RIZOS_ON === 'undefined') { shout(c, word, x, y, t); return; }
+  if (!g._stampOn) { g._stampOn = true; g.fx.p = g.fx.p.filter(p => p.k !== 'txt'); } // the sign gets the screen to itself
+  const F = rizosStampFaces(), h = 36, w = Math.min(244, cardWordW(word, F.on) + 26);
+  const bx = rd(clamp(x, w / 2 + 3, SW - w / 2 - 3)), drop = t < .32 ? (1 - E.outBack(t / .32)) * -60 : 0, swing = Math.sin(t * 7) * Math.max(0, 1 - t * 1.5) * 2;
+  const by = rd(y - h / 2 + drop + swing);
+  for (const cx0 of [bx - w / 2 + 14, bx + w / 2 - 14]) for (let yy = by - 1; yy > by - 22; yy -= 3) { px(c, cx0, yy, '#8f98b8'); px(c, cx0, yy - 1, '#5b6380'); }
+  rizosMarquee(c, bx, by, w, h, g.b * 2);
+  if (!g._stampLit && t > .3) { g._stampLit = true; sfx('sparkle', { vol: .5 }); g.fx.burst(bx, by + h / 2, 16, { k: 'star', c: [RIZOS_NEON.pink, RIZOS_NEON.cyan, '#ffffff'], sp0: 50, sp1: 150 }); }
+  const lit = i => { const on = .3 + i * .045; if (t < on) return false; if (t < on + .18) return hash2(fl(t * 30), i, 5) > .4; return (t * 1.3 + i * .37) % 3.1 >= .05; };
+  cardWord(c, word, bx - 6, by + 10, i => lit(i) ? F.on : F.off); // −6: the italic slant pushes the letters right
+}
 // a marquee board with chasing bulbs (w×h centred on x, top at y)
 function rizosMarquee(g, x, y, w, h, beat, bulb = '#fff27a') {
   panel(g, x - w / 2, y, w, h, '#130726', { r: 7, line: INK }); panel(g, x - w / 2 + 4, y + 4, w - 8, h - 8, '#1b0b34', { r: 5, line: '#3b1a6a' });
@@ -678,7 +701,7 @@ defCut('rizos_in', {
   song: Object.assign({ loop: true }, RIZOS_SONGS.play),
   shots: [
     { dur: 0, lines: [['narr', 'Sábado, 23:59. Club Champú.'], ['rizos', '¡Yeah, baby! ¡Esta noche la pista es MÍA!'], ['dj', '¡Un aplauso para el rey del afro!']],
-      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: t, react: fl(t) % 3 === 2 ? 'ready' : 'x', phase: 'cut', bpm: 124 }); if (fl(t * 2) % 2) rizosNeonText(g, '♪', 60 + Math.sin(t * 3) * 10, 70, RIZOS_NEON.yellow, t); },
+      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: t, react: fl(t) % 3 === 2 ? 'ready' : 'x', phase: 'cut', bpm: 124, clock: '23:59' }); if (fl(t * 2) % 2) rizosNeonText(g, '♪', 60 + Math.sin(t * 3) * 10, 70, RIZOS_NEON.yellow, t); },
       bot(g, t) { g.drawImage(rizosBotBack(), 0, 0); rizosCrowd(g, t, .8, t * 2.07); for (let i = 0; i < 6; i++) { const x = (i * 51 + t * 40) % SW; txt(g, i % 2 ? '¡RI-ZOS!' : '♪', x, 96 + Math.sin(t * 5 + i) * 4, [RIZOS_NEON.pink, RIZOS_NEON.cyan, RIZOS_NEON.yellow][i % 3], { out: INK, bold: true }); } } },
     { dur: 3.4, box: 'none', sfx: [[.2, 'swoosh', { pitch: 2 }], [2.6, 'boing', { pitch: 1.6 }], [2.7, 'yip', { pitch: 2.2 }]],
       tall(g, t) {
@@ -691,7 +714,7 @@ defCut('rizos_in', {
         caption(g, 'Pero alguien más bajaba a bailar…', 22);
       } },
     { dur: 0, lines: [['pulgui', '¡Qué pelazo! ¡Me hago aquí una casita con piscina!'], ['rizos', '¡Ay, ay, AY! ¡ME PICA EL AFRO!'], ['rizos', '¡Emergencia capilar! ¡A Westie BLVRD, YA!']],
-      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: .2, react: 'lose', phase: 'cut', bpm: 124 }); },
+      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: .2, react: 'lose', phase: 'cut', bpm: 124, clock: '00:01' }); },
       bot(g, t) {
         g.drawImage(rizosAfroWall(), 0, 0);
         // Pulgui's little camp in the afro: a tent and a flag
@@ -716,10 +739,10 @@ defCut('rizos_out', {
   song: Object.assign({ loop: true }, RIZOS_SONGS.card, { loop: true }),
   shots: [
     { dur: 0, sfx: [[.2, 'slam'], [.4, 'sparkle']], lines: [['narr', 'Una hora (y mucho champú) después…'], ['rizos', '¡Afro PERFECTO, nena! ¡Gracias, Anahí!'], ['narr', '¡RI-ZOS! ¡RI-ZOS! ¡RI-ZOS!']],
-      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: t, react: 'clear', phase: 'cut', bpm: 124 }); for (let i = 0; i < 16; i++) { const x = (i * 37 + t * 50) % SW, y = (i * 53 + t * 90) % SH; rect(g, x, y, 2, 2, [RIZOS_NEON.pink, RIZOS_NEON.cyan, RIZOS_NEON.yellow, '#ffffff'][i % 4]); } },
+      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: t, react: 'clear', phase: 'cut', bpm: 124, clock: '01:02' }); for (let i = 0; i < 16; i++) { const x = (i * 37 + t * 50) % SW, y = (i * 53 + t * 90) % SH; rect(g, x, y, 2, 2, [RIZOS_NEON.pink, RIZOS_NEON.cyan, RIZOS_NEON.yellow, '#ffffff'][i % 4]); } },
       bot(g, t) { g.drawImage(rizosBotBack(), 0, 0); rizosCrowd(g, t, 1, t * 2.07); } },
     { dur: 0, sfx: [[.1, 'swoosh', { pitch: 2 }], [.9, 'boing'], [1.1, 'slam']], lines: [['pulgui', '¡Holaaa! ¿Me habéis echado de menos?'], ['rizos', '¡¡OTRA VEZ NOOOO!!'], ['narr', 'Continuará… en el próximo lavado.']],
-      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: .2, react: 'x', special: 'boss', phase: 'inter', bpm: 124 }); const k = clamp(t / .9, 0, 1); if (k < 1) rizosPulguiChute(g, 128 + Math.sin(t * 3) * 12, lerp(-10, 60, k), t); },
+      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: .2, react: 'x', special: 'boss', phase: 'inter', bpm: 124, clock: '01:03' }); const k = clamp(t / .9, 0, 1); if (k < 1) rizosPulguiChute(g, 128 + Math.sin(t * 3) * 12, lerp(-10, 60, k), t); },
       bot(g, t) { g.drawImage(rizosAfroWall(), 0, 0); drawS(g, rizosPulguiSpr(fl(t * 5) % 2 ? 'sit' : 'jump'), 128, 96 - Math.abs(Math.sin(t * 7)) * 10, { s: 2 }); if (t > .9) shout(g, '¡JI, JI, JI!', 128, 56, t - .9); } },
   ],
 });

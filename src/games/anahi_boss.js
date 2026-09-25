@@ -329,22 +329,14 @@ function prepKeys(x, y, level) {
 
 // ---------------------------------------------------------------- transitions
 // the "room turn": the old room folds away like a cube face, the new one swings in
+// the camera whips from one room to the next: a quick slide with speed streaks
 function prepTurn(g, from, to, k, dir = 1) {
-  const e = E.ioC(k), wOld = SW * (1 - e), wNew = SW * e, slices = 32;
-  rect(g, 0, 0, SW, SH, '#20303a');
-  const face = (img, x0, w, shrinkLeft) => {
-    if (w < 1) return;
-    for (let i = 0; i < slices; i++) {
-      const u0 = i / slices, u1 = (i + 1) / slices, sx = u0 * SW, sw = SW / slices;
-      const persp = shrinkLeft ? lerp(.82, 1, u0) : lerp(1, .82, u0);
-      const h = SH * lerp(1, persp, Math.min(1, (1 - w / SW) * 1.6)), dy = (SH - h) / 2;
-      g.drawImage(img, sx, 0, sw, SH, rd(x0 + u0 * w), rd(dy), Math.ceil(w * (u1 - u0)) + 1, rd(h));
-    }
-  };
-  if (dir > 0) { face(from, 0, wOld, false); face(to, wOld, wNew, true); }
-  else { face(to, 0, wNew, false); face(from, wNew, wOld, true); }
-  // a crease of shadow where the faces meet
-  const cxp = dir > 0 ? wOld : wNew; g.globalAlpha = .35; rect(g, cxp - 2, 0, 4, SH, INK); g.globalAlpha = 1;
+  const e = E.ioC(k), off = rd(e * SW) * dir;
+  g.drawImage(from, -off, 0); g.drawImage(to, SW * dir - off, 0);
+  const s = Math.sin(k * Math.PI);
+  g.globalAlpha = .6 * s;
+  for (let i = 0; i < 18; i++) { const y = (i * 37 + 11) % SH, w = 30 + (i * 53) % 90, x = ((i * 71 + fl(k * 520)) % (SW + w)) - w; rect(g, dir > 0 ? SW - x - w : x, y, w, i % 3 === 0 ? 2 : 1, '#ffffff'); }
+  g.globalAlpha = 1;
 }
 // door wipe: two mint panels close/open over the scene (k: 0 open → 1 shut)
 function prepDoors(g, k) {
@@ -366,7 +358,7 @@ SFX.prepPump = (t, d, p, v) => { SFX.squish(t, d, 1.4 * p, .8 * v); INST.w(0, t 
 SFX.prepKaching = (t, d, p, v) => { INST.b(0, t, 0, 1.2 * v, d); INST.bell(2093 * p, t + .05, .2, 1 * v, d); INST.bell(2637 * p, t + .12, .4, 1 * v, d); for (let i = 0; i < 6; i++) SFX.coin(t + .1 + i * .06, d, 1 + i * .08, .5 * v); };
 
 const PREP_PH = [
-  ['¡CEPILLA!', 'Quítale los nudos', 'rub'], ['¡CHAMPÚ!', 'Toca el bote encima', 'tap'], ['¡FROTA!', 'Mucha espuma', 'rub'],
+  ['¡CEPILLA!', 'Quítale los nudos', 'rub'], ['¡CHAMPÚ!', 'Toca cuando esté sobre ella', 'tap'], ['¡FROTA!', 'Mucha espuma', 'rub'],
   ['¡ACLARA!', 'Pasa la ducha', 'drag'], ['¡SECA!', 'Rodéala con el secador', 'drag'], ['¡CORTA!', 'Repasa con la máquina', 'drag'], ['¡COBRA!', 'Diez euros', 'tap']];
 const PREP_SONG = { spb: 4, loop: true, tracks: [
   { i: 'brass', v: .55, n: 'C5 . E5 G5 . E5 D5 . C5 . A4 . G4 - . . C5 . E5 G5 . A5 G5 . E5 . D5 . C5 - . . F5 . E5 D5 . C5 A4 . G4 . E4 . G4 - A4 . C5 . D5 . E5 . G5 . A5 . G5 . C6! - . .' },
@@ -406,12 +398,13 @@ defMG({
     sfx('good'); sfx('sparkle'); HITSTOP = 4; g.shake(2, .2);
     const [dx, dy] = this.dogXY(g); g.fx.burst(dx + 52, dy + 56, 16, { k: 'star', c: ['#fff27a', '#ffffff', '#ffd1e4'], sp0: 60, sp1: 170 });
     g.patience = Math.min(100, g.patience + 12);
+    g.stepPop = { i: g.ph - 1, t: 0 }; g.patPop = 0; // the step ticks off in the HUD, the patience bar gets a "+12"
     if (g.ph === 1) this.turnTo(g, 'shower', 1);
-    if (g.ph === 4) this.turnTo(g, 'table', -1);
+    if (g.ph === 4) { g.shakeOff = .9; sfx('splash', { pitch: 1.2 }); } // she shakes the water off before going back to the table
     if (g.ph === 6) this.turnTo(g, 'till', 1);
     if (g.ph >= 7) { g.win(); }
   },
-  turnTo(g, room, dir) { g.turn = { from: g.room, to: room, t: 0, dir }; sfx('whoosh'); },
+  turnTo(g, room, dir) { g.turn = { from: g.room, to: room, t: 0, dir }; g.tufts = []; sfx('whoosh'); }, // tufts in the air stay in the old room
   roomPic(g, room) { return room === 'shower' ? prepShowerRoom() : room === 'till' ? prepTillRoom() : prepTableRoom(); },
   update(g, dt) {
     g.phT += dt; g.cmdT += dt; g.enterT += dt;
@@ -421,7 +414,17 @@ defMG({
       const onTable = g.room === 'table' && Math.abs(tf.x - PREP_TABLE.x) < 62, floorY = onTable ? PREP_TABLE.y - 2 : 186;
       if (tf.y >= floorY && tf.vy > 0) { tf.dead = true; if (g.piles.length < 120) { const near = g.piles.filter(p => p.room === g.room && Math.abs(p.x - tf.x) < 6 && p.base === floorY).length; g.piles.push({ x: tf.x, y: floorY - near * 2.2, base: floorY, room: g.room, r: tf.r, col: tf.col, lite: tf.lite, dark: tf.dark, rot: tf.rot }); } } }
     g.tufts = g.tufts.filter(t => !t.dead);
-    if (g.turn) { g.turn.t += dt / .75; if (g.turn.t >= 1) { g.room = g.turn.to; g.turn = null; g.cmdT = 0; } return; }
+    if (g.stepPop) g.stepPop.t += dt; if (g.patPop != null) g.patPop += dt;
+    if (g.shakeOff > 0) { // the rinse is done: a big wet-dog shake, drops everywhere, then off to the table
+      g.shakeOff -= dt;
+      for (let i = 0; i < 4; i++) { const a = g.r(TAU); g.fx.add({ k: 'drop', x: PREP_DOG_S.x + Math.cos(a) * 26, y: PREP_DOG_S.y - 52 + Math.sin(a) * 30, vx: Math.cos(a) * g.r(140, 280), vy: Math.sin(a) * g.r(80, 200) - 60, g: 380, life: .8, r: g.r(1.5, 3), c: pick(['#9bd6f7', '#dff4ff', '#5aaee6']) }); }
+      if (FRAME % 6 === 0) g.fx.add({ k: 'bubble', x: PREP_DOG_S.x + g.r(-30, 30), y: PREP_DOG_S.y - g.r(20, 80), vy: -20, life: .6, r: g.r(2, 4), c: '#dff4ff' });
+      if (FRAME % 9 === 0) sfx('drip', { pitch: 1.4 + Math.random() * .4, vol: .5 });
+      if (FRAME % 20 === 0) g.shake(2, .1);
+      if (g.shakeOff <= 0) { g.shakeOff = 0; this.turnTo(g, 'table', -1); }
+      return;
+    }
+    if (g.turn) { g.turn.t += dt / .6; if (g.turn.t >= 1) { g.room = g.turn.to; g.turn = null; g.cmdT = 0; } return; }
     if (g.state !== 'play') return;
     if (g.enterT < .9) return; // doors + the crust falling off
     g.patience = Math.max(0, g.patience - dt * g.drain * (g.ph === 6 ? .5 : 1));
@@ -514,12 +517,14 @@ defMG({
   // ------------------------------------------------------------ drawing ----
   drawRoom(g, c, room) {
     c.drawImage(this.roomPic(g, room), 0, 0);
+    if (room === 'shower' && g.ph !== 3) prepShower(c, 92, 44, false, g.t); // resting on its hook
     if (room === 'table') prepTable(c, PREP_TABLE.x, PREP_TABLE.y);
     for (const p of g.piles) if (p.room === room) prepFluff(c, p.x, p.y - 2, p.r, p, p.rot);
     if (room === 'shower' && g.puddle > 0) { ellipsePx(c, PREP_DOG_S.x, PREP_DOG_S.y + 2, 20 + g.puddle * 40, 4 + g.puddle * 5, '#5aaee6'); ellipsePx(c, PREP_DOG_S.x - 6, PREP_DOG_S.y + 1, 10 + g.puddle * 20, 2 + g.puddle * 2, '#9bd6f7'); }
   },
   drawDog(g, c, room) {
-    const A = room === 'shower' ? PREP_DOG_S : PREP_DOG_T, dx = A.x - 52, dy = A.y - 110, C = g.cells;
+    const A = room === 'shower' ? PREP_DOG_S : PREP_DOG_T, C = g.cells, wig = room === 'shower' && g.shakeOff > 0 ? Math.sin(g.t * 55) * 6 * Math.min(1, g.shakeOff * 1.6) : 0;
+    const dx = A.x - 52 + wig, dy = A.y - 110;
     const ph = g.ph, bob = Math.sin(g.t * 3) * .6;
     if (room === 'till') return;
     if (ph === 0) {
@@ -548,6 +553,7 @@ defMG({
   drawTools(g, c) {
     const T = g.tool, ph = g.ph;
     if (g.state !== 'play' && ph < 6) return;
+    if (g.shakeOff > 0) return; // hands off while she shakes
     if (ph === 0) prepBrush(c, T.x, T.y, IN.down ? Math.sin(g.t * 30) * .2 : -.3);
     if (ph === 1) { const B = g.bottle; prepBottle(c, B.x, 60, B.press); for (let y = 70; y < 104; y += 6) px(c, B.x, y, Math.abs(B.x - PREP_DOG_S.x) < 26 ? '#5bd18b' : 'rgba(255,255,255,.6)'); for (const b of g.blobs) if (!b.done) { disc(c, b.x, b.y, 4, INK); disc(c, b.x, b.y, 3, '#5bd18b'); px(c, b.x - 1, b.y - 1, '#e8fff4'); } }
     if (ph === 2 && IN.down) prepHands(c, T.x, T.y, g.t);
@@ -578,11 +584,16 @@ defMG({
     // doors open at the start
     if (g.enterT < .5) prepDoors(c, 1 - g.enterT / .5);
     // phase stamp
-    if (g.state === 'play' && !g.turn && g.enterT > .9 && g.cmdT < 1.25) {
-      const [cmd, sub, mech] = PREP_PH[g.ph] || PREP_PH[0], a = g.cmdT > .95 ? 1 - (g.cmdT - .95) / .3 : 1;
-      mord(c, cmd, SW / 2, 14, fitMord(cmd, 200, { u: 1.9, r: 2.1, rim: 2, sy: 2 }), { anim: i => ({ s: Math.max(0, spring(g.cmdT - i * .03, 2.6, 8)), a }) });
-      c.globalAlpha = a; txt(c, sub, SW / 2, 48, '#ffffff', { align: 'c', out: INK }); c.globalAlpha = 1;
-      if (typeof drawMechMini === 'function') { c.globalAlpha = a; drawMechMini(c, SW - 22, 26, mech, g.t); c.globalAlpha = 1; }
+    if (g.state === 'play' && !g.turn && !(g.shakeOff > 0) && g.enterT > .9 && g.cmdT < 1.5) {
+      const [cmd, sub, mech] = PREP_PH[g.ph] || PREP_PH[0], out = g.cmdT > 1.2 ? E.inQ((g.cmdT - 1.2) / .3) : 0, drop = (1 - E.outBack(clamp(g.cmdT / .3, 0, 1))) * -60 - out * 70;
+      // a green-and-gold plate drops in with the step (Anahí's salon colours), then flies off
+      c.save(); c.translate(0, rd(drop));
+      rect(c, 26, 5, SW - 52, 50, INK); rect(c, 27, 6, SW - 54, 48, RAMP.gold[2]); rect(c, 29, 8, SW - 58, 44, RAMP.green[1]); rect(c, 29, 8, SW - 58, 2, RAMP.green[3]);
+      for (const x of [33, SW - 34]) { disc(c, x, 12, 1.5, RAMP.gold[4]); disc(c, x, 47, 1.5, RAMP.gold[4]); }
+      mord(c, cmd, SW / 2 - 8, 9, fitMord(cmd, 150, { u: 1.8, r: 2, rim: 2, sy: 2 }), { anim: i => ({ s: Math.max(0, spring(g.cmdT - .08 - i * .03, 2.6, 8)) }) });
+      txt(c, sub, SW / 2 - 8, 40, '#fff8e6', { align: 'c' });
+      if (typeof drawMechMini === 'function') drawMechMini(c, SW - 44, 30, mech, g.t);
+      c.restore();
     }
     if (g.state === 'lost') { c.globalAlpha = .45; rect(c, 0, 0, SW, SH, INK); c.globalAlpha = 1; shout(c, '¡SE HA HARTADO!', SW / 2, 90, g.t - g.decidedAt); }
   },
@@ -598,13 +609,16 @@ defMG({
     // HUD: the seven steps, the client's patience, Keiko cheering
     rect(c, 0, 44, SW, SH - 44, '#fff8e6');
     prepZigzag(c, 44, false);
-    const icons = ['CEPILLA', 'CHAMPU', 'FROTA', 'ACLARA', 'SECA', 'CORTA', 'COBRA'];
+    const icons = ['CEPILLA', 'CHAMPÚ', 'FROTA', 'ACLARA', 'SECA', 'CORTA', 'COBRA'];
     icons.forEach((l, i) => {
       const x = 12 + i * 34, y = 58, done = i < g.ph, cur = i === g.ph && g.state === 'play';
+      const pop = g.stepPop && g.stepPop.i === i && g.stepPop.t < .6 ? 1 + Math.sin(Math.min(1, g.stepPop.t / .6) * Math.PI) * .35 : 1;
+      c.save(); c.translate(x + 15, y + 13); c.scale(pop, pop); c.translate(-(x + 15), -(y + 13));
       panel(c, x, y + (cur ? -2 + Math.sin(g.t * 8) : 0), 30, 26, done ? PREP_MINT[3] : cur ? '#ffdf4f' : '#ffffff', { r: 4, line: INK, lo: '#dce7ea' });
       prepStepIcon(c, i, x + 15, y + 11 + (cur ? -2 + Math.sin(g.t * 8) : 0));
-      tiny(c, l, x + 15, y + 29, cur ? INK : '#6b6977', { align: 'c' });
       if (done) { disc(c, x + 26, y + 3, 4, INK); disc(c, x + 26, y + 3, 3, '#35a869'); px(c, x + 25, y + 3, '#ffffff'); px(c, x + 26, y + 4, '#ffffff'); px(c, x + 27, y + 2, '#ffffff'); }
+      c.restore();
+      tiny(c, l, x + 15, y + 30, cur ? INK : '#6b6977', { align: 'c' });
     });
     // client card
     panel(c, 8, 94, 96, 92, '#ffffff', { r: 6, lo: '#dce7ea' });
@@ -619,6 +633,7 @@ defMG({
     rect(c, 118, 111, 122, 11, INK); rect(c, 119, 112, 120, 9, '#dce7ea');
     const w = rd(120 * g.patience / 100), col = g.patience > 60 ? '#35a869' : g.patience > 30 ? '#ffb020' : '#e23b4e';
     rect(c, 119, 112, w, 9, col); rect(c, 119, 112, w, 2, '#ffffff');
+    if (g.patPop != null && g.patPop < .9) { c.globalAlpha = 1 - clamp((g.patPop - .5) / .4, 0, 1); txt(c, '+12', 119 + w - 10, 101 - g.patPop * 14, '#35a869', { bold: true, out: '#ffffff' }); c.globalAlpha = 1; }
     // Keiko cheering from her corner
     prepKeikoCheer(c, 212, 196, g.t, g.state === 'lost' ? 'sad' : g.patience < 30 ? 'wow' : 'happy');
     const say = g.state === 'lost' ? '¡Nooo!' : g.patience < 30 ? '¡Rápido!' : g.state === 'won' ? '¡GUAU!' : fl(g.t * .6) % 3 === 0 ? '¡Ánimo!' : '';
@@ -670,20 +685,31 @@ function prepLadyBow(g, x, y, k = 1) {
   polyPx(g, [[bx, by], [bx - s(9), by - s(5)], [bx - s(9), by - s(1)]], '#ff93bf'); polyPx(g, [[bx, by], [bx + s(9), by - s(5)], [bx + s(9), by - s(1)]], '#ff93bf');
   disc(g, bx, by, Math.max(1.5, s(3)), INK); disc(g, bx, by, Math.max(1, s(2)), '#ffd1e4');
 }
-// Lady Di's owner: silver bouffant, magenta jacket, pearls
+// Lady Di's owner: a silver bouffant with sunglasses pushed up, magenta jacket, pearls
+const PREP_SILVER = ['#5b5a67', '#8f8c99', '#c4c1cc', '#e6e3ec', '#ffffff'], PREP_MAGENTA = ['#5a1650', '#8f2379', '#c23b9f', '#ef6cc4', '#ffb3e3'];
 function prepOwner(g, x, y, ex, t) {
-  const img = mdl('prepOwner', () => model(56, 64, [
-    { f: SD.smooth(4, SD.ellipse(28, 18, 17, 15), SD.ellipse(28, 8, 12, 9)), ramp: ['#5b5a67', '#8f8c99', '#c4c1cc', '#eceaf2', '#ffffff'], z: 0, th: 10 },
-    { f: SD.box(28, 58, 19, 14, 7), ramp: RAMP.pink, z: 1, th: 10 },
-    { f: SD.box(28, 40, 4, 5, 2), ramp: RAMP.skin, z: 1.5, th: 3 },
-    { f: SD.smooth(3, SD.ellipse(28, 26, 11, 13), SD.ellipse(28, 32, 8, 7)), ramp: RAMP.skin, z: 2, th: 8 },
-    { f: SD.sub(SD.ellipse(28, 16, 13, 9), SD.ellipse(28, 27, 12, 12)), ramp: ['#5b5a67', '#8f8c99', '#c4c1cc', '#eceaf2', '#ffffff'], z: 3, th: 6 },
-  ], { post: c => { for (let i = 0; i < 9; i++) { const a = .5 + i / 8 * 2.14; disc(c, 28 + Math.cos(a) * 11, 44 + Math.sin(a) * 5, 1.3, '#fffaf0'); } } }));
-  drawS(g, img, x, y + Math.sin(t * 2) * 1, { ax: .5, ay: .55 });
-  const fx = rd(x), fy = rd(y + Math.sin(t * 2) * 1 - 10);
-  if (ex === 'happy') { px(g, fx - 5, fy, INK); px(g, fx - 4, fy - 1, INK); px(g, fx - 3, fy, INK); px(g, fx + 3, fy, INK); px(g, fx + 4, fy - 1, INK); px(g, fx + 5, fy, INK); hline(g, fx - 3, fx + 3, fy + 6, '#b3202e'); hline(g, fx - 2, fx + 2, fy + 7, '#b3202e'); }
-  else { rect(g, fx - 5, fy - 1, 2, 3, INK); rect(g, fx + 3, fy - 1, 2, 3, INK); linePx(g, fx - 6, fy - 3, fx - 3, fy - 4, INK); linePx(g, fx + 6, fy - 3, fx + 3, fy - 4, INK); hline(g, fx - 2, fx + 2, fy + 6, '#b3202e'); }
+  // a neat silver bun with soft waves framing the face, pearls, red lips, magenta jacket
+  const img = mdl('prepOwner3', () => model(60, 66, [
+    { f: SD.ellipse(30, 6, 7, 6), ramp: PREP_SILVER, z: 0, th: 8 },
+    { f: SD.smooth(4, SD.ellipse(30, 19, 14, 11), SD.union(SD.ellipse(18, 27, 6, 9), SD.ellipse(42, 27, 6, 9))), ramp: PREP_SILVER, z: .5, th: 10 },
+    { f: SD.box(30, 58, 21, 12, 7), ramp: PREP_MAGENTA, z: 1, th: 10 },
+    { f: SD.poly([[23, 47], [37, 47], [30, 57]]), ramp: ['#c8c6d3', '#e6e3ec', '#ffffff', '#ffffff', '#ffffff'], z: 1.2, th: 3 },
+    { f: SD.box(30, 42, 4, 5, 2), ramp: RAMP.skin, z: 1.5, th: 3 },
+    { f: SD.smooth(3, SD.ellipse(30, 28, 10, 12), SD.ellipse(30, 34, 7, 6)), ramp: RAMP.skin, z: 2, th: 8 },
+    { f: SD.sub(SD.ellipse(30, 17, 13, 7), SD.ellipse(30, 27, 12, 9)), ramp: PREP_SILVER, z: 3, th: 6 },
+  ], { post: (q) => {
+    // the waves: soft darker arcs through the hair, a band round the bun
+    for (const [cx, cy, r, a0, a1] of [[24, 17, 5, 3.3, 5.2], [36, 17, 5, 4.2, 6.1], [19, 26, 4, 1.8, 4.2], [41, 26, 4, 5.2, 7.6], [30, 12, 6, 3.6, 5.8]])
+      for (let a = a0; a < a1; a += .12) px(q, cx + Math.cos(a) * r, cy + Math.sin(a) * r, '#9896a4');
+    hline(q, 25, 35, 11, '#c23b9f'); hline(q, 26, 34, 12, '#8f2379');
+    for (let i = 0; i < 9; i++) { const a = .45 + i / 8 * 2.25; disc(q, 30 + Math.cos(a) * 9, 46 + Math.sin(a) * 4, 1.2, '#fffaf0'); px(q, 30 + Math.cos(a) * 9 - .5, 45.5 + Math.sin(a) * 4, '#ffffff'); }
+  } }));
+  const bob = Math.sin(t * 2), fx = rd(x), fy = rd(y + bob - 9);
+  drawS(g, img, x, y + bob, { ax: .5, ay: .55 });
+  if (ex === 'happy') { for (const ox of [-4, 4]) { px(g, fx + ox - 1, fy, INK); px(g, fx + ox, fy - 1, INK); px(g, fx + ox + 1, fy, INK); } rect(g, fx - 3, fy + 6, 7, 2, '#c0182e'); px(g, fx - 2, fy + 8, '#c0182e'); px(g, fx + 2, fy + 8, '#c0182e'); }
+  else { for (const ox of [-4, 4]) { rect(g, fx + ox - 1, fy - 1, 2, 3, INK); px(g, fx + ox - 1, fy - 1, '#ffffff'); } linePx(g, fx - 7, fy - 4, fx - 3, fy - 5, '#5b5a67'); linePx(g, fx + 7, fy - 4, fx + 3, fy - 5, '#5b5a67'); hline(g, fx - 2, fx + 2, fy + 6, '#c0182e'); hline(g, fx - 1, fx + 1, fy + 7, '#c0182e'); }
   rect(g, fx - 8, fy + 3, 3, 2, '#f29aa8'); rect(g, fx + 6, fy + 3, 3, 2, '#f29aa8');
+  disc(g, fx - 11, fy + 5, 1.2, '#fffaf0'); disc(g, fx + 11, fy + 5, 1.2, '#fffaf0'); // pearl earrings
 }
 
 // a clump of cut fur: three puffs and a couple of strands

@@ -206,8 +206,8 @@ defMG({
     const w = rd(g.cov / g.need * 58); rect(c, 186, SH - 22, 60, 7, INK); rect(c, 187, SH - 21, 58, 5, '#3a4a42'); rect(c, 187, SH - 21, Math.min(58, w), 5, g.cov >= g.need ? '#5bd18b' : '#fff27a');
     if (g.cov > .6 && g.state === 'play') txt(c, '¡Casi!', 216, SH - 34, '#fff27a', { align: 'c', out: '#1b2420' });
     hermanasPeek(c, 'kira', 26, 170, g);
-    if (g.state === 'won') mord(c, '¡PRECIOSO!', 132, 150, { u: 1.2, r: 1.3, rim: 1, sy: 1 }, { anim: i => ({ s: Math.max(0, spring(g.t - g.decidedAt - i * .04, 2.5, 7)) }) });
-    if (g.state === 'lost') shout(c, '¡UY, SIN TERMINAR!', 132, 150, g.t - g.decidedAt);
+    if (g.state === 'won') hermanasStamp(c, '¡PRECIOSO!', 142, 142, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡A MEDIAS!', 142, 142, g.t - g.decidedAt, false);
   },
   hint(g) { const n = g.dots.length, P = g.dots.slice(0, Math.ceil(n * .45)).map(d => [d.x, d.y]); return { x: P[0][0], y: P[0][1], mech: 'draw', path: P }; },
   bot(g) { if (!g.plan) g.plan = [g.dots.map(d => [d.x, d.y]).concat([[g.dots[0].x, g.dots[0].y], [g.dots[1].x, g.dots[1].y]])]; return hermanasBot(g, g.plan, 5.2, .15); },
@@ -346,8 +346,8 @@ defMG({
     // point at the sheep that still needs a route
     const ld = g.sheep.find(s => !s.inPen && !s.path.length && !s.wet);
     if (g.state === 'play' && ld) { hermanasTarget(c, ld.x, ld.y, 16, g.t, '#ffffff'); if (g.t < 2 * g.spb) hermanasTag(c, ld.x, ld.y - 22, 'DESDE AQUÍ', '#fff27a'); }
-    if (g.state === 'lost' && g.sheep.some(s => s.wet)) shout(c, '¡PLOF!', g.pondE.x, g.pondE.y - 30, g.t - g.decidedAt);
-    if (g.state === 'won') shout(c, '¡A SALVO!', HERMANAS_PEN.x + 20, 44, g.t - g.decidedAt);
+    if (g.state === 'lost' && g.sheep.some(s => s.wet)) hermanasStamp(c, '¡PLOF!', clamp(g.pondE.x, 60, 196), clamp(g.pondE.y - 46, 12, 140), g.t - g.decidedAt, false);
+    if (g.state === 'won') hermanasStamp(c, '¡A SALVO!', 112, 16, g.t - g.decidedAt);
   },
   hint(g) { const s = g.sheep[0], gm = (HERMANAS_PEN.gate0 + HERMANAS_PEN.gate1) / 2, P = [[s.x, s.y]]; if (g.pond) P.push([s.x + 40, s.y < 120 ? 80 : 164], [150, s.y < 120 ? 82 : 162]); P.push([HERMANAS_PEN.x - 14, gm - 6], [HERMANAS_PEN.x + 26, gm - 6]); return { x: s.x, y: s.y, mech: 'draw', path: P }; },
   bot(g) {
@@ -456,7 +456,7 @@ defMG({
       for (let i = 0; i < P.length; i++) disc(c, P[i][0], P[i][1], col ? 1.7 : 1, col ? col[0] : '#ffffff');
     }
     if (g.bad) { const k = g.t - g.bad.t; if (fl(k * 12) % 2 === 0) thickLine(c, g.bad.a[0], g.bad.a[1], g.bad.b[0], g.bad.b[1], 1.5, '#ff4060'); shout(c, '¡NO ES SU COLOR!', 140, 40, k); }
-    if (g.state === 'won') shout(c, '¡A PASEAR!', 140, 40, g.t - g.decidedAt);
+    if (g.state === 'won') hermanasStamp(c, '¡A PASEAR!', 140, 22, g.t - g.decidedAt);
   },
   hint(g) { const d = g.dogs[0], h = g.hooks.find(h => h.ci === d.ci), [x0, y0] = this.anchorD(d), [x1, y1] = this.anchorH(h); return { x: x0, y: y0, mech: 'draw', path: [[x0, y0], [(x0 + x1) / 2, (y0 + y1) / 2 + 8], [x1, y1]] }; },
   bot(g) {
@@ -545,8 +545,8 @@ defMG({
     // countdown on the platform: 3, 2, 1… ¡YA!
     if (!b.live && !b.done) { const n = Math.ceil(left * 2); if (n > 0) txt(c, String(n), 30, 34 - (left * 2 % 1) * 4, '#ffffff', { align: 'c', out: INK, bold: true }); }
     else if (b.live && g.b < g.release + .5) txt(c, '¡YA!', 34, 32, '#fff27a', { align: 'c', out: INK, bold: true });
-    if (g.state === 'lost') shout(c, '¡PLOF!', 96, 140, g.t - g.decidedAt);
-    if (g.state === 'won') shout(c, '¡ÑAM!', mx - 30, my - 30, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡PLOF!', 96, 118, g.t - g.decidedAt, false);
+    if (g.state === 'won') hermanasStamp(c, '¡ÑAM!', clamp(mx - 30, 60, 196), clamp(my - 52, 12, 130), g.t - g.decidedAt);
   },
   hint(g) { const [mx, my] = this.mouth(g); return { x: 58, y: 72, mech: 'draw', path: [[58, 72], [100, 94], [mx - 14, my - 3]] }; },
   bot(g) {
@@ -651,19 +651,21 @@ defMG({
       const k = clamp((g.t - g.lasso.t) / .35, 0, 1), b = g.lasso.b, P = g.lasso.poly.map(([x, y]) => [lerp(x, b.x, k * .7), lerp(y, b.y, k * .7)]);
       for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; thickLine(c, p[0], p[1], q[0], q[1], 1.8, '#c0662c'); }
       if (g.t - g.lasso.t > .5) { const fk = clamp((g.t - g.lasso.t - .5) / .4, 0, 1); drawS(c, hermanasFrisbeeSpr('#ff6b3d', 18), lerp(b.x + 8, b.x + 34, fk), lerp(b.y, b.y + 14, fk) - Math.sin(fk * Math.PI) * 22, { rot: fk * 6 }); }
-      shout(c, '¡TE PILLÉ!', clamp(b.x, 50, 206), clamp(b.y - 36, 30, 160), g.t - g.lasso.t);
+      hermanasStamp(c, '¡TE PILLÉ!', clamp(b.x, 86, 170), clamp(b.y - 56, 12, 130), g.t - g.lasso.t);
     }
     if (g.miss) { const k = g.t - g.miss.t; if (fl(k * 10) % 2 === 0) for (let i = 0; i < g.miss.poly.length; i += 2) px(c, g.miss.poly[i][0], g.miss.poly[i][1], '#ff4060'); shout(c, '¡ESA NO!', SW / 2, 40, k); }
   },
   hint(g) { const th = g.birds[0]; const P = hermanasCirclePts(th.x, th.y + 2, 26, 20, -Math.PI / 2, 1.1); return { x: P[0][0], y: P[0][1], mech: 'draw', path: P }; },
   bot(g) {
     const th = g.birds[0];
+    // like a person, it draws faster (and a bit wider) when the tempo climbs, and aims where she'll be when the loop closes
+    const hk = clamp(Math.pow(g.tempo || 1, .6), 1, 1.6), spd = 12 * hk, R = 30 + (hk - 1) * 10;
     if (!g.plan || (g._bot && g._bot.done && g.state === 'play')) {
-      const d = dist(th.x, th.y, th.tx, th.ty), sp = g.speed * 1.2 * .32, k = d > 1 ? Math.min(1, sp / d) : 0;
+      const T = TAU * R * 1.15 / spd / 60 + .05, d = dist(th.x, th.y, th.tx, th.ty), sp = g.speed * 1.2 * T, k = d > 1 ? Math.min(1, sp / d) : 0;
       const cx0 = th.x + (th.tx - th.x) * k, cy0 = th.y + (th.ty - th.y) * k;
-      g.plan = [hermanasCirclePts(cx0, cy0 + 2, 30, 30, -Math.PI / 2, 1.15)]; g._bot = null;
+      g.plan = [hermanasCirclePts(cx0, cy0 + 2, R, 30, -Math.PI / 2, 1.15)]; g._bot = null;
     }
-    return hermanasBot(g, g.plan, 12, .1);
+    return hermanasBot(g, g.plan, spd, .1);
   },
 });
 
@@ -719,13 +721,14 @@ defMG({
     g.impact = [5.4, 5.0, 4.8][g.level - 1]; // beat when the wave reaches the castles
     g.waveY = 34; g.st = hermanasStrokes(); g.layer = mkCanvas(SW, SH);
     g.cols = new Float32Array(SW).fill(999); // per column: the lowest wall point (999 = no wall)
-    g.hit = false; g.saved = false; g.flood = 0; g.recede = 0;
+    g.hit = false; g.saved = false; g.flood = 0; g.recede = 0; g.ebb = 0;
   },
   wallAt(g, x) { let y = 999; for (let d = -1; d <= 1; d++) { const v = g.cols[clamp(rd(x) + d, 0, SW - 1)]; if (v < 900 && (y > 900 || v > y)) y = v; } return y; },
   frontAt(g, x) { // where the water ends in this column
     let y = g.waveY + Math.sin(x * .09 + g.t * 5) * 3;
     const wy = this.wallAt(g, x);
-    if (wy < 900) y = Math.min(y, wy - 5); else if (g.hit && !g.saved) y = lerp(y, 190, g.flood);
+    if (wy < 900) y = Math.min(y, wy - 5);
+    else if (g.hit && !g.saved) { const surge = lerp(y, 182, E.outQ(g.flood)); y = lerp(surge, 58 + Math.sin(x * .09 + g.t * 5) * 3, E.ioQ(g.ebb)); } // crashes over the castle, then ebbs away
     return y;
   },
   update(g, dt) {
@@ -755,7 +758,7 @@ defMG({
         } else { for (const cs of g.castles) if (!cs.ok) cs.wrecked = true; g.lose(); sfx('splash'); sfx('whine', { delay: .3 }); g.shake(4, .3); }
       }
     }
-    if (g.hit && !g.saved) g.flood = Math.min(1, g.flood + dt * 1.8);
+    if (g.hit && !g.saved) { g.flood = Math.min(1, g.flood + dt * 1.8); if (g.flood >= 1) g.ebb = Math.min(1, g.ebb + dt * 1.1); }
   },
   draw(g, c) {
     c.drawImage(hermanasShoreBg(), 0, 0);
@@ -775,14 +778,17 @@ defMG({
       for (let x = cs.x - 6; x <= cs.x + cs.w + 6; x++) if (this.wallAt(g, x) > 900 && (x + ph) % 7 < 4) rect(c, x, y - 1, 1, 2, '#ffffff');
       if (g.t < 2.4 * g.spb && g.cols.every(v => v > 900)) hermanasTag(c, cs.x + cs.w / 2, y - 5, 'MURO AQUÍ', '#fff27a');
     }
+    // after the wave: a band of wet, darker sand where the water reached
+    if (g.hit && !g.saved && g.ebb > 0) { c.globalAlpha = .38 * Math.min(1, g.ebb * 3); for (let x = 0; x < SW; x += 2) { const y = rd(this.frontAt(g, x)); if (this.wallAt(g, x) > 900 && y < 182) rect(c, x, y + 2, 2, 182 - y, '#b98a52'); } c.globalAlpha = 1; }
     for (const cs of g.castles) drawS(c, hermanasCastleSpr(cs.w, cs.wrecked && g.flood > .45), cs.x - 4, cs.base + 3, { ax: 0, ay: 1 });
+    // the surge rolls over the castles before it ebbs
+    if (g.hit && !g.saved && g.ebb < 1) { c.globalAlpha = .8 * (1 - g.ebb); for (let x = 0; x < SW; x++) { const y = rd(this.frontAt(g, x)); if (y > 118) { c.fillStyle = '#3d8ad0'; c.fillRect(x, 118, 1, y - 121); c.fillStyle = '#ffffff'; c.fillRect(x, y - 3, 1, 3); } } c.globalAlpha = 1; }
     // Nala guarding her castle
     const nx = g.castles.length > 1 ? 128 : clamp(g.castles[0].x + g.castles[0].w + 26, 30, 226), mood = g.state === 'won' ? 'happy' : g.state === 'lost' ? 'sad' : 'wow';
     shadowOval(c, nx, 186, 16, 2.5, .35);
     drawS(c, hermanasAussieSide('nala', g.state === 'won' ? 'jump' : 'stand', mood, .55), nx, 186 - (g.state === 'won' ? Math.abs(Math.sin(g.t * 8)) * 6 : 0), { ax: .5, ay: 1, flip: true });
-    if (g.hit && !g.saved) { c.globalAlpha = .5 * g.flood; for (const cs of g.castles) if (cs.wrecked) rect(c, cs.x - 8, 120, cs.w + 16, 72, '#5aaee6'); c.globalAlpha = 1; }
-    if (g.state === 'won') shout(c, '¡SALVADO!', 128, 58, g.t - g.decidedAt);
-    if (g.state === 'lost') shout(c, '¡NOOOO!', 128, 58, g.t - g.decidedAt);
+    if (g.state === 'won') hermanasStamp(c, '¡SALVADO!', 128, 44, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡NOOOO!', 128, 44, g.t - g.decidedAt, false);
   },
   hint(g) { const a = g.castles[0], b = g.castles[g.castles.length - 1], y = a.top - 18; return { x: a.x - 6, y, mech: 'draw', path: [[a.x - 6, y], [b.x + b.w + 6, y]] }; },
   bot(g) { if (!g.plan) { const a = g.castles[0], b = g.castles[g.castles.length - 1], y = a.top - 16; g.plan = [[[a.x - 10, y], [b.x + b.w + 10, y]]]; } return hermanasBot(g, g.plan, 6, .15); },
@@ -858,8 +864,8 @@ defMG({
     // Kira supervising from the corner
     shadowOval(c, 34, 186, 16, 2.5, .35);
     drawS(c, hermanasAussieSide('kira', g.state === 'won' ? 'jump' : 'stand', g.state === 'won' ? 'happy' : g.state === 'lost' ? 'sad' : 'normal', .55), 34, 186, { ax: .5, ay: 1 });
-    if (g.state === 'won') mord(c, P.name, 140, 160, fitMord(P.name, 200, { u: 1.2, r: 1.3, rim: 1, sy: 1 }), { anim: i => ({ s: Math.max(0, spring(g.t - g.decidedAt - i * .04, 2.5, 7)) }) });
-    if (g.state === 'lost') shout(c, '¡NO HA DADO TIEMPO!', 140, 160, g.t - g.decidedAt);
+    if (g.state === 'won') hermanasStamp(c, P.name, 142, 152, g.t - g.decidedAt, true, 190);
+    if (g.state === 'lost') hermanasStamp(c, '¡SIN TIEMPO!', 142, 152, g.t - g.decidedAt, false);
   },
   hint(g) { const P = g.dots.slice(0, 3).map(d => [d.x, d.y]); return { x: P[0][0], y: P[0][1], mech: 'draw', path: P }; },
   bot(g) { if (!g.plan) g.plan = [g.dots.map(d => [d.x, d.y])]; return hermanasBot(g, g.plan, 7, .1); },
@@ -983,8 +989,8 @@ defMG({
     shadowOval(c, kx, ky + 2, 12, 2.5, .45);
     drawS(c, hermanasChibi(fr), kx, ky + 2, { ax: .5, ay: 1, flip: g.walk && g.okPath && this.heading(g) < 0 });
     if (g.state === 'play' && g.t < 2.2 * g.spb && !g.st.cur) hermanasTag(c, sx + 30, sy - 14, 'EMPIEZA AQUÍ', '#fff27a');
-    if (g.state === 'won' && g.walk && g.walk.d > 60) shout(c, '¡AL PARQUE!', 128, 24, g.t - g.decidedAt);
-    if (g.state === 'lost') shout(c, '¡NO HEMOS LLEGADO!', 128, 24, g.t - g.decidedAt);
+    if (g.state === 'won' && g.walk && g.walk.d > 60) hermanasStamp(c, '¡AL PARQUE!', 128, 12, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡NO LLEGAMOS!', 128, 12, g.t - g.decidedAt, false);
   },
   pathLen(g) { let L = 0; const P = g.okPath || []; for (let i = 1; i < P.length; i++) L += dist(P[i - 1][0], P[i - 1][1], P[i][0], P[i][1]); return L; },
   heading(g) { let d = g.walk.d; const P = g.okPath; for (let i = 1; i < P.length; i++) { const L = dist(P[i - 1][0], P[i - 1][1], P[i][0], P[i][1]); if (d <= L) return Math.sign(P[i][0] - P[i - 1][0]) || 1; d -= L; } return 1; },

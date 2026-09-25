@@ -345,7 +345,7 @@ PORTAL_FRAMES.hermanasChalk = function (g, x, y, w, h, beat) {
 
 // ---------------------------------------------------------------- room ------
 function hermanasRoomTop(g, S) {
-  if (S.phase === 'inter') hermanasPrewarm();
+  if (S.phase === 'inter') { hermanasPrewarm(); if (hermanasPrewarm.done) hermanasStampWarm(); }
   // build every pose the interlude will need in the background, once
   if (!hermanasRoomTop.warmed) { hermanasRoomTop.warmed = 1; for (const w of ['kira', 'nala']) for (const [p, m] of [['bow', 'happy'], ['jump', 'happy'], ['lie', 'sad'], ['run', 'focus'], ['stand', 'wow'], ['stand', 'normal'], ['jump', 'normal']]) warm(() => hermanasAussieSide(w, p, m)); }
   g.drawImage(hermanasBeachBg(), 0, 0);
@@ -355,7 +355,7 @@ function hermanasRoomTop(g, S) {
   for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + NOW * .5; polyPx(g, [[sx + Math.cos(a - .12) * 22, sy + Math.sin(a - .12) * 22], [sx + Math.cos(a) * 31, sy + Math.sin(a) * 31], [sx + Math.cos(a + .12) * 22, sy + Math.sin(a + .12) * 22]], '#ffe45c'); }
   disc(g, sx, sy, 22, '#ffb020'); disc(g, sx, sy, 20, '#ffd23f'); disc(g, sx - 4, sy - 5, 12, '#ffe98a');
   // who does what
-  let react = rt < 1.3 ? (S.react || 'ready') : 'idle';
+  let react = rt < Math.max(1.3, 3.2 * 60 / (S.bpm || 120)) ? (S.react || 'ready') : 'idle'; // the reaction holds until the portal zooms in
   if (S.react === 'clear' || S.react === 'over') react = S.react;
   let poseK = 'stand', poseN = 'stand', moodK = 'normal', moodN = 'normal';
   const special = S.phase === 'inter' && S.special && S.pb >= 2 ? S.special : null;
@@ -431,6 +431,30 @@ function hermanasPrewarm() {
   const list = []; for (const k in HERMANAS_WORDS) for (const w of HERMANAS_WORDS[k]) list.push([w, hermanasFitWord(k, w)]);
   cardPrewarm(list);
   if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) hermanasPrewarm.done = 1;
+}
+// ---------------------------------------------------------------- result stamps
+// Every Kira & Nala microgame ends on the same stamp: their surf letters from the
+// card, sunny for a win and stormy for a miss, slammed in with a ring of sand
+// and foam. (Warmed up letter by letter from the room, like the announcements.)
+const HERMANAS_STAMP_WORDS = { ok: ['¡PRECIOSO!', '¡A SALVO!', '¡A PASEAR!', '¡ÑAM!', '¡TE PILLÉ!', '¡SALVADO!', '¡AL PARQUE!', '¡ATRAPADO!', '¡UN CORAZÓN!', '¡UNA ESTRELLA!', '¡UN PEZ!', '¡UN HUESO!', '¡UNA CASETA!', '¡KEIKO!'], bad: ['¡A MEDIAS!', '¡PLOF!', '¡NOOOO!', '¡SIN TIEMPO!', '¡NO LLEGAMOS!', '¡SIN BOCATAS!'] };
+function hermanasStampFace(ok) { const F = hermanasFaces(); return ok ? F.speed : F.level; }
+function hermanasStamp(c, word, x, y, t, ok = true, maxW = 196) {
+  if (t < 0) return;
+  if (typeof cardWord !== 'function') { shout(c, word, x, y + 10, t); return; }
+  const st = cardFit(word, maxW, hermanasStampFace(ok));
+  if (t < .6) { // sand and foam fly out as the letters land
+    const k = E.outQ(t / .6), n = 16;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + word.length * .7, r = 12 + k * 64; disc(c, x + Math.cos(a) * r * 1.6, y + 11 + Math.sin(a) * r * .55, Math.max(0, 3.4 * (1 - k)), ok ? (i % 3 === 0 ? '#ffd1e4' : i % 3 === 1 ? '#fff7ae' : '#ffffff') : (i % 2 ? '#d7e6f5' : '#9fb4cc')); }
+  }
+  cardWord(c, word, x, y, st, { anim: i => cardAnimSlam(t, i, { stagger: .035, from: 2 }) });
+}
+function hermanasStampWarm() {
+  if (typeof cardPrewarm !== 'function' || hermanasStampWarm.done) return;
+  const list = [];
+  for (const w of HERMANAS_STAMP_WORDS.ok) list.push([w, cardFit(w, 196, hermanasStampFace(true))]);
+  for (const w of HERMANAS_STAMP_WORDS.bad) list.push([w, cardFit(w, 196, hermanasStampFace(false))]);
+  cardPrewarm(list);
+  if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) hermanasStampWarm.done = 1;
 }
 // one-shot sounds inside a draw: once per announcement
 function hermanasOnce(S, key) { S._hnOnce = S._hnOnce || {}; const k = S.count + ':' + key; if (S._hnOnce[k]) return false; S._hnOnce[k] = 1; return true; }

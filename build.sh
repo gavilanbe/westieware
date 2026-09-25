@@ -33,7 +33,7 @@ cat <<'H'
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>WESTIE WARE ¡Tocados!</title>
+<title>WESTIE WARE ¡Grooming!</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
@@ -45,7 +45,7 @@ body{display:flex;align-items:center;justify-content:center;background:#0b2a20 r
 canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;touch-action:none}
 </style>
 </head>
-<body><script>window.onerror=function(m,s,l,c){document.documentElement.setAttribute('data-err',m+' @'+l+':'+c);};</script><canvas id="c" aria-label="WESTIE WARE ¡Tocados!: microjuegos táctiles en la peluquería canina Westie BLVRD"></canvas>
+<body><script>window.onerror=function(m,s,l,c){document.documentElement.setAttribute('data-err',m+' @'+l+':'+c);};</script><canvas id="c" aria-label="WESTIE WARE ¡Grooming!: microjuegos táctiles en la peluquería canina Westie BLVRD"></canvas>
 <script>
 H
 cat $FILES

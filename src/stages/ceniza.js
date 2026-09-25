@@ -351,14 +351,14 @@ function cenizaCounterBoard(g, x, y) {
 }
 function cenizaPoseFor(S) {
   const rt = S.reactT || 0;
-  let pose = rt < 1.3 ? ({ ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' }[S.react] || 'stir') : 'stir';
+  let pose = rt < Math.max(1.3, 3.2 * 60 / (S.bpm || 120)) ? ({ ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' }[S.react] || 'stir') : 'stir'; // held until the portal zooms in
   if (S.phase === 'inter' && S.special === 'speed' && S.pb >= 2) pose = 'speed';
   if (S.phase === 'inter' && S.special === 'boss' && S.pb >= 2) pose = 'boss';
   if (S.react === 'clear' || S.react === 'over') pose = S.react;
   return pose;
 }
 function cenizaRoomTop(g, S) {
-  if (S.phase === 'inter') cenizaPrewarm();
+  if (S.phase === 'inter') { cenizaPrewarm(); if (cenizaPrewarm.done && typeof cenizaStampWarm === 'function') cenizaStampWarm(); }
   const t = S.pt || 0, rt = S.reactT || 0, pose = cenizaPoseFor(S);
   g.drawImage(cenizaRoomBg(), 0, 0);
   // candles flicker on the shelves
@@ -506,7 +506,7 @@ function cenizaFaces() {
   };
   return CENIZA_FACES;
 }
-function cenizaFitWord(kind, w) { return cardFit(w, kind === 'level' ? 164 : 190, cenizaFaces()[kind]); }
+function cenizaFitWord(kind, w) { return cardFit(w, kind === 'level' ? 160 : 176, cenizaFaces()[kind]); }
 function cenizaPrewarm() {
   if (typeof cardPrewarm !== 'function' || cenizaPrewarm.done) return;
   const list = []; for (const k in CENIZA_WORDS) for (const w of CENIZA_WORDS[k]) list.push([w, cenizaFitWord(k, w)]);
@@ -574,7 +574,7 @@ function cenizaSpeedFx(g, S, t) {
   pass(1.05, 1.85, 116, 1); pass(2.15, 2.95, 80, -1);
   if (b > 1.05 && cenizaOnce(S, 'zoom1')) sfx('zoom'); if (b > 2.15 && cenizaOnce(S, 'zoom2')) sfx('zoom', { pitch: 1.2 });
   for (let i = 0; i < 8; i++) { const y = 70 + i * 13, x = SW - ((i * 61 + b * 260) % (SW + 60)); if (b > 1 && b < 3) rect(g, x, y, 16 + (i % 3) * 6, 1, 'rgba(255,255,255,.6)'); }
-  cenizaWords(g, 'speed', t, 150, 6, 146, 38);
+  cenizaWords(g, 'speed', t, 144, 6, 136, 38);
 }
 // ---- ¡JUEGO DEL JEFE!: the cauldron boils over and floods the den
 function cenizaBossFx(g, S, t) {
@@ -600,7 +600,7 @@ function cenizaBossFx(g, S, t) {
   if (b > 1.9 && b < 3) shout(g, '¡BLUB!', 150, 112, (b - 1.9) * 1.5);
   if (b > .2 && cenizaOnce(S, 'blub')) sfx('czBlub', { pitch: .6 });
   if (b > 1.9 && cenizaOnce(S, 'quack')) sfx('czQuack');
-  cenizaWords(g, 'boss', t, 150, 6, 144, 38);
+  cenizaWords(g, 'boss', t, 144, 6, 134, 38);
 }
 // ---- ¡MÁS DIFÍCIL!: the moon turns red, her hat glows, the bats come out
 function cenizaLevelFx(g, S, t) {
@@ -625,7 +625,7 @@ function cenizaLevelFx(g, S, t) {
   for (let i = 0; i < 6; i++) { const an = b * 3 + i * TAU / 6, r = 18 + Math.sin(b * 5 + i) * 3; drawStar(g, hx + Math.cos(an) * r, hy + Math.sin(an) * r * .6, 2 * k, i % 2 ? '#fff27a' : '#94dcbc', an); }
   if (b > .9 && cenizaOnce(S, 'hat')) sfx('czMagic', { pitch: .8 });
   if (b > .9 && b < 2.4) shout(g, '¡LUNA ROJA!', 80, 76, (b - .9) * 1.4);
-  cenizaWords(g, 'level', t, 164, 8, 158, 40);
+  cenizaWords(g, 'level', t, 154, 8, 148, 40);
 }
 function cenizaSpecial(g, S, kind, t) {
   if (typeof cardWord !== 'function') return false;
@@ -677,7 +677,7 @@ function cenizaGrimoire(g, t, items) {
   rect(g, bx, by, bw / 2 - 1, bh, '#fff4dc'); rect(g, bx + bw / 2 + 1, by, bw / 2 - 1, bh, '#fff4dc');
   rect(g, bx + bw / 2 - 1, by, 2, bh, '#c9b28c');
   for (let y = by + 6; y < by + bh; y += 9) { hline(g, bx + 6, bx + bw / 2 - 8, y, '#f2e2b8'); hline(g, bx + bw / 2 + 8, bx + bw - 6, y, '#f2e2b8'); }
-  txt(g, 'Pócima Nº 5', bx + bw / 4, by + 6, '#5a1f2a', { align: 'c', bold: true });
+  txt(g, 'Pócima N° 5', bx + bw / 4, by + 6, '#5a1f2a', { align: 'c', bold: true });
   txt(g, 'el champú', bx + bw / 4, by + 20, '#6b6977', { align: 'c' }); txt(g, 'definitivo', bx + bw / 4, by + 30, '#6b6977', { align: 'c' });
   drawS(g, cenizaCauldron(.7), bx + bw / 4, by + 80, {});
   cenizaPotion(g, bx + bw / 4, by + 70, 15, 3, '#5bd18b', t);
@@ -686,7 +686,7 @@ function cenizaGrimoire(g, t, items) {
 defCut('ceniza_in', {
   song: { spb: 4, loop: true, tracks: CENIZA_SONGS.play.tracks },
   shots: [
-    { dur: 0, sfx: [[.3, 'czMeow'], [1.4, 'czQuack']], lines: [['narr', 'Mientras tanto, en el almacén de Westie BLVRD…'], ['ceniza', 'Pato, el aloe. Anahí quiere un champú nuevo: natural, suave… y con MUCHA espuma.'], ['pato', '¡Cuac! ¿Y si le echamos una guindilla?'], ['ceniza', 'Ni se te ocurra. Esto es la Pócima Nº 5.']],
+    { dur: 0, sfx: [[.3, 'czMeow'], [1.4, 'czQuack']], lines: [['narr', 'Mientras tanto, en el almacén de Westie BLVRD…'], ['ceniza', 'Pato, el aloe. Anahí quiere un champú nuevo: natural, suave… y con MUCHA espuma.'], ['pato', '¡Cuac! ¿Y si le echamos una guindilla?'], ['ceniza', 'Ni se te ocurra. Esto es la Pócima N° 5.']],
       top(g, t) { cenizaRoomTop(g, { pt: t, pb: t * 2, reactT: 9, react: 'ready', phase: 'cut' }); const k = clamp(t / .5, 0, 1); caption(g, 'Almacén · 23:59', 22 - (1 - k) * 40); },
       bot(g, t) { g.drawImage(cenizaBotBg(), 0, 0); cenizaPato(g, 128, 78, CUT.li === 2 ? 'laugh' : 'grin', t, { s: 1 }); if (CUT.li === 2) { drawS(g, cenizaIngIcon('guindilla'), 158, 70, { rot: Math.sin(t * 8) * .3 }); } } },
     { dur: 0, sfx: [[.2, 'czMagic']], lines: [['ceniza', 'Aloe, avena, lavanda, manzanilla… y una pizca de purpurina.'], ['pato', '(Esto va a explotar…) ¡Cuac, cuac!'], ['ceniza', '¿Has dicho algo?'], ['pato', '¡Que qué bien huele, jefa!']],
@@ -724,9 +724,19 @@ defCut('ceniza_out', {
         if (CUT.li === 0) for (let i = 0; i < 5; i++) { const ph = (t * .5 + i * .2) % 1; g.globalAlpha = 1 - ph; disc(g, 40 + i * 44, 120 - ph * 60, 8 + ph * 8, '#ffffff'); g.globalAlpha = 1; }
       },
       bot(g, t) { g.drawImage(cenizaBotBg(), 0, 0); if (CUT.li >= 2) drawWestieSit(g, 72, 150, CUT.li === 2 ? 'wow' : 'happy'); drawS(g, cenizaBody(CUT.li >= 3 ? 'angry' : 'smug', true), 176, 120, { s: 1 }); if (CUT.li >= 2) txt(g, '?', 100, 40 + Math.sin(t * 6) * 2, '#ffffff', { out: INK, bold: true }); } },
-    { dur: 0, lines: [['anahi', '¡Qué espuma más perfecta! Ceniza, ¿esto lo podemos vender?'], ['ceniza', '…Miau.'], ['narr', 'Y así nació la Pócima Nº 5, el champú más espumoso de Westie BLVRD.']],
+    { dur: 0, lines: [['anahi', '¡Qué espuma más perfecta! Ceniza, ¿esto lo podemos vender?'], ['ceniza', '…Miau.'], ['narr', 'Y así nació la Pócima N° 5, el champú más espumoso de Westie BLVRD.']],
       top(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 190, 170, 'win', t); cenizaDraw(g, 90, 178, 'smug', t, { white: true }); },
-      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); for (let i = 0; i < 5; i++) { const x = 60 + i * 34, y = 130; rect(g, x - 7, y - 26, 14, 28, INK); rect(g, x - 6, y - 25, 12, 26, '#ff93bf'); rect(g, x - 3, y - 32, 6, 7, INK); rect(g, x - 2, y - 31, 4, 6, '#ffffff'); rect(g, x - 5, y - 17, 10, 9, '#fff8e6'); tiny(g, 'N5', x, y - 15, RAMP.purple[2], { align: 'c' }); px(g, x - 4, y - 22, '#ffffff'); } txt(g, 'NOVEDAD · Pócima Nº 5', SW / 2, 146, INK, { align: 'c', bold: true }); } },
+      bot(g, t) {
+        g.drawImage(salonBotBackdrop(), 0, 0);
+        // the new product on the shop's shelf, under a hanging sign (all above the dialogue box)
+        const sk = E.outBack(clamp(t / .5, 0, 1)); g.save(); g.translate(SW / 2, rd(-30 + sk * 52)); g.rotate(Math.sin(t * 2.4) * .03);
+        vline(g, -52, -40, -10, INK); vline(g, 52, -40, -10, INK); panel(g, -70, -11, 140, 22, '#fff8e6', { r: 4 }); txt(g, 'NOVEDAD · Pócima N° 5', 0, -5, RAMP.purple[1], { align: 'c', bold: true }); g.restore();
+        rect(g, 36, 112, 184, 5, INK); rect(g, 37, 112, 182, 3, RAMP.wood[3]); rect(g, 37, 112, 182, 1, RAMP.wood[4]);
+        for (let i = 0; i < 5; i++) { const pop = spring(t - .5 - i * .12, 2.6, 6); if (pop <= 0) continue; const x = 60 + i * 34, y = 112; g.save(); g.translate(x, y); g.scale(1, pop); g.translate(-x, -y);
+          rect(g, x - 7, y - 26, 14, 26, INK); rect(g, x - 6, y - 25, 12, 25, '#ff93bf'); rect(g, x - 6, y - 25, 3, 25, '#ffd1e4'); rect(g, x - 3, y - 32, 6, 7, INK); rect(g, x - 2, y - 31, 4, 6, '#ffffff');
+          rect(g, x - 5, y - 17, 10, 9, '#fff8e6'); tiny(g, 'N5', x, y - 15, RAMP.purple[2], { align: 'c' }); g.restore();
+          if (fl(t * 3 + i) % 5 === 0) drawStar(g, x + 5, y - 28, 2, '#ffffff'); }
+      } },
   ],
 });
 

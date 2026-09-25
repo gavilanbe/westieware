@@ -298,7 +298,7 @@ const MENU = {
   drawColTop(g) {
     rect(g, 0, 0, SW, SH, RAMP.purple[2]); for (let y = 0; y < SH; y += 8) rect(g, 0, y, SW, 1, RAMP.purple[1]);
     const seen = this.colItems().filter(id => SAVE.seen[id]).length, total = this.colItems().length;
-    mord(g, 'COLECCIÓN', SW / 2, 10, { u: 1.6, r: 1.7, rim: 2, sy: 2 });
+    mord(g, 'ÁLBUM', SW / 2, 10, { u: 1.8, r: 1.9, rim: 2, sy: 2 });
     txt(g, seen + ' / ' + total + ' microjuegos descubiertos', SW / 2, 44, '#ffffff', { align: 'c', out: INK });
     const id = this.subSel;
     if (id) {
@@ -323,7 +323,7 @@ const MENU = {
         sfx('select');
         if (id === 'sound') setSound(!AU.on);
         if (id === 'haptic') { SAVE.opts.haptic = SAVE.opts.haptic === 0 ? 1 : 0; persist(); buzz(30); }
-        if (id === 'prologo') playCut('prologo', () => go(MENU, {}));
+        if (id === 'prologo') playCut('prologo', () => go(MENU, { tab: 'opciones' }));
         if (id === 'credits') transit('curtain', CREDITS, {});
         if (id === 'erase') { if (this.eraseArm) { SAVE = defaultSave(); persist(); this.eraseArm = false; transit('paw', BOOT, {}); } else this.eraseArm = true; }
       }
@@ -338,10 +338,11 @@ const MENU = {
   },
   drawOptTop(g) {
     rect(g, 0, 0, SW, SH, RAMP.teal[2]); for (let i = 0; i < 20; i++) drawPawPrint(g, (i * 57) % SW, (i * 37) % SH, RAMP.teal[3], i);
-    drawLogo(g, SW / 2, 70, 3 + this.t, { noSparkle: true });
-    txt(g, 'Westie BLVRD · Grooming, Spa & Store', SW / 2, 130, '#ffffff', { align: 'c', out: INK });
-    txt(g, 'Carrer de Viladomat, 185 · Barcelona', SW / 2, 144, '#ffffff', { align: 'c', out: INK });
-    txt(g, 'Cita: 688 72 57 01 · @westie.blvrd', SW / 2, 158, C.yellowL, { align: 'c', out: INK });
+    drawLogo(g, SW / 2, 62, 3 + this.t, { noSparkle: true });
+    g.globalAlpha = .55; rect(g, 0, 145, SW, 43, INK); g.globalAlpha = 1;
+    txt(g, 'Westie BLVRD · Grooming, Spa & Store', SW / 2, 149, '#ffffff', { align: 'c' });
+    txt(g, 'Carrer de Viladomat, 185 · Barcelona', SW / 2, 161, '#ffffff', { align: 'c' });
+    txt(g, 'Cita: 688 72 57 01 · Instagram: westie.blvrd', SW / 2, 173, C.yellowL, { align: 'c' });
   },
   // ------------------------------------------------------------ juguetes ---
   updJuguetes(dt) { if (typeof toysUpdate === 'function') toysUpdate(this, dt); },
@@ -374,15 +375,28 @@ const CREDITS = {
   update(dt) { this.t += dt; if (this.t > 2 && IN.anyTap) transit('curtain', MENU, {}); },
   drawTop(g) {
     rect(g, 0, 0, SW, SH, RAMP.green[1]);
-    drawLogo(g, SW / 2, 70, this.t);
-    txt(g, 'Un homenaje de fans a WarioWare: Touched!', SW / 2, 140, '#ffffff', { align: 'c' });
-    txt(g, 'hecho para Westie BLVRD', SW / 2, 152, RAMP.cream[3], { align: 'c' });
+    drawLogo(g, SW / 2, 62, this.t);
+    g.globalAlpha = .45; rect(g, 0, 150, SW, 30, INK); g.globalAlpha = 1;
+    txt(g, 'Un homenaje de fans a WarioWare: Touched!', SW / 2, 154, '#ffffff', { align: 'c' });
+    txt(g, 'hecho para Westie BLVRD', SW / 2, 166, RAMP.cream[3], { align: 'c' });
   },
   drawBot(g) {
     rect(g, 0, 0, SW, SH, RAMP.green[2]);
+    for (let y = 0; y < 150; y += 8) for (let x = ((y / 8) % 2) * 8; x < SW; x += 16) rect(g, x, y, 8, 8, RAMP.green[1]);
     const lines = ['PELUQUERÍA', 'Anahí Gavilán', '', 'MASCOTA', 'Keiko (y todos los peludos)', '', 'IDEA Y PRODUCCIÓN', 'Nahuel Gavilán', '', 'PROGRAMACIÓN, ARTE Y MÚSICA', 'Claude Opus 5.5', '', 'Grooming · Spa & Store', 'Carrer de Viladomat, 185', '688 72 57 01 · @westie.blvrd', '', '¡Gracias por jugar!'];
-    const y0 = SH - this.t * 18;
-    lines.forEach((l, i) => { const y = y0 + i * 12; if (y > -10 && y < SH) txt(g, l, SW / 2, y, l === l.toUpperCase() && l ? C.yellowL : '#ffffff', { align: 'c', out: INK, bold: l === l.toUpperCase() }); });
+    // the names roll up above the floor…
+    g.save(); g.beginPath(); g.rect(0, 0, SW, 150); g.clip();
+    const y0 = 150 - this.t * 18;
+    lines.forEach((l, i) => { const y = y0 + i * 12; if (y > -10 && y < 150) txt(g, l, SW / 2, y, l === l.toUpperCase() && l ? C.yellowL : '#ffffff', { align: 'c', out: INK, bold: l === l.toUpperCase() }); });
+    g.restore();
+    // …while the whole cast parades along it, Keiko leading
+    rect(g, 0, 150, SW, 42, RAMP.wood[2]); rect(g, 0, 150, SW, 2, INK); for (let x = (-(this.t * 28) % 24 + 24) % 24 - 24; x < SW; x += 24) vline(g, rd(x), 152, SH, RAMP.wood[1]);
+    const cast = ["keiko"].concat(menuStageIds().filter(id => id !== "mezcla" && id !== "unpelo")), gap = 40, span = Math.max(cast.length * gap, SW + gap);
+    cast.forEach((id, i) => {
+      const x = ((this.t * 28 + (cast.length - i) * gap) % span) - 30, step = fl(this.t * 6 + i) % 2, hop = Math.abs(Math.sin(this.t * 6 + i)) * 2;
+      const img = id === 'keiko' ? (typeof keikoChibi === 'function' ? keikoChibi(step ? 'walk1' : 'walk0', this.t) : keikoSide(.34, 'wag', 'happy')) : menuChibi(id, step ? 'walk1' : 'walk0', this.t);
+      shadowOval(g, x, 184, 8, 2, .35); drawS(g, img, x, 184 - hop, { ax: .5, ay: 1 });
+    });
   },
 };
 

@@ -106,10 +106,17 @@ defMG({
     }
     if (IN.rel) for (const tr of g.traces) if (!tr.done) tr.reset();
     if (g.traces.every(t => t.done)) {
-      if (g.phase < 2) g.fx.add({ k: 'txt', s: ['¡PATAS PERFECTAS!', '¡COLA PERFECTA!'][g.phase], x: 128, y: 30, life: 1, c: '#fff27a' });
+      if (g.phase < POMPON_PHASES.length - 1) g.fx.add({ k: 'txt', s: ['¡PATAS PERFECTAS!', '¡COLA PERFECTA!'][g.phase], x: 128, y: 30, life: .8, c: '#fff27a' });
       sfx('sparkle'); g.cheer = 1; g.phaseDoneT = g.t;
       g.phase++;
-      if (g.phase >= POMPON_PHASES.length) { g.win(); pomponSparkle(g, 150, 60, 24); sfx('slam'); return; }
+      if (g.phase >= POMPON_PHASES.length) {
+        g.win(); g.fx.p = g.fx.p.filter(p => p.k !== 'txt'); // the stamp gets the stage to itself
+        pomponSparkle(g, 150, 60, 24); sfx('slam'); sfx('shutter'); sfx('shutter', { delay: .18, pitch: 1.1 }); sfx('shutter', { delay: .41, pitch: .95 });
+        // the whole Palau goes wild: confetti and hearts rain on the winner
+        for (let i = 0; i < 34; i++) g.fx.add({ k: 'conf', x: g.r(SW), y: g.r(-20, 30), vx: g.r(-30, 30), vy: g.r(30, 110), g: 60, life: 2.2, c: pick(['#ff5d9e', '#fff27a', '#ffffff', '#c49aff', '#8fd6b5']), rot: g.r(TAU), vr: g.r(-8, 8) });
+        for (let i = 0; i < 8; i++) g.fx.add({ k: 'heart', x: 150 + g.r(-50, 50), y: 150, vy: -g.r(30, 70), life: 1.2, c: '#ff5d9e' });
+        return;
+      }
       this.setupPhase(g);
     }
     // Vanesa's hairspray
@@ -186,7 +193,9 @@ defMG({
     // Vanesa up on the gantry, lobbing cans
     const pose = g.state === 'won' ? 'angry' : g.vanPose;
     pomponDrawVanesa(c, 218, 150, pose, { flip: true });
-    if (g.state === 'play' && g.vanPose === 'smug' && fl(t * .6) % 3 === 0) txt(c, '¡Un poquito de laca!', 180, 42, POMPON_VAN_LILAC[4], { align: 'c', out: INK });
+    if (g.state === 'play' && g.vanPose === 'smug' && fl(t * .6) % 3 === 0) pomponSay(c, '¡Un poquito de laca!', 172, 22, 206, 56);
+    // camera flashes pop all over the stalls for the winner
+    if (g.state === 'won') for (let i = 0; i < 7; i++) { const ph = ((g.t - g.decidedAt) * 2.3 + i * .37) % 1; if (ph < .18) { const fx0 = 14 + (i * 67) % 230, fy0 = 150 + (i * 23) % 30; drawStar(c, fx0, fy0, 7 * (1 - ph / .18), '#ffffff', i); disc(c, fx0, fy0, 2, '#fff7ae'); } }
     for (const cn of g.cans) { if (cn.dead) continue; const [x, yt] = this.canPos(cn); if (yt < SH + 12) pomponSprayCan(c, x, yt, cn.rot); }
     // HUD
     panel(c, 6, 40, 104, 70, '#fff8e6', { r: 6 });

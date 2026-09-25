@@ -200,7 +200,7 @@ defMG({
         }
       }
     }
-    if (g.st.cur && !g.owner) for (let i = 1; i < g.st.cur.length; i++) thickLine(c, g.st.cur[i - 1][0], g.st.cur[i - 1][1], g.st.cur[i][0], g.st.cur[i][1], 1.2, '#ffffff');
+    if (g.st.cur && !g.owner && g.state === 'play') for (let i = 1; i < g.st.cur.length; i++) thickLine(c, g.st.cur[i - 1][0], g.st.cur[i - 1][1], g.st.cur[i][0], g.st.cur[i][1], 1.2, '#ffffff');
     // the gull (on this screen)
     if (G.y > -40) {
       shadowOval(c, G.x, 150 + (G.y - 92) * .2, 16, 3, clamp((G.y + 30) / 150, .15, .4));
@@ -222,6 +222,8 @@ defMG({
       for (let i = 0; i < P.length; i += 1) { const p = P[i], q = P[(i + 1) % P.length]; thickLine(c, p[0], p[1], q[0], q[1], 2, '#c0662c'); }
       if (g.t - g.lasso.t < .5) shout(c, '¡ZAS!', clamp(G.x, 40, 216), clamp(G.y - 36, 22, 170), g.t - g.lasso.t);
     }
+    if (g.state === 'won') hermanasStamp(c, '¡ATRAPADO!', 128, 30, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡SIN BOCATAS!', 128, 30, g.t - g.decidedAt, false);
     if (g.msg && g.t - g.msg.t < g.msg.dur) { const k = E.outBack(clamp((g.t - g.msg.t) / .2, 0, 1)); g.msg.w = g.msg.w || txtW(g.msg.s) + 14; panel(c, SW / 2 - g.msg.w / 2, rd(4 - (1 - k) * 20), g.msg.w, 15, '#ffffff', { r: 4 }); txt(c, g.msg.s, SW / 2, rd(8 - (1 - k) * 20), INK, { align: 'c' }); }
   },
   top(g, c) {

@@ -334,11 +334,12 @@ function pomponLife(g, x, y, st, bt) {
   }
   drawS(g, pomponLifeBow(), x, y, { rot: Math.sin(NOW * 3 + x) * .08 });
 }
-function pomponMiniLife(g, x, y, alive) { if (alive) pomponBowAt(g, x, y, .6); else ringPx(g, x, y, 3, 'rgba(255,255,255,.5)'); }
+function pomponMiniLife(g, x, y, alive) { if (alive) pomponBowAt(g, x, y, .72); else { px(g, x - 3, y - 2, 'rgba(255,255,255,.45)'); px(g, x + 3, y - 2, 'rgba(255,255,255,.45)'); ringPx(g, x, y, 2.5, 'rgba(255,255,255,.45)'); } }
 function pomponMini(g, x, y, st, S) {
   const pose = st === 'win' ? 'joy' : st === 'lose' ? 'lose' : 'idle';
-  drawS(g, pomponBody(pose === 'joy' ? 'win' : pose), 34, SH + 52 - (st === 'win' ? 5 : 0), { ax: .5, ay: 1 });
-  void S;
+  // she peeks in from the corner and bops to the beat (a hop when you win)
+  const bop = Math.round(Math.abs(Math.sin((S.pb || 0) * Math.PI)) * -2), hop = st === 'win' ? -6 : 0;
+  drawS(g, pomponBody(pose === 'joy' ? 'win' : pose), 34, SH + 46 + bop + hop, { ax: .5, ay: 1 });
 }
 function pomponPlayTop(g, S) {
   const t = S.pt || 0;
@@ -581,7 +582,18 @@ defCut('pompon_out', {
       bot(g, t) { g.drawImage(pomponCurtainBg(), 0, 0); g.drawImage(pomponBigHead(), 0, 24); if (CUT.li >= 1) for (let i = 0; i < 3; i++) drawStar(g, 60 + i * 68, 40 + Math.sin(t * 6 + i) * 4, 4, '#fff27a'); } },
     { dur: 0, lines: [['pompon', '¡Vanesa, pásate un día por Westie BLVRD!'], ['pompon', 'Ese pelo pide a gritos un buen corte. ¡Con cariño, eh!'], ['narr', 'Y así, Pompón siguió siendo la número 1… con flequillo de gala.']],
       top(g, t) { g.drawImage(pomponArenaBg(), 0, 0); pomponBeams(g, t); pomponDraw(g, 128, 160, CUT.li === 1 ? 'ready' : 'win', { jump: Math.abs(Math.sin(t * 5)) * 5 }); pomponCrowd(g, 158, t * 2, t, 1); },
-      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); drawPortalFrame(g, 'mirror', 64, 24, 128, 96, t); rect(g, 64, 24, 128, 96, '#dfe9ee'); drawS(g, pomponHead('win'), 128, 118, { ax: .5, ay: 1 }); rosette(g, 180, 70, '#ff5d9e', '#ffffff'); } },
+      bot(g, t) {
+        // back at Westie BLVRD: Pompón admires her gala fringe in the salon mirror, the winner's rosette pinned to the frame
+        g.drawImage(salonBotBackdrop(), 0, 0);
+        g.save(); g.beginPath(); g.rect(64, 24, 128, 96); g.clip();
+        greenWall(g, 64, 24, 128, 96);
+        drawS(g, pomponBody(CUT.li === 1 ? 'ready' : 'win'), 128, 150 + Math.round(Math.abs(Math.sin(t * 4)) * -2), { ax: .5, ay: 1 });
+        g.globalAlpha = .3; for (let i = 0; i < 3; i++) linePx(g, 92 + i * 8 + (t * 30) % 90, 24, 62 + i * 8 + (t * 30) % 90, 120, '#ffffff'); g.globalAlpha = 1;
+        g.restore();
+        drawPortalFrame(g, 'mirror', 64, 24, 128, 96, t);
+        rosette(g, 184, 34, '#ff5d9e', '#ffffff');
+        for (let i = 0; i < 6; i++) { const a = t * 2 + i * TAU / 6, k = (Math.sin(t * 5 + i * 2) + 1) / 2; drawStar(g, 128 + Math.cos(a) * 78, 72 + Math.sin(a) * 56, 1.5 + k * 2.5, i % 2 ? '#fff27a' : '#ffd1e4', t * 3); }
+      } },
   ],
 });
 // a dog biscuit (thrown by the crowd, also the treat in "chuches")

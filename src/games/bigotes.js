@@ -900,6 +900,7 @@ defMG({
   update(g, dt) {
     const d = g.state === 'play' ? g.trk.update(dt) : 0;
     if (d) { g.min = g.start + g.trk.ang / TAU * 60; if (fl(g.min / 5) !== g._m5) { g._m5 = fl(g.min / 5); sfx('tick', { pitch: 1.2, vol: .5 }); } }
+    if (g.state === 'won') { g.min += (g.target - g.min) * Math.min(1, dt * 14); return; } // the hands click onto the appointment: it reads exactly 10:30
     if (g.state !== 'play') return;
     if (Math.abs(g.min - g.target) <= g.tol && (!IN.down || Math.abs(g.trk.vel) < .8)) {
       g.still += dt;

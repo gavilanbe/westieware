@@ -21,13 +21,15 @@ function rizosAfroWall() {
   });
 }
 function rizosFaceCrop(ex) { return mdl('rizosFaceCrop:' + ex, () => faceCrop(rizosHead(ex), 16, 30, 52, 44)); }
-function rizosDrawKnot(g, x, y, k, t, seed, hot) {
-  // k: 0 (loose) .. 1 (tight): a lumpy snarl of dark hair with a frizzy halo
+function rizosDrawKnot(g, x, y, k, t, seed, hot, sq = 0) {
+  // k: 0 (loose) .. 1 (tight): a lumpy snarl of dark hair with a frizzy halo.
+  // sq squashes it wide (+) or tall (−) while it's being rubbed.
   const r = 10 + k * 7, wob = Math.sin(t * 9 + seed) * (hot ? 1.5 : .6);
+  const sqx = 1 + sq, sqy = 1 - sq, S = ([a, b]) => [x + (a - x) * sqx, y + (b - y) * sqy];
   // frizz halo sticking out all round
-  for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + hash2(i, seed) * .4, l = r + 4 + hash2(seed, i) * 6; linePx(g, x + Math.cos(a) * (r - 3), y + Math.sin(a) * (r - 3), x + Math.cos(a + .25 + wob * .05) * l, y + Math.sin(a + .25) * l, i % 3 ? '#f0b573' : '#3e2016'); }
+  for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + hash2(i, seed) * .4, l = r + 4 + hash2(seed, i) * 6; const [x0, y0] = S([x + Math.cos(a) * (r - 3), y + Math.sin(a) * (r - 3)]), [x1, y1] = S([x + Math.cos(a + .25 + wob * .05) * l, y + Math.sin(a + .25) * l]); linePx(g, x0, y0, x1, y1, i % 3 ? '#f0b573' : '#3e2016'); }
   // lumpy body
-  const pts = []; for (let i = 0; i < 14; i++) { const a = i / 14 * TAU, rr = r * (.78 + hash2(i, seed + 2) * .34) + Math.sin(t * 7 + i) * (hot ? 1 : 0); pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr * .88]); }
+  const pts = []; for (let i = 0; i < 14; i++) { const a = i / 14 * TAU, rr = r * (.78 + hash2(i, seed + 2) * .34) + Math.sin(t * 7 + i) * (hot ? 1 : 0); pts.push(S([x + Math.cos(a) * rr, y + Math.sin(a) * rr * .88])); }
   polyPx(g, pts.map(([a, b]) => [a + 1, b + 2]), '#3e1a0c');
   polyPx(g, pts, INK); polyPx(g, pts.map(([a, b]) => [lerp(a, x, .1), lerp(b, y, .1)]), mixHex('#4a2210', '#9c5a30', 1 - k));
   polyPx(g, pts.map(([a, b]) => [lerp(a, x - r * .3, .5), lerp(b, y - r * .3, .5)]), mixHex('#6e3520', '#d4874c', 1 - k));
@@ -36,7 +38,7 @@ function rizosDrawKnot(g, x, y, k, t, seed, hot) {
   for (let i = 0; i < n; i++) {
     const a0 = hash2(i, seed) * TAU, rr = r * (.25 + hash2(seed, i) * .55), ox = (hash2(i, seed + 3) - .5) * r * .9, oy = (hash2(i, seed + 5) - .5) * r * .8;
     let lx = null, ly = null;
-    for (let a = a0; a < a0 + 4.8; a += .34) { const px0 = x + ox + Math.cos(a + wob * .1) * rr, py0 = y + oy + Math.sin(a) * rr * .8; if (lx != null) linePx(g, lx, ly, px0, py0, i % 3 === 0 ? '#1e0c05' : i % 3 === 1 ? '#f0b573' : '#8a4a24'); lx = px0; ly = py0; }
+    for (let a = a0; a < a0 + 4.8; a += .34) { const [px0, py0] = S([x + ox + Math.cos(a + wob * .1) * rr, y + oy + Math.sin(a) * rr * .8]); if (lx != null) linePx(g, lx, ly, px0, py0, i % 3 === 0 ? '#1e0c05' : i % 3 === 1 ? '#f0b573' : '#8a4a24'); lx = px0; ly = py0; }
   }
 }
 defMG({
@@ -139,10 +141,12 @@ defMG({
         if (dt0 < .8) drawStar(c, k.x + 8, k.y - 8, 3 * (1 - dt0 / .8) + .5, '#ffffff', dt0 * 8);
         continue;
       }
-      const kk = clamp(k.hp / k.max, 0, 1), sh = k.shake ? Math.sin(g.t * 60) * k.shake * 1.5 : 0;
-      rizosDrawKnot(c, k.x + sh, k.y, kk, g.t, k.seed, k.shake > .5);
-      // life ring
-      for (let a = 0; a < kk * TAU; a += .12) px(c, k.x + Math.cos(a - Math.PI / 2) * 19, k.y + Math.sin(a - Math.PI / 2) * 19, kk > .5 ? '#ff4060' : '#ffb020');
+      const kk = clamp(k.hp / k.max, 0, 1), sh = k.shake ? Math.sin(g.t * 60) * k.shake * 1.5 : 0, sq = k.shake > .5 ? Math.sin(g.t * 34) * .12 * k.shake : 0;
+      // life ring: a bold arc on a dark track, so you can read how loose it is
+      for (let a = 0; a < TAU; a += .1) px(c, k.x + Math.cos(a) * 20, k.y + Math.sin(a) * 20, 'rgba(29,20,36,.35)');
+      for (let a = 0; a < kk * TAU; a += .07) { const ca = Math.cos(a - Math.PI / 2), sa = Math.sin(a - Math.PI / 2), col = kk > .5 ? '#ff4060' : kk > .25 ? '#ffb020' : '#5bd18b'; px(c, k.x + ca * 20, k.y + sa * 20, col); px(c, k.x + ca * 21, k.y + sa * 21, col); }
+      rizosDrawKnot(c, k.x + sh, k.y, kk, g.t, k.seed, k.shake > .5, sq);
+      if (kk < .25 && fl(g.t * 10) % 2) drawStar(c, k.x + 12, k.y - 12, 2.5, '#fff27a', g.t * 5); // nearly loose!
     }
     // Pulgui
     const P = g.pul;
@@ -156,7 +160,8 @@ defMG({
       if (P.st === 'sit' && g.phase === 1 && P.target >= 0 && !g.knots[P.target].done) txt(c, '~', P.x + 8, P.y - 10 + Math.sin(g.t * 20) * 2, '#ff93bf', { out: INK });
     }
     if (g.phase === 2 && g.state === 'play') for (let i = 0; i < 3; i++) drawHeart(c, P.x - 8 + i * 8, P.y - 20, i < P.hp ? '#ff4060' : '#5a2a9a', .7);
-    if (g.state === 'won' && g.t - g.flyT < 1.6) shout(c, '¡VOLVERÉEE!', 128, 60, g.t - g.flyT);
+    if (g.state === 'won' && g.t - g.flyT < 1.6) shout(c, '¡VOLVERÉEE!', clamp(g.pul.x, 50, 206), clamp(g.pul.y - 20, 70, 150), g.t - g.flyT);
+    if (g.state === 'won') rizosStamp(c, g, '¡AFRO LIBRE!', 128, 26, .25);
   },
   top(g, c) {
     // HUD: the five knots and the itch meter

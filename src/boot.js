@@ -35,7 +35,11 @@ const BOOT = {
     } else {
       rect(g, 0, 0, SW, SH, '#ffffff');
       const k = this.k, drop = k < .5 ? -120 * (1 - E.outBounce(k / .5)) : 0;
+      // Keiko pops up from behind the sign when it barks, then ducks back down
+      const pk = k < .5 ? 0 : k < 1.9 ? spring(k - .5, 2.6, 7) : Math.max(0, 1 - (k - 1.9) * 3), tilt = Math.sin(k * 9) * .06 * (k < 1.2 ? 1 : 0);
+      if (pk > 0) drawS(g, keikoHead(k < 1.4 ? 'happy' : 'wink'), SW / 2 + 42, 78 - pk * 17, { rot: tilt, s: .62 });
       drawS(g, wbSign(), SW / 2, 84 + drop, {});
+      if (k > .55 && k < 1.5) { const bk = spring(k - .55, 3, 8); g.save(); g.translate(SW / 2 + 76, 30); g.scale(bk, bk); panel(g, -24, -9, 48, 16, '#ffffff', { r: 5 }); polyPx(g, [[-14, 6], [-22, 13], [-8, 6]], '#ffffff'); txt(g, '¡GUAU!', 0, -5, INK, { align: 'c', bold: true }); g.restore(); }
       this.fx.draw(g);
     }
   },
@@ -46,7 +50,7 @@ const BOOT = {
     } else {
       const k = this.k;
       if (k > .7) { const a = clamp((k - .7) * 3, 0, 1); g.globalAlpha = a; txt(g, 'presenta', SW / 2, 60, '#6b6977', { align: 'c' }); g.globalAlpha = 1; }
-      if (k > 1.1) { g.globalAlpha = clamp((k - 1.1) * 3, 0, 1); txt(g, 'un juego hecho con mucho cariño', SW / 2, 110, '#9896a4', { align: 'c' }); txt(g, 'para Anahí y sus peludos', SW / 2, 122, '#9896a4', { align: 'c' }); drawHeart(g, SW / 2, 142, '#ff4060', 1.4); g.globalAlpha = 1; }
+      if (k > 1.1) { g.globalAlpha = clamp((k - 1.1) * 3, 0, 1); txt(g, 'un juego hecho con mucho cariño', SW / 2, 110, '#9896a4', { align: 'c' }); txt(g, 'para Anahí y sus peludos', SW / 2, 122, '#9896a4', { align: 'c' }); drawHeart(g, SW / 2, 142, '#ff4060', 1.4 + Math.max(0, Math.sin(k * 7)) * .25); g.globalAlpha = 1; }
     }
   },
 };

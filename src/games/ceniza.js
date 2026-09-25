@@ -153,12 +153,38 @@ function cenizaHalo(c, img, x, y, t, col = '#ffffff', o = {}) {
   drawS(c, cenizaRing(img, col), x + (ax - .5) * 4 * s * (o.flip ? -1 : 1), y + (ay - .5) * 4 * s, Object.assign({}, o, { alpha: .4 + k * .6 }));
 }
 // a big word stamped on the screen (success / failure), springing in
+const CENIZA_WIN_FILL = ['#ffffff', '#d2f5e4', '#5bd18b'], CENIZA_BAD_FILL = ['#ffffff', '#d7dde8', '#7b8398'], CENIZA_PINK_FILL = ['#ffffff', '#ffd1e4', '#ff5d9e'];
+const CENIZA_PUAJ_FILL = ['#ffffff', '#e5f7a0', '#8ec63f'], CENIZA_WATER_FILL = ['#ffffff', '#dff4ff', '#5aaee6'], CENIZA_GOLD_FILL = ['#ffffff', '#fff7ae', '#e2b21b'], CENIZA_LILAC_FILL = ['#ffffff', '#e5d3fa', '#8959c5'];
+// Every Ceniza microgame ends on her gothic card lettering (green glow and all),
+// tinted per game; a miss fizzles out in grey. The letters condense out of smoke
+// like her name on the card, and stars and smoke burst out as they land.
+const CENIZA_STAMP_FACES = {};
+const cenizaStampBad = fill => fill === CENIZA_BAD_FILL || fill === CENIZA_PUAJ_FILL;
+function cenizaStampFace(fill) {
+  fill = fill || CENIZA_PINK_FILL; const key = fill.join('');
+  if (CENIZA_STAMP_FACES[key]) return CENIZA_STAMP_FACES[key];
+  const F = CARD_WITCH_FACE, bad = cenizaStampBad(fill);
+  return (CENIZA_STAMP_FACES[key] = Object.assign({}, F, { id: 'czSt' + key, fill }, bad ? { line2: '#44424f', glow: null } : {}));
+}
 function cenizaStamp(c, word, x, y, t, fill) {
   if (t < 0) return;
-  const s = spring(t, 2.6, 6), st = fitMord(word, 230, { u: 1.9, r: 2.1, rim: 2, sy: 3, fill: fill || ['#ffffff', '#ffd1e4', '#ff5d9e'] });
-  mord(c, word, x, y, st, { anim: (i) => ({ s: Math.max(0, spring(t - i * .03, 2.6, 7)) * s, rot: Math.sin(t * 6 + i) * .04 }) });
+  fill = fill || CENIZA_PINK_FILL;
+  if (typeof cardWord !== 'function') { const st = fitMord(word, 230, { u: 1.9, r: 2.1, rim: 2, sy: 3, fill }); mord(c, word, x, y, st, { anim: i => ({ s: Math.max(0, spring(t - i * .03, 2.6, 7)) }) }); return; }
+  const bad = cenizaStampBad(fill), st = cardFit(word, 224, cenizaStampFace(fill));
+  if (t < .7) { const k = E.outQ(t / .7), n = 14;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + word.length, r = 10 + k * 62, px0 = x + Math.cos(a) * r * 1.5, py0 = y + 11 + Math.sin(a) * r * .55;
+      if (bad) disc(c, px0, py0, Math.max(0, 4 * (1 - k)), i % 2 ? '#7b8398' : '#b3b8d4');
+      else if (i % 2) drawStar(c, px0, py0, Math.max(0, 3.2 * (1 - k)), fill[1]); else disc(c, px0, py0, Math.max(0, 3.6 * (1 - k)), 'rgba(191,149,233,.7)'); } }
+  cardWord(c, word, x, y, st, { anim: i => { const lt = t - i * .05; if (lt <= 0) return { s: 0 }; const k = E.outC(clamp(lt / .28, 0, 1)); return { s: lerp(1.6, 1, k), a: k, rot: (1 - k) * .3 }; } });
 }
-const CENIZA_WIN_FILL = ['#ffffff', '#d2f5e4', '#5bd18b'], CENIZA_BAD_FILL = ['#ffffff', '#d7dde8', '#7b8398'];
+// letter by letter, from the room, so the stamps never hitch
+const CENIZA_STAMPS = [['¡OLÉ!', CENIZA_PINK_FILL], ['¡PUAJ!', CENIZA_PUAJ_FILL], ['¡PERFECTO!', CENIZA_WIN_FILL], ['¡GUAPÍSIMA!', CENIZA_PINK_FILL], ['¡GUAPÍSIMAS!', CENIZA_PINK_FILL], ['¡AL AGUA!', CENIZA_WATER_FILL], ['¡A PASEAR!', CENIZA_WIN_FILL], ['¡MAGIA!', CENIZA_GOLD_FILL], ['¡SE ESCAPAN!', CENIZA_BAD_FILL], ['¡A DORMIR!', CENIZA_LILAC_FILL], ['¡PILLADO!', CENIZA_WIN_FILL], ['¡PÓCIMA PERFECTA!', CENIZA_PINK_FILL], ['¡BUUUM!', CENIZA_BAD_FILL]];
+function cenizaStampWarm() {
+  if (typeof cardPrewarm !== 'function' || cenizaStampWarm.done) return;
+  const list = CENIZA_STAMPS.map(([w, f]) => [w, cardFit(w, 224, cenizaStampFace(f))]);
+  cardPrewarm(list);
+  if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) cenizaStampWarm.done = 1;
+}
 // Keiko in profile: the westie body plus her Westie-green bandana (cached)
 function cenizaKeikoSpr(k, pose, mood) {
   return mdl('cz:keikoSide' + k + pose + mood, () => {
@@ -265,7 +291,7 @@ defMG({
       drawS(c, cenizaIngIcon(it.id), it.x, it.y, { s: 1 + it.sq * .25 - it.back * .15, rot: Math.sin(it.wob) * .08 });
     }
     if (g.state === 'won') cenizaStamp(c, '¡OLÉ!', P.x, 70, g.t - g.stampT);
-    if (g.state === 'lost' && g.stampT >= 0) cenizaStamp(c, '¡PUAJ!', P.x, 70, g.t - g.stampT, ['#ffffff', '#e5f7a0', '#8ec63f']);
+    if (g.state === 'lost' && g.stampT >= 0) cenizaStamp(c, '¡PUAJ!', P.x, 70, g.t - g.stampT, CENIZA_PUAJ_FILL);
   },
   // the recipe card, on the top screen
   top(g, c) {
@@ -484,7 +510,8 @@ defMG({
       const b = g.held; cenizaFollow(b, dt, .6);
       if (IN.rel || !IN.down) {
         g.held = null;
-        const d = g.dogs.find(d => !d.bow && dist(b.x, b.y, this.headOf(d).x, this.headOf(d).y) < 20);
+        const snap = 20 * clamp(Math.pow(g.tempo || 1, .3), 1, 1.25); // a touch more forgiving when everything is flying
+        const d = g.dogs.find(d => !d.bow && dist(b.x, b.y, this.headOf(d).x, this.headOf(d).y) < snap);
         if (d) {
           d.bow = b; b.on = d; d.happy = 1.2; b.sq = 1; sfx('sparkle'); sfx('bark', { pitch: 1.3, delay: .08 }); HITSTOP = 3; buzz(8);
           const h = this.headOf(d); g.fx.burst(h.x, h.y, 14, { k: 'star', c: ['#fff27a', '#ffffff', '#ffd1e4'], sp0: 40, sp1: 120 });
@@ -521,8 +548,9 @@ defMG({
       cenizaBotGrab(b, bow.x, bow.y); return b;
     }
     const d = g.dogs.find(d => !d.bow); const h = this.headOf(d);
-    const lead = d.stopT > 0 ? 0 : d.v * .15;
-    if (cenizaBotMove(b, h.x + lead, h.y, 5.5) && dist(g.held.x, g.held.y, h.x, h.y) < 10) { b.down = false; b.wait = .15 / b.k; }
+    const nearEdge = (d.v > 0 && d.x > 200) || (d.v < 0 && d.x < 104); // about to turn round: don't lead
+    const lead = d.stopT > 0 || nearEdge ? 0 : d.v * .08;
+    if (cenizaBotMove(b, h.x + lead, h.y, 5.5) && dist(g.held.x, g.held.y, h.x, h.y) < 11) { b.down = false; b.wait = .15 / b.k; }
     return b;
   },
 });
@@ -624,7 +652,7 @@ defMG({
       }
       if (g.held && g.warn > 0) { c.globalAlpha = g.warn; panel(c, d.x - 30, d.y - 80, 60, 14, '#ffffff', { r: 4 }); txt(c, '¡Despacio!', d.x, d.y - 76, '#c02d45', { align: 'c', bold: true }); c.globalAlpha = 1; }
     }
-    if (g.state === 'won') cenizaStamp(c, '¡AL AGUA!', 128, 22, g.t - g.stampT, ['#ffffff', '#dff4ff', '#5aaee6']);
+    if (g.state === 'won') cenizaStamp(c, '¡AL AGUA!', 128, 22, g.t - g.stampT, CENIZA_WATER_FILL);
   },
   hint(g) { const d = g.dog; return { x: d.x, y: d.y - 24, path: [[d.x, d.y - 24], [118, d.y - 70], [g.tub.x - 6, g.tub.y - 34]] }; },
   bot(g) {
@@ -873,7 +901,7 @@ defMG({
     // the stars she still needs
     panel(c, 6, 170, 14 + g.need * 14, 18, '#1b1627', { r: 5 });
     for (let i = 0; i < g.need; i++) { const x = 17 + i * 14, on = i < g.got; drawStar(c, x + 1, 180, 5.5, INK); drawStar(c, x, 179, 5, on ? '#ffdf4f' : '#40395e'); }
-    if (g.state === 'won') cenizaStamp(c, '¡MAGIA!', 128, 60, g.t - g.stampT, ['#ffffff', '#fff7ae', '#e2b21b']);
+    if (g.state === 'won') cenizaStamp(c, '¡MAGIA!', 128, 60, g.t - g.stampT, CENIZA_GOLD_FILL);
     if (g.state === 'lost' && g.stampT >= 0) cenizaStamp(c, '¡SE ESCAPAN!', 128, 60, g.t - g.stampT, CENIZA_BAD_FILL);
   },
   hint(g) { const s = g.stars.find(s => !s.got && !s.lost); const Cc = g.cat; return { x: Cc.x, y: Cc.y, to: s ? [s.x, Math.min(140, s.y + 30)] : [Cc.x + 50, Cc.y - 30] }; },
@@ -1042,7 +1070,7 @@ defMG({
       if (!p.in && !held) { shadowOval(c, p.x, p.y + 15, 11, 2.5, .3); if (!g.held && g.state === 'play') cenizaHalo(c, img, p.x, y, g.t + p.hop * .1, '#ffffff', o); }
       drawS(c, img, p.x, y, o);
     }
-    if (g.state === 'won') cenizaStamp(c, '¡A DORMIR!', 128, 100, g.t - g.stampT, ['#ffffff', '#e5d3fa', '#8959c5']);
+    if (g.state === 'won') cenizaStamp(c, '¡A DORMIR!', 128, 100, g.t - g.stampT, CENIZA_LILAC_FILL);
   },
   hint(g) { const p = g.pets.find(q => !q.in); if (!p) return null; const B = g.bask[p.kind]; return { x: p.x, y: p.y, to: [B.x, B.y - 10] }; },
   bot(g) {

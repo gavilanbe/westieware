@@ -195,8 +195,9 @@ defMG({
     bigotesGauge(c, 192, 80, 12, g.heat, g.t, null); txt(c, 'TEMP', 226, 67, INK, { align: 'c', bold: true });
     txt(c, g.heat > .7 ? '¡QUEMA!' : g.heat > .4 ? 'CALIENTE' : 'OK', 226, 80, g.heat > .7 ? '#c02d45' : g.heat > .4 ? '#c38a21' : '#2a9a6a', { align: 'c' });
     // shots
-    panel(c, 8, 164, 166, 22, '#fff8e6', { r: 4 }); txt(c, 'DISPAROS', 16, 170, INK, { bold: true });
-    for (let i = 0; i < g.shots; i++) { const x = 104 + i * 16, on = i < g.hits; disc(c, x, 175, 6, INK); disc(c, x, 175, 5, on ? '#fff27a' : '#6b6977'); if (on) { px(c, x - 2, 173, '#ffffff'); px(c, x - 1, 173, '#ffffff'); } }
+    // (the bottom strip stays clear: the stage draws the little lives there)
+    panel(c, 8, 150, 150, 19, '#fff8e6', { r: 4 }); txt(c, 'DISPAROS', 15, 155, INK, { bold: true });
+    for (let i = 0; i < g.shots; i++) { const x = 98 + i * 14, on = i < g.hits, pop = on && g.t - g.shotT < .4 && i === g.hits - 1 ? 1.4 - (g.t - g.shotT) : 1; disc(c, x, 159, 6 * pop, INK); disc(c, x, 159, 5 * pop, on ? '#fff27a' : '#6b6977'); if (on) { px(c, x - 2, 157, '#ffffff'); px(c, x - 1, 157, '#ffffff'); } }
     // Don Bigotes runs the show from where he always peeks in (bottom right)
     const ev = g.t < g.sayUntil, line = BIGOTES_BOSS_LINES[g.ph], pose = ev ? g.sayPose : g.state === 'won' ? 'clear' : g.state === 'lost' ? 'over' : line[2];
     const hop = ev && g.t - g.sayT < .3 ? Math.sin((g.t - g.sayT) / .3 * Math.PI) * 4 : 0;

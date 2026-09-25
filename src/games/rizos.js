@@ -35,6 +35,15 @@ function rizosSpecks(g, t, n = 14, x0 = 0, y0 = 0, w = SW, h = SH) {
   for (let i = 0; i < n; i++) { const x = x0 + ((i * 47 + t * (30 + (i % 3) * 12)) % w), y = y0 + ((i * 29 + Math.sin(t * .7 + i) * 16 + h) % h); rect(g, x, y, 2, 2, cols[i % 4]); }
 }
 // fog/foam dither tiles (4x4) by density level 1..4
+// replay tempos (up to ~2x) leave half the time: the "amount" goals shrink a little
+// above 156 bpm (1 below that, so normal play is untouched)
+function rizosEase(g) { return Math.pow(Math.max(1, g.tempo / 1.3), .75); }
+// a word that pops over the action; a second one too soon after (and too close) is skipped,
+// the particles and the sound still carry the feedback
+function rizosPop(g, s, x, y, c = '#ffffff', life = .55) {
+  const L = g._pop; if (L && g.t - L.t < .3 && Math.abs(L.x - x) < 60 && Math.abs(L.y - y) < 30) return;
+  g._pop = { t: g.t, x, y }; g.fx.add({ k: 'txt', s, x, y, life, c });
+}
 function rizosDitherTile(col, lvl) { return mdl('rizosDT' + col + lvl, () => { const c = mkCanvas(4, 4); c.g.fillStyle = col; for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (bayer(x, y) < lvl / 4) c.g.fillRect(x, y, 1, 1); return c; }); }
 
 // ---------------------------------------------------------------- 1 ESPUMA --
@@ -88,7 +97,7 @@ defMG({
           const done = g.spots.filter(q => q.clean).length;
           sfx('pop', { pitch: .8 + done * .15 }); sfx('fizz', { vol: .4 });
           g.fx.burst(sx, sy, 8, { k: 'star', c: ['#ffffff', '#9bd6f7', '#fff27a'], sp0: 40, sp1: 110 });
-          g.fx.add({ k: 'txt', s: '¡LIMPIO!', x: sx, y: sy - 14, life: .55, c: '#ffffff' });
+          rizosPop(g, '¡LIMPIO!', sx, sy - 14);
           g.face = done >= g.spots.length / 2 ? 'grin' : 'cool';
           if (g.spots.every(q => q.clean)) { g.win(); g.face = 'love'; sfx('boingy', { pitch: .8 }); g.fx.burst(hx, 50, 26, { k: 'bubble', c: '#ffffff', sp0: 60, sp1: 170, r: 4, life0: .6, life1: 1.1 }); }
         }
@@ -132,8 +141,8 @@ defMG({
     rizosDuck(c, 204, 143, g.t);
     // HUD: mud left
     const left = g.spots.filter(q => !q.clean).length;
-    panel(c, 6, 6, 74, 18, '#ffffff', { r: 5 }); drawS(c, rizosMudSplat(3, 5), 20, 15, {}); txt(c, 'BARRO: ' + left, 30, 11, INK, { bold: true });
-    if (g.state === 'won' && g.afroK > .5) shout(c, '¡AFRO DE ESPUMA!', 176, 30, g.afroK - .5);
+    if (g.state !== 'won') { panel(c, 6, 6, 74, 18, '#ffffff', { r: 5 }); drawS(c, rizosMudSplat(3, 5), 20, 15, {}); txt(c, 'BARRO: ' + left, 30, 11, INK, { bold: true }); }
+    if (g.state === 'won' && g.afroK > .5) rizosStamp(c, g, '¡AFRO DE ESPUMA!', 128, 30, .35);
     if (g.state === 'lost') txt(c, 'Sigue sucio…', 128, 26, '#6b4520', { align: 'c', out: '#ffffff', bold: true });
   },
   blobAt(c, x, y, r) { if (r < 1) return; disc(c, x, y + 1, r + 1, '#9fb4c8'); disc(c, x, y, r, '#dfe9f2'); disc(c, x - r * .2, y - r * .25, r * .72, '#ffffff'); },
@@ -183,7 +192,7 @@ defMG({
         g.fx.burst(g.dogX, 86, 18, { k: 'hair', c: [RIZOS_FUR[3], RIZOS_FUR[4], RIZOS_FUR[2]], sp0: 60, sp1: 160, r: 3, life0: .4, life1: .7 });
         g.fx.add({ k: 'txt', s: ['', '¡POF!', '¡POOF!', '¡PUFFF!'][st], x: g.dogX, y: 30, life: .6, c: '#ffffff' });
       }
-      if (g.dry >= 1) { g.win(); g.fx.burst(g.dogX, 90, 16, { k: 'star', c: [C.yellow, '#fff', RIZOS_NEON.pink], sp0: 60, sp1: 160 }); }
+      if (g.dry >= 1) { g.win(); g.toss = { t: g.t, x: g.tx, y: g.ty, r: g.trot }; sfx('swoosh', { pitch: 1.3 }); g.fx.burst(g.dogX, 90, 16, { k: 'star', c: [C.yellow, '#fff', RIZOS_NEON.pink], sp0: 60, sp1: 160 }); }
     }
     if (g.state === 'lost' && g.shakeT < 0) { g.shakeT = g.t; sfx('splash'); g.shake(3, .4); for (let i = 0; i < 26; i++) g.fx.add({ k: 'drop', x: g.dogX + g.r(-30, 30), y: 100 + g.r(-30, 30), vx: g.r(-260, 260), vy: g.r(-260, 60), g: 300, life: .9, c: pick(['#9bd6f7', '#5aaee6']) }); }
   },
@@ -206,15 +215,16 @@ defMG({
       if (g.stage === 0) for (const s of [-1, 1]) for (let i = 0; i < 3; i++) linePx(c, X + s * (50 + i * 3), 90 + i * 8, X + s * (54 + i * 3), 92 + i * 8, '#5aaee6');
       if (g.stage === 0 && fl(g.t * 2) % 2) txt(c, 'Brrr…', X + 42, 60, '#5aaee6', { out: '#ffffff' });
     }
-    // the towel follows the finger
-    drawS(c, rizosTowelSpr(), g.tx, g.ty, { rot: g.trot, sx: 1 + Math.abs(g.trot) * .2, sy: 1 - Math.abs(g.trot) * .15, alpha: IN.down ? 1 : .75 });
+    // the towel follows the finger; once he's dry it gets tossed over the shoulder
+    if (g.toss) { const k = g.t - g.toss.t, x = g.toss.x + k * 240, y = g.toss.y - k * 320 + k * k * 520; if (y < SH + 40 && x < SW + 40) drawS(c, rizosTowelSpr(), x, y, { rot: g.toss.r + k * 11 }); }
+    else drawS(c, rizosTowelSpr(), g.tx, g.ty, { rot: g.trot, sx: 1 + Math.abs(g.trot) * .2, sy: 1 - Math.abs(g.trot) * .15, alpha: IN.down ? 1 : .75 });
     // splash on the "lens" when he shakes it all off at you
     if (g.shakeT >= 0) for (let i = 0; i < 9; i++) { const k = clamp((g.t - g.shakeT) * 4 - i * .1, 0, 1); if (k > 0) { disc(c, 24 + i * 27, 30 + (i % 3) * 44 + k * 20, 7, 'rgba(155,214,247,.55)'); px(c, 21 + i * 27, 27 + (i % 3) * 44 + k * 20, '#ffffff'); } }
     // dryness meter: a drop that empties into a sun
     panel(c, 6, 6, 92, 18, '#ffffff', { r: 5 });
     polyPx(c, [[18, 9], [13, 17], [23, 17]], '#5aaee6'); disc(c, 18, 18, 5, '#5aaee6'); px(c, 16, 16, '#dff4ff');
     rect(c, 28, 12, 62, 7, INK); rect(c, 29, 13, rd(60 * g.dry), 5, g.dry > .9 ? '#ffd23f' : '#ffb020'); rect(c, 29, 13, rd(60 * g.dry), 1, '#fff7ae');
-    if (g.state === 'won') shout(c, '¡AFRO LISTO!', 176, 36, g.t - g.decidedAt);
+    if (g.state === 'won') rizosStamp(c, g, '¡AFRO LISTO!', 150, 34);
   },
   hint(g) { return { x: g.dogX, y: 104 }; },
   bot(g) { return { x: g.dogX + Math.sin(g.t * 34) * 30, y: 96 + Math.sin(g.t * 5) * 30, down: g.t > .2 && g.state === 'play' }; },
@@ -253,7 +263,8 @@ defMG({
     { i: 'bass', v: .9, n: 'E2 . . E2 . . E3 . D2 . . D2 . . D3 . C2 . . C2 . . C3 . B1 . . B1 . D2 E2 .' },
     { i: 'd', v: .85, n: 'k . h r s . h k . k h r s . h h k . h r s . h k . k h r s s s s' }] }),
   init(g) {
-    g.need = [7, 10, 13][g.level - 1]; g.count = 0; g.hype = 0;
+    // at replay tempos the song is over in ~2 s: ask for fewer scratches (unchanged up to 156 bpm)
+    g.need = Math.round([7, 10, 13][g.level - 1] / rizosEase(g)); g.count = 0; g.hype = 0;
     g.ang = 0; g.acc = 0; g.dir = 0; g.last = null; g.wiki = []; g.flash = 0;
     g.cx = 150; g.cy = 132;
   },
@@ -320,7 +331,7 @@ defMG({
     if (g.count < 2 && g.state === 'play') { const k = (g.t * 3) % 1; for (const sgn2 of [-1, 1]) for (let q = 0; q < 2; q++) { const x = g.cx + sgn2 * (74 + k * 5 + q * 5), y = g.cy; linePx(c, x, y - 5, x + sgn2 * 4, y, '#fff04f'); linePx(c, x + sgn2 * 4, y, x, y + 5, '#fff04f'); } }
     for (const w of g.wiki) { txt(c, w.s, w.x, w.y - w.t * 30, ['#ff4fa3', '#4ff2ff', '#fff04f'][fl(w.t * 10) % 3], { align: 'c', out: INK, bold: true }); }
     txt(c, 'SCRATCH ' + Math.min(g.count, g.need) + '/' + g.need, 8, 82, '#ffffff', { out: INK, bold: true });
-    if (g.state === 'won') shout(c, '¡OTRA, OTRA!', 128, 26, g.t - g.decidedAt);
+    if (g.state === 'won') rizosStamp(c, g, '¡OTRA, OTRA!', 128, 26);
     if (g.state === 'lost') { txt(c, 'Buuu…', 128, 26, '#b3b8d4', { align: 'c', out: INK, bold: true }); }
   },
   hint(g) { return { x: g.cx + 30, y: g.cy - 28 }; },
@@ -346,7 +357,7 @@ defMG({
     { i: 'bass', v: .85, n: 'C3 . . C3 . . G2 . A2 . . A2 . . E2 . D3 . . D3 . . A2 . G2 . . G2 . . B2 .' },
     { i: 'd', v: .6, n: 'k . z . k+c . z z k . z . k+c . z . k . z . k+c . z z k . z . k+c z c c' }] }),
   init(g) {
-    g.need = [.56, .66, .74][g.level - 1]; g.regrow = [0, 0, .07][g.level - 1];
+    g.need = [.56, .66, .74][g.level - 1] / Math.sqrt(rizosEase(g)); g.regrow = [0, 0, .07][g.level - 1];
     g.rub = rubTracker(); g.mx = 60; g.my = 26; g.mw = 136; g.mh = 116;
     g.cw = g.mw / 4; g.ch = g.mh / 4; g.fog = new Float32Array(g.cw * g.ch).fill(1); g.clear = 0; g.saidHi = false;
     g.drips = []; g.cx = 180; g.cy = 150; g.crot = 0;
@@ -373,7 +384,8 @@ defMG({
     let clr = 0; for (let i = 0; i < g.fog.length; i++) clr += 1 - g.fog[i];
     g.clear = clr / g.fog.length;
     if (g.clear > .35 && !g.saidHi) { g.saidHi = true; sfx('heart', { pitch: 1.2 }); }
-    if (g.clear >= g.need && g.state === 'play') { g.win(); sfx('sparkle'); g.fx.burst(128, 70, 16, { k: 'star', c: ['#fff', C.yellow, RIZOS_NEON.pink], sp0: 50, sp1: 140 }); }
+    if (g.clear >= g.need && g.state === 'play') { g.win(); g.toss = { t: g.t, x: g.cx, y: g.cy, r: g.crot }; sfx('sparkle'); sfx('swoosh', { pitch: 1.4, vol: .6 }); g.fx.burst(128, 70, 16, { k: 'star', c: ['#fff', C.yellow, RIZOS_NEON.pink], sp0: 50, sp1: 140 }); }
+    if (g.state === 'won') { for (let i = 0; i < g.fog.length; i++) g.fog[i] = Math.max(0, g.fog[i] - dt * 3); g.drips.length = 0; }
   },
   draw(g, c) {
     rect(c, 0, 0, SW, SH, '#dce7ea'); subwayTiles(c, 0, 0, SW, SH);
@@ -383,7 +395,13 @@ defMG({
     greenWall(c, mx, my, mw, mh);
     const ex = g.state === 'won' ? 'love' : g.clear > .35 ? 'grin' : 'cool';
     drawS(c, rizosHead(ex), mx + mw / 2 + Math.sin(g.t * 2) * 2, my + mh - 30, { ax: .5, ay: .8 });
-    rect(c, mx + mw / 2 - 20, my + mh - 20, 40, 20, RIZOS_SHIRT[3]); ringRect(c, mx + mw / 2 - 20, my + mh - 20, 40, 21, 1, RIZOS_SHIRT[1]);
+    // his shoulders in the reflection: the white disco shirt, wide collar, gold chain
+    const bx = mx + mw / 2, by = my + mh - 4;
+    ellipsePx(c, bx, by + 8, 31, 17, INK); ellipsePx(c, bx, by + 8, 30, 16, RIZOS_SHIRT[3]); ellipsePx(c, bx - 7, by + 3, 18, 8, RIZOS_SHIRT[4]);
+    // wide seventies lapels spreading down from the neck, an open V and the gold chain
+    for (const sx of [-1, 1]) { polyPx(c, [[bx + sx * 2, by - 11], [bx + sx * 22, by - 5], [bx + sx * 9, by + 1]], INK); polyPx(c, [[bx + sx * 3, by - 10], [bx + sx * 19, by - 5], [bx + sx * 9, by - 1]], RIZOS_SHIRT[2]); }
+    polyPx(c, [[bx - 5, by - 10], [bx + 5, by - 10], [bx, by - 1]], RAMP.apricot ? RAMP.apricot[3] : '#e8b98a');
+    for (let a = .5; a < Math.PI - .5; a += .25) px(c, bx + Math.cos(a) * 6, by - 9 + Math.sin(a) * 6, '#ffd23f');
     // glass glint across the cleaned parts
     c.globalAlpha = .35; for (let i = 0; i < 3; i++) linePx(c, mx + 20 + i * 8 + g.clear * 40, my, mx - 10 + i * 8 + g.clear * 40, my + mh, '#ffffff'); c.globalAlpha = 1;
     // steam: thicker towards the bottom, with beads of condensation
@@ -395,13 +413,16 @@ defMG({
       if (v > .9 && hash2(x, y, 7) < .06) { px(c, mx + x * 4 + 1, my + y * 4 + 1, '#ffffff'); px(c, mx + x * 4 + 2, my + y * 4 + 2, '#b9cad0'); }
     }
     for (const d of g.drips) { vline(c, d.x, d.y - d.L, d.y, '#b3d9ff'); px(c, d.x, d.y + 1, '#ffffff'); }
+    // a clean mirror: a bright glint sweeps across the glass
+    if (g.state === 'won') { const k = (g.t - g.decidedAt) / .6; if (k < 1) { const gx = mx - 40 + k * (mw + 80); c.globalAlpha = .75; polyPx(c, [[gx, my], [gx + 14, my], [gx - 26, my + mh], [gx - 40, my + mh]], '#ffffff'); polyPx(c, [[gx + 20, my], [gx + 26, my], [gx - 14, my + mh], [gx - 20, my + mh]], '#ffffff'); c.globalAlpha = 1; } }
     c.restore();
     // steam curling up from below
     for (let i = 0; i < 7; i++) { const ph = (g.t * .6 + i * .14) % 1, x = 40 + i * 30 + Math.sin(g.t * 2 + i) * 8, y = 190 - ph * 70; c.globalAlpha = (1 - ph) * .5; disc(c, x, y, 6 + ph * 8, '#ffffff'); c.globalAlpha = 1; }
     drawPortalFrame(c, 'mirror', mx, my, mw, mh, g.b);
-    // the cloth in your hand
-    drawS(c, rizosClothSpr(), g.cx, g.cy, { rot: g.crot, alpha: IN.down ? 1 : .7 });
-    if (g.state === 'won') shout(c, '¡GUAPÍSIMO!', 196, 40, g.t - g.decidedAt);
+    // the cloth in your hand, flicked away once the glass is clean
+    if (g.toss) { const k = g.t - g.toss.t, x = g.toss.x + k * 200, y = g.toss.y - k * 280 + k * k * 480; if (y < SH + 30 && x < SW + 30) drawS(c, rizosClothSpr(), x, y, { rot: g.toss.r + k * 12 }); }
+    else drawS(c, rizosClothSpr(), g.cx, g.cy, { rot: g.crot, alpha: IN.down ? 1 : .7 });
+    if (g.state === 'won') rizosStamp(c, g, '¡GUAPÍSIMO!', 128, 24);
     // clear-o-meter as a gold tag under the frame
     panel(c, SW / 2 - 40, 170, 80, 16, '#fff8e6', { r: 4 }); txt(c, 'LIMPIO ' + fl(Math.min(1, g.clear / g.need) * 100) + '%', SW / 2, 175, INK, { align: 'c', bold: true });
   },
@@ -466,7 +487,7 @@ defMG({
     g.need = [1, 1, 1][g.level - 1]; g.joy = 0; g.kick = 0; g.kickA = 0; g.rub = rubTracker();
     g.rad = [20, 16, 13][g.level - 1];
     g.sx = g.r(98, 136); g.sy = g.r(114, 124); g.tsx = g.sx; g.tsy = g.sy; g.hopT = 1.1;
-    g.rate = [1 / 560, 1 / 700, 1 / 800][g.level - 1];
+    g.rate = [1 / 560, 1 / 700, 1 / 800][g.level - 1] * rizosEase(g); // less rubbing needed at replay tempos
   },
   update(g, dt) {
     // the itch wanders (level 2) or jumps around (level 3)
@@ -504,7 +525,7 @@ defMG({
     }
     // gustómetro: a row of hearts filling up
     for (let i = 0; i < 5; i++) { const on = g.joy * 5 > i + .5; drawHeart(c, 88 + i * 20, 18, on ? '#ff4060' : '#5a3396', 1.4); if (on) px(c, 86 + i * 20, 15, '#ffffff'); }
-    if (g.state === 'won') shout(c, '¡QUÉ GUSTAZO!', 128, 44, g.t - g.decidedAt);
+    if (g.state === 'won') rizosStamp(c, g, '¡QUÉ GUSTAZO!', 128, 40);
     else if (g.kick > .5) txt(c, '¡AHÍ, AHÍ!', g.sx, g.sy + 24, '#ffffff', { align: 'c', out: INK, bold: true });
   },
   hint(g) { return { x: g.sx, y: g.sy }; },
@@ -672,8 +693,8 @@ defMG({
     // the big paddle brush in the hand
     drawS(c, rizosPaddleSpr(), g.bx, g.by, { rot: g.brot + .6, ax: .5, ay: .08 });
     const left = g.knots.filter(k => k.hp > 0).length;
-    panel(c, 6, 6, 70, 14, '#ffffff', { r: 4 }); txt(c, 'NUDOS: ' + left, 12, 9, INK, { bold: true });
-    if (g.state === 'won') { shout(c, '¡QUÉ SUAVECITO!', 150, 26, g.t - g.decidedAt); if (fl(g.t * 8) % 2) for (let i = 0; i < 4; i++) drawStar(c, g.dogX - 40 + i * 26, 50 + (i % 2) * 40, 3.2, '#ffffff', g.t * 5); }
+    if (g.state !== 'won') { panel(c, 6, 6, 70, 14, '#ffffff', { r: 4 }); txt(c, 'NUDOS: ' + left, 12, 9, INK, { bold: true }); }
+    if (g.state === 'won') { rizosStamp(c, g, '¡QUÉ SUAVECITO!', 136, 26); if (fl(g.t * 8) % 2) for (let i = 0; i < 4; i++) drawStar(c, g.dogX - 40 + i * 26, 50 + (i % 2) * 40, 3.2, '#ffffff', g.t * 5); }
     if (g.state === 'lost') txt(c, '¡Grrr!', g.dogX, 22, '#ffffff', { align: 'c', out: INK, bold: true });
   },
   hint(g) { const k = g.knots.find(k => k.hp > 0); return k && { x: g.dogX - 55 + k.x, y: 30 + k.y }; },
@@ -753,7 +774,7 @@ defMG({
       if (l.gone) { l.x += l.vx * dt; l.y += l.vy * dt; l.vy += 300 * dt; l.rot += dt * 20; continue; }
       if (l.hidden) {
         // buried deep in the fur: brushing nearby parts the coat and reveals it
-        if (IN.down && dist(g.bx, g.by, l.x, l.y) < 34 && speed > 60) { l.peek += dt * 3; if (l.peek >= 1) { l.hidden = false; sfx('squeaky', { pitch: 1.8 }); g.fx.add({ k: 'txt', s: '¡AHÍ ESTÁ!', x: l.x, y: l.y - 16, life: .7, c: '#ff4060' }); } }
+        if (IN.down && dist(g.bx, g.by, l.x, l.y) < 34 && speed > 60) { l.peek += dt * 3; if (l.peek >= 1) { l.hidden = false; sfx('squeaky', { pitch: 1.8 }); rizosPop(g, '¡AHÍ ESTÁ!', l.x, l.y - 16, '#ff4060', .7); } }
         continue;
       }
       // wander, and (level 2+) scurry away from the brush
@@ -771,7 +792,7 @@ defMG({
         HITSTOP = 2; buzz(8); g.shake(1.5, .08);
         sfx('coin', { pitch: .9 + g.count * .12 }); sfx('squeaky', { pitch: 1.5 });
         g.fx.burst(l.x, l.y, 10, { k: 'star', c: ['#ff4060', '#ffd23f', '#ffffff'], sp0: 50, sp1: 130, life0: .25, life1: .5 });
-        g.fx.add({ k: 'txt', s: '¡PING!', x: l.x, y: l.y - 12, life: .5, c: '#ff4060' });
+        rizosPop(g, '¡PING!', l.x, l.y - 12, '#ff4060', .5);
         if (g.lice.every(q => q.gone)) { g.win(); g.winT = g.t; sfx('sparkle'); }
       }
     }
@@ -783,7 +804,7 @@ defMG({
       const k = clamp((g.t - g.winT - .45) / .35, 0, 1);
       c.drawImage(rizosFurCloseUp(), 0, 0);
       c.save(); c.beginPath(); c.arc(SW / 2, SH / 2, 10 + k * 180, 0, TAU); c.clip(); c.drawImage(rizosFluffyOnGrass(), 0, 0); c.restore();
-      if (k >= 1) { shout(c, '¡SIN BICHOS!', 128, 28, g.t - g.winT - .8); for (let i = 0; i < 5; i++) drawStar(c, 60 + i * 34, 64 + Math.sin(g.t * 6 + i) * 6, 3, '#fff27a', g.t * 3); }
+      if (k >= 1) { rizosStamp(c, g, '¡SIN BICHOS!', 128, 28, .8); for (let i = 0; i < 5; i++) drawStar(c, 60 + i * 34, 64 + Math.sin(g.t * 6 + i) * 6, 3, '#fff27a', g.t * 3); }
       return;
     }
     c.drawImage(rizosFurCloseUp(), 0, 0);
@@ -977,7 +998,7 @@ defMG({
     else rizosBolaDraw(g, c);
     if (!won) drawS(c, rizosChamoisSpr(), g.cx, g.cy, { rot: g.crot, alpha: IN.down ? 1 : .75 });
     panel(c, 6, 6, 78, 16, '#fff8e6', { r: 4 }); txt(c, 'BRILLO ' + fl(Math.min(1, g.shine / g.need) * 100) + '%', 45, 10, INK, { align: 'c', bold: true });
-    if (won) shout(c, '¡A BAILAR!', 188, 150, k);
+    if (won) rizosStamp(c, g, '¡A BAILAR!', 188, 152);
     if (g.state === 'lost') txt(c, 'Sin brillo no hay fiesta…', 164, 176, '#b3b8d4', { align: 'c', out: INK, bold: true });
     if (won && k < .25) { c.globalAlpha = (1 - k / .25) * .7; rect(c, 0, 0, SW, SH, '#ffffff'); c.globalAlpha = 1; }
   },
@@ -1170,7 +1191,7 @@ defMG({
     // the afro pick in your hand
     if (!won) drawS(c, rizosPickSpr(), g.px, g.py, { ax: .5, ay: .92, rot: g.prot, alpha: IN.down ? 1 : .75 });
     rizosAfroMeter(c, won ? 1 : g.fv, g.t);
-    if (won) shout(c, '¡AFRO XXL!', 128, 24, k);
+    if (won) rizosStamp(c, g, '¡AFRO XXL!', 128, 24);
     if (lost) txt(c, '¡Pelo chafado!', 128, 26, '#ffb3d6', { align: 'c', out: INK, bold: true });
   },
   hint(g) { return { x: g.hx, y: 82 + rizosAfroShape(g.fv).cy - 4 }; },

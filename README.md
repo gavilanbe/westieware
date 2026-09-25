@@ -1,4 +1,4 @@
-# 🐶 WESTIE WARE ¡Tocados!
+# 🐶 WESTIE WARE ¡Grooming!
 
 **Jugar:** https://gavilanbe.github.io/westieware/
 

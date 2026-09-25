@@ -399,12 +399,13 @@ defMG({
     { i: 'bass', v: .85, n: 'A2 A3 A2 A3 A2 A3 A2 A3 B2 B3 B2 B3 B2 B3 B2 B3 C#3 C#4 C#3 C#4 C#3 C#4 C#3 C#4 E2 E3 E2 E3 E2 E3 E2 E3' },
     { i: 'd', v: .8, n: 'k h c h k h c h k h c h k h c c k h c h k h c h k h c h k c c c' }] }),
   init(g) {
-    g.need = [3, 4, 5][g.level - 1]; g.bows = [0, 1, 3][g.level - 1]; g.sliced = 0; g.objs = []; g.halves = []; g.nextT = .05; g.bowsLeft = g.bows; g.combo = 0;
+    g.need = Math.round([3, 4, 5][g.level - 1] / Math.pow(Math.max(1, g.tempo / 1.3), .75)); g.bows = [0, 1, 3][g.level - 1]; g.sliced = 0; g.objs = []; g.halves = []; g.nextT = .05; g.bowsLeft = g.bows; g.combo = 0;
     g.blade = pomponBlade();
+    g.grav = 520 * g.tempo * g.tempo; // speed ∝ tempo, gravity ∝ tempo²: the same arc, just quicker (it never flies off the top)
   },
   toss(g, kind) {
-    const x = g.r(46, 210), tx = clamp(x + g.r(-60, 60), 46, 210), up = g.r(360, 420) * Math.sqrt(g.tempo);
-    const T = 2 * up / 520; g.objs.push({ kind, x, y: SH + 14, vx: (tx - x) / T, vy: -up, rot: 0, vr: g.r(-4, 4), v: g.ri(0, 2), dead: false, born: g.t });
+    const x = g.r(46, 210), tx = clamp(x + g.r(-60, 60), 46, 210), up = g.r(360, 420) * g.tempo;
+    const T = 2 * up / g.grav; g.objs.push({ kind, x, y: SH + 14, vx: (tx - x) / T, vy: -up, rot: 0, vr: g.r(-4, 4), v: g.ri(0, 2), dead: false, born: g.t });
     sfx('boing', { pitch: kind === 'bow' ? 2 : 1.3, vol: .25 });
   },
   update(g, dt) {
@@ -417,7 +418,7 @@ defMG({
     }
     for (const o of g.objs) {
       if (o.dead) continue;
-      o.vy += 520 * dt; o.x += o.vx * dt; o.y += o.vy * dt; o.rot += o.vr * dt;
+      o.vy += g.grav * dt; o.x += o.vx * dt; o.y += o.vy * dt; o.rot += o.vr * dt;
       if (o.y > SH + 30 && o.vy > 0) o.dead = true;
       if (g.state !== 'play') continue;
       const r = o.kind === 'bow' ? 12 : 16;
@@ -456,12 +457,18 @@ defMG({
   },
   hint(g) { const o = g.objs.find(o => !o.dead && o.kind === 'knot'); const x = o ? clamp(o.x + o.vx * .5, 50, 206) : 128, y = 80; return { mech: 'cut', x, y, path: [[x - 24, y - 14], [x + 24, y + 14]] }; },
   bot(g) {
-    const o = g.objs.filter(o => !o.dead && o.kind === 'knot' && o.y < SH - 10 && o.y > 10).sort((a, b) => a.vy - b.vy)[0];
+    // a knot on screen with no bow close to it (the youngest first), sliced with a short swipe that leads it
+    const safe = o => !g.objs.some(b => !b.dead && b.kind === 'bow' && dist(b.x, b.y, o.x, o.y) < 38);
+    const o = g.objs.filter(o => !o.dead && o.kind === 'knot' && o.y < SH - 10 && o.y > 10 && safe(o)).sort((a, b) => a.vy - b.vy)[0];
     if (!o) return { down: false };
-    const bow = g.objs.find(b => !b.dead && b.kind === 'bow' && dist(b.x, b.y, o.x, o.y) < 38); if (bow) return { down: false };
-    const ph = (g._p = (g._p || 0) + 1) % 8;
-    if (ph < 2) return { x: o.x - 16, y: o.y - 10, down: false };
-    const q = (ph - 2) / 5; return { x: o.x - 16 + q * 32 + o.vx * STEP * ph, y: o.y - 10 + q * 20 + o.vy * STEP * ph, down: true };
+    if (o !== g._tgt) { g._tgt = o; g._p = 0; return { down: false }; } // lift the finger before moving to a new knot
+    const ph = (g._p = (g._p || 0) + 1) % 8, lead = STEP * ph, at = (b, l) => [b.x + b.vx * l, b.y + b.vy * l + .5 * g.grav * l * l];
+    const [px0, py0] = at(o, lead);
+    if (ph < 2) return { x: px0 - 16, y: py0 - 10, down: false };
+    // never swipe through a bow: check the stroke against where every bow will be
+    const segD = (x, y, ax, ay, bx, by) => { const vx = bx - ax, vy = by - ay, L = vx * vx + vy * vy || 1, k = clamp(((x - ax) * vx + (y - ay) * vy) / L, 0, 1); return dist(x, y, ax + vx * k, ay + vy * k); };
+    if (g.objs.some(b => { if (b.dead || b.kind !== 'bow') return false; const [bx, by] = at(b, lead); return segD(bx, by, px0 - 16, py0 - 10, px0 + 16, py0 + 10) < 24; })) { g._p = 0; return { down: false }; }
+    const q = (ph - 2) / 5; return { x: px0 - 16 + q * 32, y: py0 - 10 + q * 20, down: true };
   },
 });
 
@@ -930,7 +937,9 @@ defMG({
     const L = g.state === 'won' ? 'go' : this.light(g), on = L === 'go' ? '#5bd18b' : L === 'almost' ? '#ffdf4f' : '#ff4060';
     panel(c, 188, 24, 60, 62, '#2b2540', { r: 6, line: INK });
     for (const [y, col, lit] of [[40, '#ff4060', L === 'wait'], [58, '#ffdf4f', L === 'almost'], [76, '#5bd18b', L === 'go']]) { disc(c, 204, y, 7, INK); disc(c, 204, y, 6, lit ? col : mixHex(col, '#20162e', .7)); if (lit) { disc(c, 202, y - 2, 2, '#ffffff'); c.globalAlpha = .25; disc(c, 204, y, 12, col); c.globalAlpha = 1; } }
-    txt(c, L === 'go' ? '¡YA!' : L === 'almost' ? '¿...?' : 'ESPERA', 231, 52, on, { align: 'c', bold: true, out: INK });
+    // the cue word sits inside the box, beside its light
+    if (L === 'wait') { rect(c, 214, 36, 29, 9, INK); tiny(c, 'ESPERA', 229, 38, on); }
+    else txt(c, L === 'go' ? '¡YA!' : '¿…?', 229, L === 'go' ? 70 : 52, on, { align: 'c', bold: true, out: INK });
     // Keiko runs the show tonight: headset on, she calls the cue
     const kx = 222, ky = 180, kex = g.state === 'won' ? 'star' : g.state === 'lost' ? (g.early ? 'x' : 'sad') : L === 'go' ? 'wow' : L === 'almost' ? 'spiral' : 'normal';
     drawS(c, westieSitBody(), kx, ky, { ax: .5, ay: 1, s: .62 });

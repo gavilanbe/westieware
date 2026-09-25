@@ -1,11 +1,26 @@
 // ============================================================================
-//  Microgames of ANAHÍ's stage (¡TOCA!). The boss (¡PAPELEO!, the Hacienda
-//  inspector) lives in anahi_boss.js.
+//  Microgames of ANAHÍ's stage (¡TOCA!). The boss (¡PREPARA EL PERRO!, Lady Di
+//  before the 12:00 show) lives in anahi_boss.js.
 //  Every game here has a hint(g) → { x, y, mech } for the ghost hand.
 // ============================================================================
 'use strict';
 
 // ---------------------------------------------------------------- shared art
+// the salon's rubber stamp, slammed onto the scene when a job is judged: Westie
+// green for a job well done, red for a mess (same family as Hacienda's APROBADO).
+// t = seconds since the verdict; (x, y) = its centre
+const ANA_OK = '#2a9a5a', ANA_KO = '#e0283c';
+const ANA_SCRATCH = mkCanvas(1, 1); // to prebuild pictures by drawing them once, off screen
+function anaStamp(c, word, t, ok, x = SW / 2, y = 56, rot) {
+  if (!(t >= 0)) return; // no verdict yet (or a timeout: the bath bomb says it all)
+  const k = clamp(t / .14, 0, 1), img = hacStamp(word, ok ? ANA_OK : ANA_KO);
+  const s = k < 1 ? lerp(2.4, 1, E.inQ(k)) : 1 + Math.max(0, .06 - (t - .14) * .3) * Math.sin((t - .14) * 40);
+  c.globalAlpha = k < 1 ? .4 + .6 * k : 1;
+  drawS(c, img, x, y, { rot: rot != null ? rot : ok ? -.1 : .08, s });
+  c.globalAlpha = 1;
+}
+// call on the verdict: the thump of the stamp lands a beat after
+function anaStampHit(g, ok) { g.stampT = g.t; g.stampOk = ok; sfx('stamp', { delay: .12 }); if (typeof after === 'function') after(.14, () => { if (g.shake) g.shake(ok ? 2 : 3, .15); }); }
 function splatSpr() { return mdl('splat', () => spr(['.k...k.', 'k.kkk.k', '.kbbbk.', 'kbbBbbk', '.kbbbk.', 'k.kkk.k', '.k...k.'], { k: INK, b: '#5b3a1d', B: '#a07748' })); }
 
 // ---------------------------------------------------------------- 1 PULGAS --
@@ -42,6 +57,7 @@ defMG({
     g.fleas = [];
     for (let i = 0; i < n; i++) g.fleas.push(this.spot(g, { dead: false, jump: 0, sit: g.r(.3, .8), f: 0, flip: g.r() < .5 }));
     g.bounce = 0; g.scr = 0;
+    hacStamp('¡SIN PULGAS!', ANA_OK); keikoSide(2, 'wag', 'happy'); // built now, not mid-game
   },
   // landing spots on Keiko's coat (back, flank, head)
   spot(g, q) {
@@ -72,7 +88,11 @@ defMG({
         g.fx.burst(best.x, best.y, 10, { k: 'star', c: [C.yellow, '#fff'], sp0: 40, sp1: 100, life0: .25, life1: .45 });
         g.fx.add({ k: 'txt', s: '¡PAF!', x: best.x, y: best.y - 12, life: .5, c: '#ffffff' });
         g.bounce = 1; g.shake(1.5, .1);
-        if (g.fleas.every(f => f.dead)) { g.win(); sfx('bark', { pitch: 1.3, delay: .15 }); for (let i = 0; i < 6; i++) g.fx.add({ k: 'heart', x: 176 + g.r(-20, 20), y: 50, vx: g.r(-20, 20), vy: g.r(-60, -30), life: 1, c: C.pink }); }
+        if (g.fleas.every(f => f.dead)) {
+          g.win(); anaStampHit(g, true); sfx('bark', { pitch: 1.3, delay: .15 });
+          for (let i = 0; i < 6; i++) g.fx.add({ k: 'heart', x: 176 + g.r(-20, 20), y: 50, vx: g.r(-20, 20), vy: g.r(-60, -30), life: 1, c: C.pink });
+          g.fx.burst(120, 100, 16, { k: 'star', c: ['#fff27a', '#ffffff'], sp0: 40, sp1: 130 });
+        }
       } else g.fx.add({ k: 'ring', x: IN.x, y: IN.y, r: 3, life: .25, c: '#ffffff' });
     }
   },
@@ -87,8 +107,11 @@ defMG({
       if (f.jump > 0) shadowOval(c, lerp(f.x0, f.x1, Math.min(1, f.jump)), lerp(f.y0, f.y1, Math.min(1, f.jump)) + 6, 5, 1.5, .6);
       drawFlea(c, rd(f.x), rd(f.y), fl(f.f), f.flip);
     }
-    const left = g.fleas.filter(f => !f.dead).length;
-    panel(c, 6, 6, 70, 16, '#ffffff', { r: 4 }); drawFlea(c, 18, 14, 0, false); txt(c, left ? 'x ' + left : '¡0!', 30, 10, INK, { bold: true });
+    const dead = g.fleas.filter(f => f.dead).length, n = g.fleas.length;
+    panel(c, 6, 6, 62, 18, '#ffffff', { r: 5 }); drawFlea(c, 18, 15, 0, false); txt(c, dead + '/' + n, 30, 11, dead === n ? ANA_OK : INK, { bold: true });
+    // a clean, shiny coat once they're all gone
+    if (g.state === 'won') { const st = g.t - g.decidedAt; for (let i = 0; i < 4; i++) { const a = st * 3 + i * 1.6; drawStar(c, 100 + i * 22 + Math.cos(a) * 4, 96 + Math.sin(a * 1.3) * 12, 2 + Math.sin(st * 9 + i) * 1.2, '#fff27a'); } }
+    if (g.state === 'won') anaStamp(c, '¡SIN PULGAS!', g.t - g.stampT, true, 118, 50);
   },
   bot(g) { const f = g.fleas.find(f => !f.dead && f.jump === 0); if (!f) return { down: false }; return { x: f.x, y: f.y, down: fl(g.t * 10) % 3 === 0 }; },
   hint(g) { const f = g.fleas.find(f => !f.dead) || g.fleas[0]; return { x: f.x, y: f.y, mech: 'tap' }; },
@@ -161,6 +184,7 @@ defMG({
     g.nails = [0, 1, 2, 3].map(i => ({ cut: false, tip: 0 }));
     g.order = shuffle([0, 1, 2, 3]).slice(0, g.need);
     g.blade = 0; g.flyers = []; g.ouch = 0; g.jerk = 0;
+    okPaw(); // the victory paw is heavy: build it before the game starts
   },
   // claw centre line: from the toe, 48px long, hooking down; radius tapers
   clawAt(i, t) { const [x, y] = UNAS_TOES[i]; return [x + 12 + t * 58, y - 1 + t * t * 13 + (i - 1.5) * t * 7, 5.4 - t * 3.8]; },
@@ -387,6 +411,8 @@ defMG({
     g.need = g.level >= 2 ? 2 : 1; g.stack = 0; g.drop = null;
     g.coneX = g.level === 1 ? 160 : g.r(130, 200); g.coneV = [0, 22, 36][g.level - 1] * g.tempo * (g.r() < .5 ? -1 : 1);
     g.swingT = g.r(TAU); g.cols = ['#ffb3d1', '#fff7ae', '#b3d9ff']; g.splats = []; g.squash = 0;
+    hacStamp('¡ÑAM!', ANA_OK); hacStamp('¡PLOF!', ANA_KO);
+    for (const ex of ['love', 'sad']) drawKeikoSit(ANA_SCRATCH.g, 0, 0, ex); // her reactions, prebuilt
   },
   armX(g) { return 150 + Math.sin(g.swingT) * 92; },
   coneTop(g) { return 118 - g.stack * 12; },
@@ -396,8 +422,8 @@ defMG({
     if (g.drop) {
       const d = g.drop; d.vy += 700 * dt; d.y += d.vy * dt;
       if (d.y >= this.coneTop(g) - 4 && !d.done) {
-        if (Math.abs(d.x - g.coneX) < 14) { d.done = true; g.stack++; g.drop = null; sfx('pop', { pitch: .7 }); sfx('gulp', { delay: .1 }); HITSTOP = 2; g.fx.burst(g.coneX, this.coneTop(g), 12, { k: 'star', c: [C.yellow, '#fff', C.pinkL] }); g.squash = 1; if (g.stack >= g.need) { g.win(); sfx('bark', { pitch: 1.4, delay: .15 }); g.fx.add({ k: 'txt', s: '¡ÑAM!', x: 66, y: 110, life: .8, c: '#ffffff' }); } }
-        else if (d.y > 176) { d.done = true; g.splats.push({ x: d.x, col: d.col }); g.drop = null; sfx('squish', { pitch: .8 }); g.lose(); g.shake(2, .15); }
+        if (Math.abs(d.x - g.coneX) < 14) { d.done = true; g.stack++; g.drop = null; sfx('pop', { pitch: .7 }); sfx('gulp', { delay: .1 }); HITSTOP = 2; g.fx.burst(g.coneX, this.coneTop(g), 12, { k: 'star', c: [C.yellow, '#fff', C.pinkL] }); g.squash = 1; if (g.stack >= g.need) { g.win(); anaStampHit(g, true); sfx('bark', { pitch: 1.4, delay: .15 }); for (let i = 0; i < 5; i++) g.fx.add({ k: 'heart', x: 56 + g.r(-12, 12), y: 110, vx: g.r(-20, 20), vy: g.r(-60, -30), life: 1, c: C.pink }); } }
+        else if (d.y > 176) { d.done = true; g.splats.push({ x: d.x, col: d.col }); g.drop = null; sfx('squish', { pitch: .8 }); g.lose(); anaStampHit(g, false); g.shake(2, .15); g.fx.burst(d.x, 178, 10, { k: 'drop', c: [d.col, '#ffffff'], sp0: 40, sp1: 110, g: 300, life0: .3, life1: .5 }); }
       }
     } else if (IN.tap && g.state === 'play') { g.drop = { x: this.armX(g), y: 44, vy: 0, col: g.cols[g.stack % 3] }; sfx('swoosh', { pitch: 1.4 }); }
     g.squash = Math.max(0, g.squash - dt * 4);
@@ -424,6 +450,7 @@ defMG({
     if (!g.drop && g.state === 'play') drawS(c, heladoScoop(g.cols[g.stack % 3]), ax, 46, {});
     if (g.drop) drawS(c, heladoScoop(g.drop.col), g.drop.x, g.drop.y, { sy: 1 + Math.min(.3, g.drop.vy / 2000) });
     if (g.state === 'play' && !g.drop && g.level < 3) { const hit = Math.abs(ax - g.coneX) < 14; for (let y = 58; y < 112; y += 6) px(c, ax, y, hit ? '#5bd18b' : '#ffffff'); }
+    if (g.state !== 'play') anaStamp(c, g.state === 'won' ? '¡ÑAM!' : '¡PLOF!', g.t - g.stampT, g.state === 'won', 150, 76);
   },
   bot(g) {
     // predict where the cone will be when a scoop dropped now arrives
@@ -486,6 +513,7 @@ defMG({
     { i: 'd', v: .55, n: 'k . z z . . z . k . z z . . z z k . z z . . z . k . z z s . s .' }] }),
   init(g) {
     g.need = [5, 7, 9][g.level - 1]; g.popped = 0; g.bubbles = []; g.spawned = 0; g.spawnT = 0; g.combo = 0;
+    hacStamp('¡LIMPITA!', ANA_OK);
   },
   spawn(g) { const r = g.r(10, 16); g.bubbles.push({ x: g.r(30, 226), y: 170 + r, r, vy: -g.r(22, 40) * [1, 1.2, 1.45][g.level - 1] * g.tempo, ph: g.r(TAU), hue: g.r(TAU) }); g.spawned++; },
   update(g, dt) {
@@ -500,7 +528,7 @@ defMG({
         g.fx.add({ k: 'ring', x: hit.x, y: hit.y, r: hit.r * .8, grow: 10, life: .25, c: '#ffffff' });
         g.fx.burst(hit.x, hit.y, 8, { k: 'drop', c: ['#dff4ff', '#9bd6f7'], sp0: 40, sp1: 110, g: 300, life0: .3, life1: .5 });
         g.fx.add({ k: 'txt', s: '¡PLOP!', x: hit.x, y: hit.y - hit.r - 4, life: .45, c: '#ffffff' });
-        if (g.popped >= g.need) { g.win(); g.fx.burst(128, 150, 20, { k: 'bubble', c: '#ffffff', sp0: 40, sp1: 140, r: 4 }); }
+        if (g.popped >= g.need) { g.win(); anaStampHit(g, true); sfx('sparkle', { delay: .2 }); g.fx.burst(128, 150, 20, { k: 'bubble', c: '#ffffff', sp0: 40, sp1: 140, r: 4 }); g.fx.burst(128, 110, 12, { k: 'star', c: ['#fff27a', '#ffffff'], sp0: 40, sp1: 120 }); }
       }
     }
   },
@@ -519,7 +547,8 @@ defMG({
       for (let a = 3.6; a < 4.6; a += .12) px(c, b.x + Math.cos(a) * (r - 3.5), b.y + Math.sin(a) * (r - 3.5), '#ffffff');
       disc(c, b.x - r * .45, b.y - r * .45, 1.5, '#ffffff');
     }
-    panel(c, SW - 66, 6, 60, 18, '#ffffff', { r: 5 }); ringPx(c, SW - 54, 15, 5, '#63a0ef'); px(c, SW - 56, 13, '#ffffff'); txt(c, g.popped + '/' + g.need, SW - 44, 11, INK, { bold: true });
+    panel(c, SW - 66, 6, 60, 18, '#ffffff', { r: 5 }); ringPx(c, SW - 54, 15, 5, '#63a0ef'); px(c, SW - 56, 13, '#ffffff'); txt(c, g.popped + '/' + g.need, SW - 44, 11, g.state === 'won' ? ANA_OK : INK, { bold: true });
+    if (g.state === 'won') anaStamp(c, '¡LIMPITA!', g.t - g.stampT, true, 118, 58);
   },
   bot(g) { const b = g.bubbles.find(b => b.y < 160 && b.y > 10); if (!b) return { down: false }; return { x: b.x, y: b.y + b.vy * .02, down: fl(g.t * 20) % 3 === 0 }; },
   hint(g) { const b = g.bubbles[0]; return b ? { x: b.x, y: Math.max(40, b.y - 30), mech: 'tap' } : { x: 128, y: 120, mech: 'tap' }; },
@@ -538,6 +567,7 @@ defMG({
     g.holes = [];
     for (let j = 0; j < 2; j++) for (let i = 0; i < 3; i++) g.holes.push({ x: 50 + i * 78, y: 88 + j * 72, up: 0, st: 'down', t: 0, dur: 0, kind: 'mud' });
     g.nextT = .2;
+    hacStamp('¡TODOS LIMPIOS!', ANA_OK); hacStamp('¡ES UN GATO!', ANA_KO);
   },
   update(g, dt) {
     const sp = [1, 1.2, 1.4][g.level - 1] * g.tempo;
@@ -548,17 +578,22 @@ defMG({
     }
     for (const h of g.holes) {
       h.t += dt;
+      if (h.st === 'cheer') { if (g.t >= h.cheerAt) h.up = Math.min(1, h.up + dt * 8); continue; }
       if (h.st === 'rise') { h.up = Math.min(1, h.up + dt * 7 * sp); if (h.up >= 1) { h.st = 'up'; h.t = 0; } }
       else if (h.st === 'up') { if (h.t > h.dur) { h.st = 'sink'; } }
       else if (h.st === 'sink' || h.st === 'clean') { h.up = Math.max(0, h.up - dt * (h.st === 'clean' ? 3 : 6) * sp); if (h.up <= 0) { h.st = 'down'; } }
     }
     if (IN.tap && g.state === 'play') {
       for (const h of g.holes) if ((h.st === 'up' || h.st === 'rise') && Math.abs(IN.x - h.x) < 26 && IN.y > h.y - 50 * h.up - 10 && IN.y < h.y + 8) {
-        if (h.kind === 'cat') { sfx('whine', { pitch: 1.8 }); g.fx.add({ k: 'txt', s: '¡MIAU!', x: h.x, y: h.y - 50, life: .7, c: '#ffd1e4' }); g.lose(); break; }
+        if (h.kind === 'cat') { sfx('whine', { pitch: 1.8 }); g.fx.add({ k: 'txt', s: '¡FFFSH!', x: h.x, y: h.y - 56, life: .7, c: '#ffd1e4' }); g.lose(); anaStampHit(g, false); g.shake(3, .2); h.hiss = g.t; break; }
         h.st = 'clean'; h.sprayT = g.t; g.washed++; sfx('splash', { vol: .5 }); sfx('sparkle', { pitch: 1 + g.washed * .1 }); HITSTOP = 2; buzz(8);
         g.fx.burst(h.x, h.y - 30, 12, { k: 'bubble', c: '#ffffff', sp0: 40, sp1: 120, r: 3 });
         g.fx.burst(h.x, h.y - 30, 8, { k: 'star', c: [C.yellow, '#fff'] });
-        if (g.washed >= g.need) g.win();
+        if (g.washed >= g.need) {
+          g.win(); anaStampHit(g, true); sfx('bark', { n: 2, pitch: 1.3, delay: .2 });
+          // curtain call: every basin pops a clean, happy westie
+          for (const q of g.holes) { q.st = 'cheer'; q.kind = 'mud'; q.cheerAt = g.t + g.r(.05, .3); }
+        }
         break;
       }
     }
@@ -571,9 +606,9 @@ defMG({
       ellipsePx(c, h.x, h.y + 3, 31, 10, INK); ellipsePx(c, h.x, h.y + 1, 30, 9, RAMP.steel[2]); ellipsePx(c, h.x, h.y, 28, 7.5, RAMP.steel[4]); ellipsePx(c, h.x, h.y, 25, 6, '#3d6f7a'); ellipsePx(c, h.x - 4, h.y - 1, 15, 3, '#5aaee6');
       if (h.up > 0) {
         c.save(); c.beginPath(); c.rect(h.x - 32, h.y - 90, 64, 90); c.clip();
-        const y = h.y + 40 - h.up * 52;
-        if (h.kind === 'cat') drawCatHead(c, h.x, y);
-        else drawS(c, buleHead(h.st === 'clean' ? 'happy' : 'grr', h.st === 'clean' ? RAMP.fur : RAMP.mud), h.x, y, { s: 1 });
+        const cheer = h.st === 'cheer', hop = cheer ? Math.abs(Math.sin((g.t - h.cheerAt) * 9)) * 4 : 0, y = h.y + 40 - h.up * 52 - hop;
+        if (h.kind === 'cat') drawCatHead(c, h.x + (h.hiss && g.t - h.hiss < .6 ? Math.sin(g.t * 60) * 2 : 0), y);
+        else drawS(c, buleHead(h.st === 'clean' || cheer ? 'happy' : 'grr', h.st === 'clean' || cheer ? RAMP.fur : RAMP.mud), h.x, y, { s: 1 });
         c.restore();
       }
       // foam rim in front
@@ -588,7 +623,10 @@ defMG({
     }
     panel(c, 6, 6, 58, 18, '#ffffff', { r: 5 });
     polyPx(c, [[17, 8], [22, 16], [12, 16]], INK); disc(c, 17, 16, 5, INK); polyPx(c, [[17, 10], [21, 16], [13, 16]], '#63a0ef'); disc(c, 17, 16, 4, '#63a0ef'); px(c, 15, 15, '#dff4ff'); px(c, 15, 16, '#dff4ff');
-    txt(c, g.washed + '/' + g.need, 28, 11, INK, { bold: true });
+    txt(c, g.washed + '/' + g.need, 28, 11, g.state === 'won' ? ANA_OK : INK, { bold: true });
+    // sparkles over the clean heads, then the salon's verdict
+    if (g.state === 'won') for (const h of g.holes) if (h.up > .8) drawStar(c, h.x + 16, h.y - 58 + Math.sin(g.t * 8 + h.x) * 3, 2 + Math.sin(g.t * 12 + h.x) * 1, '#fff27a');
+    if (g.state !== 'play') anaStamp(c, g.state === 'won' ? '¡TODOS LIMPIOS!' : '¡ES UN GATO!', g.t - g.stampT, g.state === 'won', 142, 46);
   },
   bot(g) { const h = g.holes.find(h => (h.st === 'up') && h.kind === 'mud'); if (!h) return { down: false }; return { x: h.x, y: h.y - 30, down: fl(g.t * 20) % 3 === 0 }; },
   hint(g) { const h = g.holes.find(h => h.st !== 'down') || g.holes[1]; return { x: h.x, y: h.y - 30, mech: 'tap' }; },
@@ -845,6 +883,7 @@ defMG({
     const xs = { 2: [84, 172], 3: [62, 128, 194], 4: [46, 101, 156, 211] }[n];
     g.forms = opts.map((num, i) => ({ num, x: xs[i], y: 86, tx: xs[i], rot: g.r(-.12, .12), hand: 0 }));
     g.pick = null; g.handT = -1; g.verdictT = -1; g.hand = { x: 128, y: 196 }; g.shuf = g.level >= 3 ? .9 : -1;
+    hacStamp('APROBADO', '#2a9a5a'); hacStamp('DENEGADO', '#e0283c');
   },
   update(g, dt) {
     // level 3: the forms swap places once, just to keep you honest
@@ -867,8 +906,9 @@ defMG({
   },
   draw(g, c) {
     c.drawImage(modeloOffice(), 0, 0);
-    for (const f of g.forms) { if (f === g.pick && g.verdictT >= 0) continue; drawS(c, modeloForm(f.num), f.x, f.y, { rot: f === g.pick ? 0 : f.rot }); }
-    drawS(c, anaHandOpen(), g.hand.x, g.hand.y, { ax: .45, ay: .3 });
+    g.forms.forEach((f, i) => { if (f === g.pick && g.verdictT >= 0) return; const idle = f === g.pick ? 0 : Math.sin(g.t * 3 + i * 1.7) * 1.2; drawS(c, modeloForm(f.num), f.x, f.y + idle, { rot: f === g.pick ? 0 : f.rot + idle * .02 }); });
+    const wait = g.handT < 0 ? -12 + Math.sin(g.t * 4) * 2 : 0; // her hand hovers, ready to grab a form
+    drawS(c, anaHandOpen(), g.hand.x, g.hand.y + wait, { ax: .45, ay: .3 });
     if (g.verdictT >= 0) {
       const k = spring(g.t - g.verdictT, 2.6, 7), ok = g.state === 'won';
       drawS(c, hacStamp(ok ? 'APROBADO' : 'DENEGADO', ok ? '#2a9a5a' : '#e0283c'), 128, 92, { rot: -.16, s: lerp(2.6, 1, Math.min(1, k)) * (k > 1 ? 1 : 1) });
@@ -984,6 +1024,7 @@ defMG({
     const x0 = 96, x1 = 236; g.dogs.forEach((d, i) => { d.x = n === 1 ? 170 : lerp(x0, x1, i / (n - 1)); d.vx = g.level >= 3 ? g.r(18, 34) * (g.r() < .5 ? -1 : 1) * g.tempo : 0; });
     g.target = g.dogs[fl(g.r(n))];
     g.leash = null; g.hugT = -1; g.ab = { x: 38, y: 176 };
+    for (const m of ['happy', 'hug', 'cross']) abuela(m); empDog(g.target.breed, g.target.coll, 'hop'); // the endings, prebuilt
   },
   update(g, dt) {
     for (const d of g.dogs) {
@@ -1310,7 +1351,7 @@ defMG({
     { i: 'd', v: .5, n: 'k . h . s . h . k . h . s . h h k . h . s . h . k . h . s . s .' }] }),
   init(g) {
     const n = [2, 3, 3][g.level - 1], pool = shuffle(g.level >= 3 ? ['guiri', 'inspector', 'gato', 'globo'] : ['guiri', 'inspector', 'gato']);
-    const ci = g.level === 1 ? g.ri(0, 1) : g.ri(1, n - 1);
+    const ci = g.level === 1 ? 1 : g.ri(1, n - 1); // level 1: first someone you mustn't let in, then the dog
     g.q = []; let di = 0;
     for (let i = 0; i < n; i++) g.q.push(i === ci ? { kind: 'cliente', breed: g.pick(EMP_BREEDS), coll: g.pick(['#e23b4e', '#3565cc', '#ffdf4f']) } : { kind: pool[di++ % pool.length] });
     g.slot = [2.2, 2, 1.8][g.level - 1]; g.t0 = .6; g.rang = -1;

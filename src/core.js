@@ -1,5 +1,5 @@
 // ============================================================================
-//  WESTIE WARE ¡Tocados! — core
+//  WESTIE WARE ¡Grooming! — core
 //  Two DS-style screens (256x192 each). Every scene draws the top screen and
 //  the touch screen separately (or one tall picture that spans both, hinge
 //  included). Input only lives on the bottom screen, like a real stylus.

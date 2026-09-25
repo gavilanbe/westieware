@@ -112,7 +112,7 @@ const STG = {
   },
   startInter(result) {
     const S = this.S;
-    S.result = result;
+    S.result = result; S.stampBurst = false;
     this.setPhase('inter');
     if (result === true) { S.count++; S.countPop = 1; this.react('win'); }
     else if (result === false) { S.count++; S.countPop = 1; S.lives--; S.breakI = S.lives; S.breakT = 0; this.react('lose'); shake('top', 3, .3); }
@@ -158,6 +158,10 @@ const STG = {
   },
   updInter() {
     const S = this.S;
+    if (S.result !== null && !S.stampBurst && S.pb >= .6 && S.lives > 0) {
+      S.stampBurst = true; const P = this.portalRect(S);
+      S.fx.burst(P.x + P.w / 2, P.y + P.h / 2, 12, S.result ? { k: 'star', c: ['#fff27a', '#ffffff', '#8ef0b4'], sp0: 50, sp1: 140, life0: .3, life1: .6 } : { k: 'puff', c: ['#ff8d9b', '#ffffff'], sp0: 20, sp1: 60, r: 4, life0: .3, life1: .5 });
+    }
     if (S.lives <= 0) { if (S.pb >= S.len) this.gameOver(); return; }
     // interlude beat events
     const nb = fl(S.pb);
@@ -217,6 +221,7 @@ const STG = {
     const S = this.S;
     for (let i = 0; i < 26; i++) S.fx.add({ k: 'puff', x: 14 + rnd(-6, 6), y: 176 + rnd(-6, 6), vx: rnd(-40, 140), vy: rnd(-160, -20), g: 160, drag: 2, r: rnd(3, 8), life: rnd(.4, .8), c: pick(['#ffffff', '#ffe3f0', '#ffd1e4', '#e2f4ff']) });
     S.fx.burst(14, 176, 12, { k: 'bubble', c: '#ffffff', sp0: 40, sp1: 140, r: 3, life0: .4, life1: .8 });
+    S.fx.add({ k: 'txt', s: '¡PLOF!', x: 40, y: 150, vy: -30, life: .8, c: '#ffffff' });
   },
   endPlay() {
     const S = this.S, g = S.g, won = g.state === 'won';
@@ -276,6 +281,7 @@ const STG = {
   },
   updResults() {
     const S = this.S;
+    if (S.newRecord && !S.confetti && S.pt > .75) { S.confetti = true; for (let i = 0; i < 36; i++) S.topFx.add({ k: 'conf', x: 176 + rnd(-40, 40), y: 178, vx: rnd(-120, 120), vy: rnd(-260, -120), g: 300, life: rnd(1.2, 2), c: pick([C.yellow, C.pink, C.mint, C.sky, '#ffffff', C.gold]), rot: rnd(TAU), vr: rnd(-10, 10) }); sfx('sparkle'); }
     if (S.pt < .5) return;
     for (const b of S.btns) {
       const hit = IN.x >= b.x && IN.x < b.x + b.w && IN.y >= b.y && IN.y < b.y + b.h;
@@ -321,7 +327,7 @@ const STG = {
     }
     S.topFx.draw(g);
     if ((S.phase === 'inter' || S.phase === 'play') && !S.paused) this.drawPauseBtn(g);
-    if (S.paused) { g.globalAlpha = .6; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1; mord(g, 'PAUSA', SW / 2, 80, { u: 2.2, r: 2.2 }); }
+    if (S.paused) { g.globalAlpha = .6; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1; mord(g, 'PAUSA', SW / 2, 80 + Math.sin(NOW * 2.5) * 3, { u: 2.2, r: 2.2 }, { anim: i => ({ dy: Math.sin(NOW * 4 + i * .7) * 1.5 }) }); }
   },
   drawBot(g) {
     const S = this.S, d = S.def, R = d.room;
@@ -354,8 +360,13 @@ const STG = {
   },
   drawPauseBot(g) {
     g.globalAlpha = .75; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1;
-    const bs = [['SEGUIR', 72, C.mint], ['SALIR AL MENÚ', 116, C.pinkL]];
-    for (const [l, y, c] of bs) { panel(g, 48, y, 160, 32, c, { r: 5, line: INK, hi: '#ffffff' }); txt(g, l, SW / 2, y + 12, INK, { align: 'c', bold: true }); }
+    const bs = [['SEGUIR', 72, C.mint, 'go'], ['SALIR AL MENÚ', 116, C.pinkL, 'quit']], S = this.S;
+    for (const [l, y, c, id] of bs) {
+      const pr = S.pbtn === id && IN.down, k = id === 'go' && !pr ? 1 + Math.max(0, Math.sin(NOW * 4)) * .04 : pr ? .95 : 1;
+      g.save(); g.translate(SW / 2, y + 16); g.scale(k, k); g.translate(-SW / 2, -(y + 16));
+      panel(g, 48, y + (pr ? 2 : 0), 160, 32, c, { r: 5, line: INK, hi: '#ffffff', lo: pr ? null : INK }); txt(g, l, SW / 2, y + 12 + (pr ? 2 : 0), INK, { align: 'c', bold: true });
+      g.restore();
+    }
   },
   // big announcement across the top screen
   drawBanner(g, word, t, fill, y = 78) {
@@ -434,7 +445,8 @@ const STG = {
     g.fillStyle = cols[1];
     const off = fl(S.pt * 24);
     for (let yy = 0; yy < h; yy += 2) for (let xx = ((yy / 2 + off) % 8); xx < w; xx += 8) g.fillRect(x + xx, y + yy, 4, 1);
-    // question mark bouncing on the beat
+    // question mark bouncing on the beat — or FIN when the lives are gone
+    if (S.phase === 'over' || S.lives <= 0) { const k = spring(S.pt - .3, 2.4, 6); if (k > 0) mord(g, 'FIN', x + w / 2, y + h / 2 - 14, { u: 2, r: 2.2, fill: ['#ffffff', '#ffd1e4', '#ff5d9e'] }, { anim: () => ({ s: k }) }); return; }
     const bob = Math.abs(Math.sin(S.pb * Math.PI)) * 5;
     mord(g, '?', x + w / 2, y + h / 2 - 12 - bob, { u: 2, r: 2.2, fill: ['#ffffff', '#fff8e6', '#f2e2b8'] });
   },
@@ -475,20 +487,22 @@ const STG = {
   drawBomb(g, S) {
     const gm = S.g; if (gm.def.boss) return;
     const beats = gm.def.beats, rem = Math.max(0, beats - S.pb);
-    const bx = 14, by = 176;
+    const bx = 17, by = 176;
     if (S.bombState === 'burn' || (S.bombState == null && rem <= 4 && gm.state === 'play')) {
       const appear = clamp((4 - rem) * this.beatDur / .15, 0, 1), s = spring(appear * .5, 2.5, 6);
-      const L = rem / 4 * 222;
-      // fuse cord (twisted rope) to the right
-      for (let x = 0; x < L; x++) { const xx = bx + 9 + x, yy = by + 1 + Math.round(Math.sin(x * .25 + S.pt * 3) * .8); px(g, xx, yy, x % 3 === 0 ? '#8a6a44' : '#dcc08a'); px(g, xx, yy + 1, '#8a6a44'); }
-      // spark at the tip
-      const sx = bx + 9 + L, sy = by + 1;
-      if (fl(S.pt * 30) % 2) drawStar(g, sx, sy, 4.5, '#fff27a', S.pt * 9); else drawStar(g, sx, sy, 3.5, '#ffffff', -S.pt * 7);
-      if (FRAME % 3 === 0) S.fx.add({ k: 'spark', x: sx, y: sy, vx: rnd(-30, 30), vy: rnd(-60, -10), g: 200, life: .3, c: pick(['#fff27a', '#ff9f4f', '#ffffff']), r: 1.5 });
-      drawBathBomb(g, bx, by, s, Math.ceil(rem), S.pt);
+      const L = rem / 4 * 214, beatK = Math.max(0, 1 - (S.pb % 1) * 4);
+      // the fuse: a thick twisted cord along the bottom edge
+      for (let x = 0; x < L; x++) { const xx = bx + 12 + x, yy = by + 1 + Math.round(Math.sin(x * .25 + S.pt * 3) * .8); px(g, xx, yy - 1, INK); px(g, xx, yy, x % 3 === 0 ? '#8a6a44' : '#dcc08a'); px(g, xx, yy + 1, x % 3 === 1 ? '#8a6a44' : '#c9a86c'); px(g, xx, yy + 2, INK); }
+      // the ember at the tip: a glow, a star, sparks
+      const sx = bx + 12 + L, sy = by + 1;
+      g.globalAlpha = .35 + Math.sin(S.pt * 40) * .15; disc(g, sx, sy, 6, '#ffdf4f'); g.globalAlpha = 1;
+      if (fl(S.pt * 30) % 2) drawStar(g, sx, sy, 5, '#fff27a', S.pt * 9); else drawStar(g, sx, sy, 4, '#ffffff', -S.pt * 7);
+      if (FRAME % 2 === 0) S.fx.add({ k: 'spark', x: sx, y: sy, vx: rnd(-50, 30), vy: rnd(-80, -20), g: 220, life: .35, c: pick(['#fff27a', '#ff9f4f', '#ffffff']), r: 1.5 });
+      drawBathBomb(g, bx, by - 2, s, Math.ceil(rem), S.pt, beatK);
     } else if (S.bombState === 'fizzle' || S.bombState === 'pop') {
+      const won = S.bombState === 'pop';
       S.bombState = 'done';
-      if (S.bombState === 'done') S.fx.burst(bx, by, 8, { k: 'puff', c: ['#ffffff', '#ffd1e4'], sp0: 10, sp1: 40, r: 4, life0: .3, life1: .5 });
+      S.fx.burst(bx, by, 10, { k: won ? 'star' : 'puff', c: won ? ['#fff27a', '#ffffff', '#ffd1e4'] : ['#ffffff', '#ffd1e4'], sp0: 20, sp1: won ? 110 : 50, r: 4, life0: .3, life1: .55 });
     }
   },
   drawPlayTop(g) {
@@ -499,9 +513,10 @@ const STG = {
     const t = S.cmdT, t1 = .55 * bd, t2 = .8 * bd;
     if (t > t1) {
       const k = clamp((t - t1) / (t2 - t1), 0, 1), y = lerp(SH + 20, 6, E.outBack(k)), bob = Math.sin(S.pb * Math.PI) * 1.5;
-      const st = fitMord(gm.def.cmd, 190, { u: 1.9, r: 2, rim: 2, sy: 2 }), w = mordW(gm.def.cmd, st);
-      mord(g, gm.def.cmd, SW / 2 - 10, y + bob, st);
-      drawMechMini(g, SW / 2 - 10 + w / 2 + 22, y + 16 + bob, gm.def.mech === 'mix' ? S.def.mech : gm.def.mech, S.pt);
+      // long commands shrink and shift left so the gesture icon never sits on the pause button
+      const st = fitMord(gm.def.cmd, 170, { u: 1.9, r: 2, rim: 2, sy: 2 }), w = mordW(gm.def.cmd, st), cx = Math.min(SW / 2 - 10, 196 - w / 2);
+      mord(g, gm.def.cmd, cx, y + bob, st);
+      drawMechMini(g, cx + w / 2 + 22, y + 16 + bob, gm.def.mech === 'mix' ? S.def.mech : gm.def.mech, S.pt);
       if (k >= 1 && !gm.def.top) {
         if (gm.def.how) { const lines = wrapText(gm.def.how, 220); lines.slice(0, 2).forEach((l, i) => txt(g, l, SW / 2, 48 + i * 11 + bob, '#ffffff', { align: 'c', out: INK })); }
         else if (gm.def.name) txt(g, gm.def.name, SW / 2, 48 + bob, '#ffffff', { align: 'c', out: INK });
@@ -510,7 +525,12 @@ const STG = {
     this.drawMiniLives(g, S);
     txt(g, String(S.count + 1).padStart(2, '0'), 8, 6, '#ffffff', { out: INK, bold: true });
   },
-  drawMiniLives(g, S) { for (let i = 0; i < S.maxLives; i++) { const alive = i < S.lives; (S.def.room.miniLife || drawMiniLifeDefault)(g, 10 + i * 12, SH - 12, alive); } },
+  // the little lives during a microgame: bottom centre on a dark pill, clear of every character's corner mini
+  drawMiniLives(g, S) {
+    const n = S.maxLives, sp = 12, x0 = SW / 2 - (n - 1) * sp / 2, y = SH - 11;
+    g.globalAlpha = .45; panel(g, rd(x0 - 10), y - 8, (n - 1) * sp + 20, 16, INK, { r: 6, line: null }); g.globalAlpha = 1;
+    for (let i = 0; i < n; i++) { const alive = i < S.lives, lost = i === S.lives && S.g && S.g.state === 'lost' && S.g.t - S.g.decidedAt < .5; (S.def.room.miniLife || drawMiniLifeDefault)(g, x0 + i * sp + (lost ? Math.sin(S.pt * 60) * 1.5 : 0), y, alive); }
+  },
   // ---- title card: every character brings its own (src/cards.js); this is the plain template
   drawCardTop(g) {
     const S = this.S, d = S.def, t = S.pt, cd = d.card || (typeof CARD_DESIGNS !== 'undefined' && CARD_DESIGNS[d.id]);
@@ -584,12 +604,24 @@ const STG = {
     if (S.newRecord && t > .7) { const b = spring(t - .7, 2.6, 5); g.save(); g.translate(176, 178); g.rotate(-.08); g.scale(b * 1.1, b * 1.1); panel(g, -46, -12, 92, 24, C.pink, { r: 4, line: INK, hi: '#ffd1e4' }); txt(g, '¡NUEVO RÉCORD!', 0, -4, '#ffffff', { align: 'c', bold: true }); g.restore(); if (fl(t * 10) % 4 === 0) S.topFx.add({ k: 'star', x: rnd(120, 236), y: rnd(160, 190), vy: -10, life: .5, r: 3, c: '#fff27a' }); }
   },
   drawResultsBot(g) {
-    const S = this.S;
+    const S = this.S, t = S.pt;
     (S.def.room.bot)(g, S);
-    g.globalAlpha = .4; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1;
-    txt(g, S.cleared ? '¡Fase superada!' : S.practice ? 'Práctica terminada' : 'Vuelve a intentarlo', SW / 2, 40, '#ffffff', { align: 'c', out: INK, bold: true });
-    for (const b of S.btns || []) { const pr = S.press === b.id; panel(g, b.x, b.y + (pr ? 2 : 0), b.w, b.h, b.id === 'again' ? C.yellow : b.id === 'share' ? C.pinkL : C.mint, { r: 6, hi: '#ffffff', lo: pr ? null : INK }); txt(g, b.label, b.x + b.w / 2, b.y + b.h / 2 - 3 + (pr ? 2 : 0), INK, { align: 'c', bold: true }); }
+    g.globalAlpha = .5; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1;
+    // a big word for how it went, then the buttons spring in one by one
+    const word = S.cleared ? '¡SUPERADO!' : S.practice ? '¡PRÁCTICA!' : '¡SE ACABÓ!';
+    const fill = S.cleared ? ['#ffffff', '#fff27a', '#ffc23a'] : S.practice ? ['#ffffff', '#d2f5e4', '#5bb593'] : ['#ffffff', '#b3d9ff', '#63a0ef'];
+    mord(g, word, SW / 2, 16, fitMord(word, 220, { u: 2, r: 2.1, rim: 2, sy: 3, fill }), { anim: i => { const lt = t - .1 - i * .04; return { s: lt <= 0 ? 0 : spring(lt, 2.4, 7), dy: Math.sin(t * 3 + i * .6) * 1.2 }; } });
+    if (t > .45) txt(g, S.cleared ? 'Fase superada' : S.practice ? 'Práctica terminada' : 'Vuelve a intentarlo', SW / 2, 54, '#ffffff', { align: 'c', out: INK });
+    (S.btns || []).forEach((b, i) => {
+      const k = E.outBack(clamp((t - .35 - i * .09) / .35, 0, 1)); if (k <= 0) return;
+      const pr = S.press === b.id, bob = pr ? 0 : Math.round(Math.sin(t * 3 + i * 1.3));
+      g.save(); g.translate(b.x + b.w / 2, b.y + b.h / 2 + bob + rd((1 - k) * 70)); g.scale(pr ? 1.06 : 1, pr ? .88 : 1);
+      panel(g, -b.w / 2, -b.h / 2 + (pr ? 2 : 0), b.w, b.h, b.id === 'again' ? C.yellow : b.id === 'share' ? C.pinkL : C.mint, { r: 6, hi: '#ffffff', lo: pr ? null : INK });
+      txt(g, b.label, 0, -4 + (pr ? 2 : 0), INK, { align: 'c', bold: true });
+      g.restore();
+    });
   },
+
 };
 // after a cutscene the stage scene is re-entered without resetting
 const STG_RESUME = new Proxy({}, { get(_, k) { if (k === 'enter') return () => { const S = STG.S; if (S.phase === 'card') STG.startInter(null); }; return STG[k]; } });
@@ -601,14 +633,25 @@ function drawStampMark(g, x, y, ok, k) {
   if (ok) { thickLine(g, x - r * .45, y, x - r * .1, y + r * .38, 2.2 * k, '#ffffff'); thickLine(g, x - r * .1, y + r * .38, x + r * .5, y - r * .4, 2.2 * k, '#ffffff'); }
   else { thickLine(g, x - r * .4, y - r * .4, x + r * .4, y + r * .4, 2.2 * k, '#ffffff'); thickLine(g, x + r * .4, y - r * .4, x - r * .4, y + r * .4, 2.2 * k, '#ffffff'); }
 }
-// the bath bomb: a speckled pastel ball with a wick
-function drawBathBomb(g, x, y, s, n, t) {
-  const r = 9 * s; if (r < 1) return;
+// the bath bomb: a speckled pastel ball with a face that gets more and more worried
+function drawBathBomb(g, x, y, s, n, t, beatK = 0) {
+  const r = 12 * s; if (r < 1) return;
+  const panic = n <= 1 ? 1 : n <= 2 ? .5 : 0, jit = panic ? Math.sin(t * 70) * panic * 1.2 : 0;
+  x = rd(x + jit); const sq = 1 + beatK * .12;
+  g.save(); g.translate(x, y); g.scale(sq, 2 - sq); g.translate(-x, -y);
   disc(g, x, y, r + 1, INK);
-  disc(g, x, y, r, '#ff9fc6'); disc(g, x - 1, y - 1, r - 2, '#ffc0da'); disc(g, x - 3, y - 3, r * .35, '#ffe6f1');
-  for (const [dx, dy, c] of [[3, 2, '#7fd6c8'], [-2, 4, '#fff27a'], [4, -3, '#b3a0ff'], [-5, 0, '#7fd6c8'], [1, -5, '#fff27a']]) px(g, x + dx * s, y + dy * s, c);
-  rect(g, x + r * .55, y - r * .25, 3, 3, '#8a6a44');
-  if (n <= 3 && n >= 1 && s > .9) { const k = 1 - (t * 4 % 1) * .3; txt(g, String(n), x + 1, y - 3, '#ffffff', { align: 'c', out: INK, bold: true }); void k; }
+  disc(g, x, y, r, '#ff8fbd'); disc(g, x - 1, y - 1, r - 2, '#ffb3d2'); disc(g, x - r * .35, y - r * .35, r * .32, '#ffe6f1');
+  for (const [dx, dy, c] of [[5, 5, '#7fd6c8'], [-4, 6, '#fff27a'], [6, -5, '#b3a0ff'], [-7, 1, '#7fd6c8'], [2, -8, '#fff27a'], [8, 1, '#ffffff']]) px(g, x + dx * s, y + dy * s, c);
+  // the face: calm, then worried, then panicking (sweat drop)
+  const ey = rd(y - 1);
+  if (panic >= 1) { for (const ox of [-4, 4]) { disc(g, x + ox, ey, 2.2, '#ffffff'); disc(g, x + ox, ey, 1.2, INK); } ellipsePx(g, x, ey + 6, 2.5, 2, INK); disc(g, x + r - 1, y - r + 3, 2, '#9bd6f7'); px(g, x + r - 2, y - r + 2, '#ffffff'); }
+  else if (panic) { for (const ox of [-4, 4]) { rect(g, x + ox - 1, ey - 1, 2, 3, INK); } linePx(g, x - 6, ey - 4, x - 2, ey - 3, INK); linePx(g, x + 6, ey - 4, x + 2, ey - 3, INK); hline(g, x - 2, x + 2, ey + 5, INK); }
+  else { for (const ox of [-4, 4]) rect(g, x + ox - 1, ey - 1, 2, 2, INK); px(g, x - 2, ey + 4, INK); px(g, x + 2, ey + 4, INK); hline(g, x - 1, x + 1, ey + 5, INK); }
+  rect(g, x - 5, ey + 2, 2, 1, '#ff5d9e'); rect(g, x + 4, ey + 2, 2, 1, '#ff5d9e');
+  g.restore();
+  // the wick stub and the countdown number, big, on a bubble
+  rect(g, x + r - 2, y - 3, 4, 3, INK); rect(g, x + r - 1, y - 2, 3, 1, '#8a6a44');
+  if (n <= 3 && n >= 1 && s > .9) { const k = 1 + beatK * .45, nx = x + 1, ny = y - r - 9; disc(g, nx, ny, 7 * k, INK); disc(g, nx, ny, 6 * k, n === 1 ? '#e23b4e' : '#ffffff'); txt(g, String(n), nx + 1, ny - 3, n === 1 ? '#ffffff' : INK, { align: 'c', bold: true }); }
 }
 function drawLifeDefault(g, x, y, st, bt) {
   const img = buleHead(st === 'alive' ? 'normal' : 'sad');
@@ -742,7 +785,7 @@ function shareScore(S) {
   const name = S.practice ? (MG[S.practiceId].name || '') : S.def.name;
   const text = '¡He aguantado ' + S.count + ' microjuegos en WESTIE WARE (' + name + ')! 🐶✂️ Peluquería canina Westie BLVRD, Barcelona.';
   const url = 'https://gavilanbe.github.io/westieware/';
-  try { if (navigator.share) navigator.share({ title: 'WESTIE WARE ¡Tocados!', text, url }).catch(() => { }); } catch (e) { }
+  try { if (navigator.share) navigator.share({ title: 'WESTIE WARE ¡Grooming!', text, url }).catch(() => { }); } catch (e) { }
 }
 
 // Ghost hand: at the start of a microgame (always at level 1, and the first

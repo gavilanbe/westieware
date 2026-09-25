@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>WESTIE WARE ¡Tocados!</title>
+<title>WESTIE WARE ¡Grooming!</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
@@ -19,10 +19,10 @@ body{display:flex;align-items:center;justify-content:center;background:#0b2a20 r
 canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;touch-action:none}
 </style>
 </head>
-<body><script>window.onerror=function(m,s,l,c){document.documentElement.setAttribute('data-err',m+' @'+l+':'+c);};</script><canvas id="c" aria-label="WESTIE WARE ¡Tocados!: microjuegos táctiles en la peluquería canina Westie BLVRD"></canvas>
+<body><script>window.onerror=function(m,s,l,c){document.documentElement.setAttribute('data-err',m+' @'+l+':'+c);};</script><canvas id="c" aria-label="WESTIE WARE ¡Grooming!: microjuegos táctiles en la peluquería canina Westie BLVRD"></canvas>
 <script>
 // ============================================================================
-//  WESTIE WARE ¡Tocados! — core
+//  WESTIE WARE ¡Grooming! — core
 //  Two DS-style screens (256x192 each). Every scene draws the top screen and
 //  the touch screen separately (or one tall picture that spans both, hinge
 //  included). Input only lives on the bottom screen, like a real stylus.
@@ -838,7 +838,7 @@ const PELUSA_SRC = {
   '↑': [0, '..#..', '.###.', '#.#.#', '..#..', '..#..', '..#..', '..#..'], '↓': [0, '..#..', '..#..', '..#..', '..#..', '#.#.#', '.###.', '..#..'],
   '✓': [1, '....#', '...#.', '#.#..', '.#...'], '✗': [1, '#...#', '.#.#.', '..#..', '.#.#.', '#...#'],
   '▸': [1, '#..', '##.', '###', '##.', '#..'], '◂': [1, '..#', '.##', '###', '.##', '..#'], '●': [1, '.###.', '#####', '#####', '#####', '.###.'],
-  '♦': [1, '..#..', '.###.', '#####', '.###.', '..#..'], '©': [0, '.###.', '#...#', '#.#.#', '##..#', '#.#.#', '#...#', '.###.'], '🐾': [0, '#.#.#', '.....', '.###.', '#####', '#####', '.###.'],
+  '♦': [1, '..#..', '.###.', '#####', '.###.', '..#..'], '@': [1, '.###.', '#...#', '#.###', '#.#.#', '#.##.', '#....', '.###.'], '©': [0, '.###.', '#...#', '#.#.#', '##..#', '#.#.#', '#...#', '.###.'], '🐾': [0, '#.#.#', '.....', '.###.', '#####', '#####', '.###.'],
 };
 const PEL = {};
 for (const k in PELUSA_SRC) { const [start, ...rows] = PELUSA_SRC[k]; PEL[k] = { start, rows, w: rows[0].length }; }
@@ -2179,7 +2179,7 @@ function drawRotateHint(g) {
   panel(g, -18, -30, 36, 60, '#ffffff', { r: 5 }); rect(g, -14, -24, 28, 46, RAMP.green[2]); drawS(g, lifeWestie(), 0, 0);
   g.restore();
   txt(g, 'WESTIE WARE se juega en vertical', cx0, cy0 + 50, '#ffffff', { align: 'c', bold: true });
-  txt(g, 'Gira el móvil ↻  (o toca para seguir)', cx0, cy0 + 64, RAMP.mint[3], { align: 'c' });
+  txt(g, 'Gira el móvil (o toca para seguir)', cx0, cy0 + 64, RAMP.mint[3], { align: 'c' });
 }
 // ============================================================================
 //  mg — microgame registry + runtime.
@@ -2388,7 +2388,7 @@ const STG = {
   },
   startInter(result) {
     const S = this.S;
-    S.result = result;
+    S.result = result; S.stampBurst = false;
     this.setPhase('inter');
     if (result === true) { S.count++; S.countPop = 1; this.react('win'); }
     else if (result === false) { S.count++; S.countPop = 1; S.lives--; S.breakI = S.lives; S.breakT = 0; this.react('lose'); shake('top', 3, .3); }
@@ -2434,6 +2434,10 @@ const STG = {
   },
   updInter() {
     const S = this.S;
+    if (S.result !== null && !S.stampBurst && S.pb >= .6 && S.lives > 0) {
+      S.stampBurst = true; const P = this.portalRect(S);
+      S.fx.burst(P.x + P.w / 2, P.y + P.h / 2, 12, S.result ? { k: 'star', c: ['#fff27a', '#ffffff', '#8ef0b4'], sp0: 50, sp1: 140, life0: .3, life1: .6 } : { k: 'puff', c: ['#ff8d9b', '#ffffff'], sp0: 20, sp1: 60, r: 4, life0: .3, life1: .5 });
+    }
     if (S.lives <= 0) { if (S.pb >= S.len) this.gameOver(); return; }
     // interlude beat events
     const nb = fl(S.pb);
@@ -2493,6 +2497,7 @@ const STG = {
     const S = this.S;
     for (let i = 0; i < 26; i++) S.fx.add({ k: 'puff', x: 14 + rnd(-6, 6), y: 176 + rnd(-6, 6), vx: rnd(-40, 140), vy: rnd(-160, -20), g: 160, drag: 2, r: rnd(3, 8), life: rnd(.4, .8), c: pick(['#ffffff', '#ffe3f0', '#ffd1e4', '#e2f4ff']) });
     S.fx.burst(14, 176, 12, { k: 'bubble', c: '#ffffff', sp0: 40, sp1: 140, r: 3, life0: .4, life1: .8 });
+    S.fx.add({ k: 'txt', s: '¡PLOF!', x: 40, y: 150, vy: -30, life: .8, c: '#ffffff' });
   },
   endPlay() {
     const S = this.S, g = S.g, won = g.state === 'won';
@@ -2552,6 +2557,7 @@ const STG = {
   },
   updResults() {
     const S = this.S;
+    if (S.newRecord && !S.confetti && S.pt > .75) { S.confetti = true; for (let i = 0; i < 36; i++) S.topFx.add({ k: 'conf', x: 176 + rnd(-40, 40), y: 178, vx: rnd(-120, 120), vy: rnd(-260, -120), g: 300, life: rnd(1.2, 2), c: pick([C.yellow, C.pink, C.mint, C.sky, '#ffffff', C.gold]), rot: rnd(TAU), vr: rnd(-10, 10) }); sfx('sparkle'); }
     if (S.pt < .5) return;
     for (const b of S.btns) {
       const hit = IN.x >= b.x && IN.x < b.x + b.w && IN.y >= b.y && IN.y < b.y + b.h;
@@ -2597,7 +2603,7 @@ const STG = {
     }
     S.topFx.draw(g);
     if ((S.phase === 'inter' || S.phase === 'play') && !S.paused) this.drawPauseBtn(g);
-    if (S.paused) { g.globalAlpha = .6; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1; mord(g, 'PAUSA', SW / 2, 80, { u: 2.2, r: 2.2 }); }
+    if (S.paused) { g.globalAlpha = .6; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1; mord(g, 'PAUSA', SW / 2, 80 + Math.sin(NOW * 2.5) * 3, { u: 2.2, r: 2.2 }, { anim: i => ({ dy: Math.sin(NOW * 4 + i * .7) * 1.5 }) }); }
   },
   drawBot(g) {
     const S = this.S, d = S.def, R = d.room;
@@ -2630,8 +2636,13 @@ const STG = {
   },
   drawPauseBot(g) {
     g.globalAlpha = .75; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1;
-    const bs = [['SEGUIR', 72, C.mint], ['SALIR AL MENÚ', 116, C.pinkL]];
-    for (const [l, y, c] of bs) { panel(g, 48, y, 160, 32, c, { r: 5, line: INK, hi: '#ffffff' }); txt(g, l, SW / 2, y + 12, INK, { align: 'c', bold: true }); }
+    const bs = [['SEGUIR', 72, C.mint, 'go'], ['SALIR AL MENÚ', 116, C.pinkL, 'quit']], S = this.S;
+    for (const [l, y, c, id] of bs) {
+      const pr = S.pbtn === id && IN.down, k = id === 'go' && !pr ? 1 + Math.max(0, Math.sin(NOW * 4)) * .04 : pr ? .95 : 1;
+      g.save(); g.translate(SW / 2, y + 16); g.scale(k, k); g.translate(-SW / 2, -(y + 16));
+      panel(g, 48, y + (pr ? 2 : 0), 160, 32, c, { r: 5, line: INK, hi: '#ffffff', lo: pr ? null : INK }); txt(g, l, SW / 2, y + 12 + (pr ? 2 : 0), INK, { align: 'c', bold: true });
+      g.restore();
+    }
   },
   // big announcement across the top screen
   drawBanner(g, word, t, fill, y = 78) {
@@ -2710,7 +2721,8 @@ const STG = {
     g.fillStyle = cols[1];
     const off = fl(S.pt * 24);
     for (let yy = 0; yy < h; yy += 2) for (let xx = ((yy / 2 + off) % 8); xx < w; xx += 8) g.fillRect(x + xx, y + yy, 4, 1);
-    // question mark bouncing on the beat
+    // question mark bouncing on the beat — or FIN when the lives are gone
+    if (S.phase === 'over' || S.lives <= 0) { const k = spring(S.pt - .3, 2.4, 6); if (k > 0) mord(g, 'FIN', x + w / 2, y + h / 2 - 14, { u: 2, r: 2.2, fill: ['#ffffff', '#ffd1e4', '#ff5d9e'] }, { anim: () => ({ s: k }) }); return; }
     const bob = Math.abs(Math.sin(S.pb * Math.PI)) * 5;
     mord(g, '?', x + w / 2, y + h / 2 - 12 - bob, { u: 2, r: 2.2, fill: ['#ffffff', '#fff8e6', '#f2e2b8'] });
   },
@@ -2751,20 +2763,22 @@ const STG = {
   drawBomb(g, S) {
     const gm = S.g; if (gm.def.boss) return;
     const beats = gm.def.beats, rem = Math.max(0, beats - S.pb);
-    const bx = 14, by = 176;
+    const bx = 17, by = 176;
     if (S.bombState === 'burn' || (S.bombState == null && rem <= 4 && gm.state === 'play')) {
       const appear = clamp((4 - rem) * this.beatDur / .15, 0, 1), s = spring(appear * .5, 2.5, 6);
-      const L = rem / 4 * 222;
-      // fuse cord (twisted rope) to the right
-      for (let x = 0; x < L; x++) { const xx = bx + 9 + x, yy = by + 1 + Math.round(Math.sin(x * .25 + S.pt * 3) * .8); px(g, xx, yy, x % 3 === 0 ? '#8a6a44' : '#dcc08a'); px(g, xx, yy + 1, '#8a6a44'); }
-      // spark at the tip
-      const sx = bx + 9 + L, sy = by + 1;
-      if (fl(S.pt * 30) % 2) drawStar(g, sx, sy, 4.5, '#fff27a', S.pt * 9); else drawStar(g, sx, sy, 3.5, '#ffffff', -S.pt * 7);
-      if (FRAME % 3 === 0) S.fx.add({ k: 'spark', x: sx, y: sy, vx: rnd(-30, 30), vy: rnd(-60, -10), g: 200, life: .3, c: pick(['#fff27a', '#ff9f4f', '#ffffff']), r: 1.5 });
-      drawBathBomb(g, bx, by, s, Math.ceil(rem), S.pt);
+      const L = rem / 4 * 214, beatK = Math.max(0, 1 - (S.pb % 1) * 4);
+      // the fuse: a thick twisted cord along the bottom edge
+      for (let x = 0; x < L; x++) { const xx = bx + 12 + x, yy = by + 1 + Math.round(Math.sin(x * .25 + S.pt * 3) * .8); px(g, xx, yy - 1, INK); px(g, xx, yy, x % 3 === 0 ? '#8a6a44' : '#dcc08a'); px(g, xx, yy + 1, x % 3 === 1 ? '#8a6a44' : '#c9a86c'); px(g, xx, yy + 2, INK); }
+      // the ember at the tip: a glow, a star, sparks
+      const sx = bx + 12 + L, sy = by + 1;
+      g.globalAlpha = .35 + Math.sin(S.pt * 40) * .15; disc(g, sx, sy, 6, '#ffdf4f'); g.globalAlpha = 1;
+      if (fl(S.pt * 30) % 2) drawStar(g, sx, sy, 5, '#fff27a', S.pt * 9); else drawStar(g, sx, sy, 4, '#ffffff', -S.pt * 7);
+      if (FRAME % 2 === 0) S.fx.add({ k: 'spark', x: sx, y: sy, vx: rnd(-50, 30), vy: rnd(-80, -20), g: 220, life: .35, c: pick(['#fff27a', '#ff9f4f', '#ffffff']), r: 1.5 });
+      drawBathBomb(g, bx, by - 2, s, Math.ceil(rem), S.pt, beatK);
     } else if (S.bombState === 'fizzle' || S.bombState === 'pop') {
+      const won = S.bombState === 'pop';
       S.bombState = 'done';
-      if (S.bombState === 'done') S.fx.burst(bx, by, 8, { k: 'puff', c: ['#ffffff', '#ffd1e4'], sp0: 10, sp1: 40, r: 4, life0: .3, life1: .5 });
+      S.fx.burst(bx, by, 10, { k: won ? 'star' : 'puff', c: won ? ['#fff27a', '#ffffff', '#ffd1e4'] : ['#ffffff', '#ffd1e4'], sp0: 20, sp1: won ? 110 : 50, r: 4, life0: .3, life1: .55 });
     }
   },
   drawPlayTop(g) {
@@ -2775,9 +2789,10 @@ const STG = {
     const t = S.cmdT, t1 = .55 * bd, t2 = .8 * bd;
     if (t > t1) {
       const k = clamp((t - t1) / (t2 - t1), 0, 1), y = lerp(SH + 20, 6, E.outBack(k)), bob = Math.sin(S.pb * Math.PI) * 1.5;
-      const st = fitMord(gm.def.cmd, 190, { u: 1.9, r: 2, rim: 2, sy: 2 }), w = mordW(gm.def.cmd, st);
-      mord(g, gm.def.cmd, SW / 2 - 10, y + bob, st);
-      drawMechMini(g, SW / 2 - 10 + w / 2 + 22, y + 16 + bob, gm.def.mech === 'mix' ? S.def.mech : gm.def.mech, S.pt);
+      // long commands shrink and shift left so the gesture icon never sits on the pause button
+      const st = fitMord(gm.def.cmd, 170, { u: 1.9, r: 2, rim: 2, sy: 2 }), w = mordW(gm.def.cmd, st), cx = Math.min(SW / 2 - 10, 196 - w / 2);
+      mord(g, gm.def.cmd, cx, y + bob, st);
+      drawMechMini(g, cx + w / 2 + 22, y + 16 + bob, gm.def.mech === 'mix' ? S.def.mech : gm.def.mech, S.pt);
       if (k >= 1 && !gm.def.top) {
         if (gm.def.how) { const lines = wrapText(gm.def.how, 220); lines.slice(0, 2).forEach((l, i) => txt(g, l, SW / 2, 48 + i * 11 + bob, '#ffffff', { align: 'c', out: INK })); }
         else if (gm.def.name) txt(g, gm.def.name, SW / 2, 48 + bob, '#ffffff', { align: 'c', out: INK });
@@ -2786,7 +2801,12 @@ const STG = {
     this.drawMiniLives(g, S);
     txt(g, String(S.count + 1).padStart(2, '0'), 8, 6, '#ffffff', { out: INK, bold: true });
   },
-  drawMiniLives(g, S) { for (let i = 0; i < S.maxLives; i++) { const alive = i < S.lives; (S.def.room.miniLife || drawMiniLifeDefault)(g, 10 + i * 12, SH - 12, alive); } },
+  // the little lives during a microgame: bottom centre on a dark pill, clear of every character's corner mini
+  drawMiniLives(g, S) {
+    const n = S.maxLives, sp = 12, x0 = SW / 2 - (n - 1) * sp / 2, y = SH - 11;
+    g.globalAlpha = .45; panel(g, rd(x0 - 10), y - 8, (n - 1) * sp + 20, 16, INK, { r: 6, line: null }); g.globalAlpha = 1;
+    for (let i = 0; i < n; i++) { const alive = i < S.lives, lost = i === S.lives && S.g && S.g.state === 'lost' && S.g.t - S.g.decidedAt < .5; (S.def.room.miniLife || drawMiniLifeDefault)(g, x0 + i * sp + (lost ? Math.sin(S.pt * 60) * 1.5 : 0), y, alive); }
+  },
   // ---- title card: every character brings its own (src/cards.js); this is the plain template
   drawCardTop(g) {
     const S = this.S, d = S.def, t = S.pt, cd = d.card || (typeof CARD_DESIGNS !== 'undefined' && CARD_DESIGNS[d.id]);
@@ -2860,12 +2880,24 @@ const STG = {
     if (S.newRecord && t > .7) { const b = spring(t - .7, 2.6, 5); g.save(); g.translate(176, 178); g.rotate(-.08); g.scale(b * 1.1, b * 1.1); panel(g, -46, -12, 92, 24, C.pink, { r: 4, line: INK, hi: '#ffd1e4' }); txt(g, '¡NUEVO RÉCORD!', 0, -4, '#ffffff', { align: 'c', bold: true }); g.restore(); if (fl(t * 10) % 4 === 0) S.topFx.add({ k: 'star', x: rnd(120, 236), y: rnd(160, 190), vy: -10, life: .5, r: 3, c: '#fff27a' }); }
   },
   drawResultsBot(g) {
-    const S = this.S;
+    const S = this.S, t = S.pt;
     (S.def.room.bot)(g, S);
-    g.globalAlpha = .4; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1;
-    txt(g, S.cleared ? '¡Fase superada!' : S.practice ? 'Práctica terminada' : 'Vuelve a intentarlo', SW / 2, 40, '#ffffff', { align: 'c', out: INK, bold: true });
-    for (const b of S.btns || []) { const pr = S.press === b.id; panel(g, b.x, b.y + (pr ? 2 : 0), b.w, b.h, b.id === 'again' ? C.yellow : b.id === 'share' ? C.pinkL : C.mint, { r: 6, hi: '#ffffff', lo: pr ? null : INK }); txt(g, b.label, b.x + b.w / 2, b.y + b.h / 2 - 3 + (pr ? 2 : 0), INK, { align: 'c', bold: true }); }
+    g.globalAlpha = .5; rect(g, 0, 0, SW, SH, INK); g.globalAlpha = 1;
+    // a big word for how it went, then the buttons spring in one by one
+    const word = S.cleared ? '¡SUPERADO!' : S.practice ? '¡PRÁCTICA!' : '¡SE ACABÓ!';
+    const fill = S.cleared ? ['#ffffff', '#fff27a', '#ffc23a'] : S.practice ? ['#ffffff', '#d2f5e4', '#5bb593'] : ['#ffffff', '#b3d9ff', '#63a0ef'];
+    mord(g, word, SW / 2, 16, fitMord(word, 220, { u: 2, r: 2.1, rim: 2, sy: 3, fill }), { anim: i => { const lt = t - .1 - i * .04; return { s: lt <= 0 ? 0 : spring(lt, 2.4, 7), dy: Math.sin(t * 3 + i * .6) * 1.2 }; } });
+    if (t > .45) txt(g, S.cleared ? 'Fase superada' : S.practice ? 'Práctica terminada' : 'Vuelve a intentarlo', SW / 2, 54, '#ffffff', { align: 'c', out: INK });
+    (S.btns || []).forEach((b, i) => {
+      const k = E.outBack(clamp((t - .35 - i * .09) / .35, 0, 1)); if (k <= 0) return;
+      const pr = S.press === b.id, bob = pr ? 0 : Math.round(Math.sin(t * 3 + i * 1.3));
+      g.save(); g.translate(b.x + b.w / 2, b.y + b.h / 2 + bob + rd((1 - k) * 70)); g.scale(pr ? 1.06 : 1, pr ? .88 : 1);
+      panel(g, -b.w / 2, -b.h / 2 + (pr ? 2 : 0), b.w, b.h, b.id === 'again' ? C.yellow : b.id === 'share' ? C.pinkL : C.mint, { r: 6, hi: '#ffffff', lo: pr ? null : INK });
+      txt(g, b.label, 0, -4 + (pr ? 2 : 0), INK, { align: 'c', bold: true });
+      g.restore();
+    });
   },
+
 };
 // after a cutscene the stage scene is re-entered without resetting
 const STG_RESUME = new Proxy({}, { get(_, k) { if (k === 'enter') return () => { const S = STG.S; if (S.phase === 'card') STG.startInter(null); }; return STG[k]; } });
@@ -2877,14 +2909,25 @@ function drawStampMark(g, x, y, ok, k) {
   if (ok) { thickLine(g, x - r * .45, y, x - r * .1, y + r * .38, 2.2 * k, '#ffffff'); thickLine(g, x - r * .1, y + r * .38, x + r * .5, y - r * .4, 2.2 * k, '#ffffff'); }
   else { thickLine(g, x - r * .4, y - r * .4, x + r * .4, y + r * .4, 2.2 * k, '#ffffff'); thickLine(g, x + r * .4, y - r * .4, x - r * .4, y + r * .4, 2.2 * k, '#ffffff'); }
 }
-// the bath bomb: a speckled pastel ball with a wick
-function drawBathBomb(g, x, y, s, n, t) {
-  const r = 9 * s; if (r < 1) return;
+// the bath bomb: a speckled pastel ball with a face that gets more and more worried
+function drawBathBomb(g, x, y, s, n, t, beatK = 0) {
+  const r = 12 * s; if (r < 1) return;
+  const panic = n <= 1 ? 1 : n <= 2 ? .5 : 0, jit = panic ? Math.sin(t * 70) * panic * 1.2 : 0;
+  x = rd(x + jit); const sq = 1 + beatK * .12;
+  g.save(); g.translate(x, y); g.scale(sq, 2 - sq); g.translate(-x, -y);
   disc(g, x, y, r + 1, INK);
-  disc(g, x, y, r, '#ff9fc6'); disc(g, x - 1, y - 1, r - 2, '#ffc0da'); disc(g, x - 3, y - 3, r * .35, '#ffe6f1');
-  for (const [dx, dy, c] of [[3, 2, '#7fd6c8'], [-2, 4, '#fff27a'], [4, -3, '#b3a0ff'], [-5, 0, '#7fd6c8'], [1, -5, '#fff27a']]) px(g, x + dx * s, y + dy * s, c);
-  rect(g, x + r * .55, y - r * .25, 3, 3, '#8a6a44');
-  if (n <= 3 && n >= 1 && s > .9) { const k = 1 - (t * 4 % 1) * .3; txt(g, String(n), x + 1, y - 3, '#ffffff', { align: 'c', out: INK, bold: true }); void k; }
+  disc(g, x, y, r, '#ff8fbd'); disc(g, x - 1, y - 1, r - 2, '#ffb3d2'); disc(g, x - r * .35, y - r * .35, r * .32, '#ffe6f1');
+  for (const [dx, dy, c] of [[5, 5, '#7fd6c8'], [-4, 6, '#fff27a'], [6, -5, '#b3a0ff'], [-7, 1, '#7fd6c8'], [2, -8, '#fff27a'], [8, 1, '#ffffff']]) px(g, x + dx * s, y + dy * s, c);
+  // the face: calm, then worried, then panicking (sweat drop)
+  const ey = rd(y - 1);
+  if (panic >= 1) { for (const ox of [-4, 4]) { disc(g, x + ox, ey, 2.2, '#ffffff'); disc(g, x + ox, ey, 1.2, INK); } ellipsePx(g, x, ey + 6, 2.5, 2, INK); disc(g, x + r - 1, y - r + 3, 2, '#9bd6f7'); px(g, x + r - 2, y - r + 2, '#ffffff'); }
+  else if (panic) { for (const ox of [-4, 4]) { rect(g, x + ox - 1, ey - 1, 2, 3, INK); } linePx(g, x - 6, ey - 4, x - 2, ey - 3, INK); linePx(g, x + 6, ey - 4, x + 2, ey - 3, INK); hline(g, x - 2, x + 2, ey + 5, INK); }
+  else { for (const ox of [-4, 4]) rect(g, x + ox - 1, ey - 1, 2, 2, INK); px(g, x - 2, ey + 4, INK); px(g, x + 2, ey + 4, INK); hline(g, x - 1, x + 1, ey + 5, INK); }
+  rect(g, x - 5, ey + 2, 2, 1, '#ff5d9e'); rect(g, x + 4, ey + 2, 2, 1, '#ff5d9e');
+  g.restore();
+  // the wick stub and the countdown number, big, on a bubble
+  rect(g, x + r - 2, y - 3, 4, 3, INK); rect(g, x + r - 1, y - 2, 3, 1, '#8a6a44');
+  if (n <= 3 && n >= 1 && s > .9) { const k = 1 + beatK * .45, nx = x + 1, ny = y - r - 9; disc(g, nx, ny, 7 * k, INK); disc(g, nx, ny, 6 * k, n === 1 ? '#e23b4e' : '#ffffff'); txt(g, String(n), nx + 1, ny - 3, n === 1 ? '#ffffff' : INK, { align: 'c', bold: true }); }
 }
 function drawLifeDefault(g, x, y, st, bt) {
   const img = buleHead(st === 'alive' ? 'normal' : 'sad');
@@ -3018,7 +3061,7 @@ function shareScore(S) {
   const name = S.practice ? (MG[S.practiceId].name || '') : S.def.name;
   const text = '¡He aguantado ' + S.count + ' microjuegos en WESTIE WARE (' + name + ')! 🐶✂️ Peluquería canina Westie BLVRD, Barcelona.';
   const url = 'https://gavilanbe.github.io/westieware/';
-  try { if (navigator.share) navigator.share({ title: 'WESTIE WARE ¡Tocados!', text, url }).catch(() => { }); } catch (e) { }
+  try { if (navigator.share) navigator.share({ title: 'WESTIE WARE ¡Grooming!', text, url }).catch(() => { }); } catch (e) { }
 }
 
 // Ghost hand: at the start of a microgame (always at level 1, and the first
@@ -3449,21 +3492,24 @@ const ANAHI_SONGS = {
   },
 };
 
-// the hanging oval plate that holds the counter
+// the hanging oval plate that holds the counter: big enough to frame two or three digits
 function counterPlate(g, x, y) {
-  vline(g, x - 16, 0, y - 6, RAMP.gold[1]); vline(g, x + 16, 0, y - 6, RAMP.gold[1]);
-  for (let i = 1; i < y - 6; i += 3) { px(g, x - 16, i, RAMP.gold[3]); px(g, x + 16, i, RAMP.gold[3]); }
-  ellipsePx(g, x, y + 8, 27, 13, INK); ellipsePx(g, x, y + 8, 26, 12, RAMP.gold[2]); ellipsePx(g, x, y + 8, 24, 10, RAMP.green[1]); ellipsePx(g, x - 1, y + 7, 22, 8, RAMP.green[2]);
-  for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; px(g, x + Math.cos(a) * 25, y + 8 + Math.sin(a) * 11.5, RAMP.gold[4]); }
+  const cy = y + 15, rx = 34, ry = 17, G = RAMP.gold;
+  for (const sx of [-20, 20]) { for (let yy = 0; yy < cy - ry + 3; yy += 3) { px(g, x + sx, yy, G[1]); px(g, x + sx, yy + 1, G[3]); } }
+  ellipsePx(g, x, cy, rx + 1, ry + 1, INK); ellipsePx(g, x, cy, rx, ry, G[2]); ellipsePx(g, x, cy - 1, rx - 1, ry - 1, G[3]);
+  ellipsePx(g, x, cy, rx - 4, ry - 4, INK); ellipsePx(g, x, cy, rx - 5, ry - 5, RAMP.green[1]); ellipsePx(g, x - 2, cy - 2, rx - 9, ry - 8, RAMP.green[2]);
+  for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; px(g, x + Math.cos(a) * (rx - 2), cy + Math.sin(a) * (ry - 2), i % 2 ? G[4] : G[1]); }
+  disc(g, x, cy - ry, 3, INK); disc(g, x, cy - ry, 2, G[3]); px(g, x - 1, cy - ry - 1, G[4]); // the little crest on top
 }
 const ANA_REACT = { ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' };
+const ANAHI_COUNTER_X = 150; // the counter hangs right of the sign, over the grooming table
 // the salon: Anahí behind the grooming table, Keiko on top of it, the counter
 // hanging from the ceiling in its gilt oval
 function anahiRoomTop(g, S) {
   anahiPrewarm();
   g.drawImage(salonBackdrop(), 0, 0);
-  wallClock(g, 168, 38, 600 + NOW * 30);
-  counterPlate(g, SW / 2, 8);
+  wallClock(g, 204, 22, 600 + NOW * 30);
+  counterPlate(g, ANAHI_COUNTER_X, 5);
   const beat = S.pb || 0, rt = S.reactT || 0;
   let pose = rt < 1.2 ? (ANA_REACT[S.react] || 'idle') : 'idle';
   if (S.phase === 'inter' && S.special === 'speed' && S.pb >= 2) pose = 'speed';
@@ -3482,7 +3528,7 @@ function anahiRoomTop(g, S) {
     if (S.react === 'win' && rt < .05 && S._burst !== S.count) { S._burst = S.count; S.topFx.burst(188, 84, 14, { k: 'star', c: ['#fff27a', '#ffffff', '#ffd1e4'], sp0: 60, sp1: 150, g: 120, life0: .4, life1: .8 }); S.topFx.burst(126, 100, 8, { k: 'heart', c: '#ff5d9e', sp0: 30, sp1: 70, g: -20, life0: .6, life1: 1 }); }
     if (S.react === 'lose' && rt < .05 && S._burst !== -S.count) { S._burst = -S.count; S.topFx.burst(126, 104, 10, { k: 'puff', c: ['#9896a4', '#b3b8d4'], sp0: 20, sp1: 60, r: 4, life0: .4, life1: .7 }); }
   }
-  if (pose === 'lose' || pose === 'over') { const k = Math.min(1, rt * 3); drawRainCloud(g, 190, 30 + (1 - k) * -30, rt); }
+  if (pose === 'lose' || pose === 'over') { const k = Math.min(1, rt * 3); drawRainCloud(g, 192, 38 + (1 - k) * -40, rt); }
   if (pose === 'speed') { for (let i = 0; i < 6; i++) { const yy = 70 + i * 12, xx = (i * 53 + fl((S.pt || 0) * 300)) % 90; rect(g, 216 + xx * .3, yy, 16, 1, '#ffffff'); } }
 }
 function drawRainCloud(g, x, y, t) {
@@ -3500,8 +3546,14 @@ function anahiLife(g, x, y, st, bt) {
   if (st === 'break') { const k = clamp(bt / 1.1, 0, 1); drawS(g, lifeKeiko(true), x + E.inQ(k) * 90 * (x > SW / 2 ? 1 : -1), y - Math.sin(k * Math.PI) * 18, { flip: x < SW / 2 }); if (bt < .5) txt(g, '¡Aaay!', x, y - 22 - bt * 10, '#ffffff', { align: 'c', out: INK }); return; }
   drawS(g, lifeKeiko(false), x, y);
 }
+// during the microgame: Anahí's bust in the bottom-left corner, watching (hand on chin),
+// thumbs up with a hop when you win, crestfallen when you don't
 function anahiMini(g, x, y, st, S) {
-  drawAnahiFull(g, 34, SH + 84 - (st === 'win' ? 5 : 0), st === 'win' ? 'thumbs' : st === 'lose' ? 'sad' : 'idle', S.pt, { k: .6 });
+  const t = S.pt || 0, pose = st === 'win' ? 'thumbs' : st === 'lose' ? 'sad' : 'think';
+  const hop = st === 'win' ? Math.abs(Math.sin(t * 8)) * 4 : 0, bob = st === 'play' || st === 'watch' ? Math.round(Math.sin(t * 3) * 1) : 0;
+  drawAnahiFull(g, 40, SH + 34 - hop + bob, pose, t, { k: .5 });
+  if (st === 'win') for (let i = 0; i < 3; i++) drawStar(g, 18 + i * 22, 112 + Math.sin(t * 8 + i) * 4, 2 + Math.sin(t * 11 + i), '#fff27a');
+  if (st === 'lose') { g.globalAlpha = .8; for (let i = 0; i < 3; i++) { const yy = 118 + ((t * 40 + i * 9) % 20); vline(g, 30 + i * 9, yy, yy + 3, '#63a0ef'); } g.globalAlpha = 1; }
 }
 
 // ---------------------------------------------------------------- announcements
@@ -3714,7 +3766,7 @@ defStage({
   intro: 'anahi_in', outro: 'anahi_out',
   room: {
     top: anahiRoomTop, bot: anahiRoomBot, frame: 'mirror', life: anahiLife, lifeY: 141, lifeSpacing: 34,
-    counter: { x: SW / 2, y: 7 }, mini: anahiMini, portal: { x: 64, y: 24, w: 128, h: 96 }, bossLabel: '¡Lady Di, lista para las 12:00!',
+    counter: { x: ANAHI_COUNTER_X, y: 7 }, mini: anahiMini, portal: { x: 64, y: 24, w: 128, h: 96 }, bossLabel: '¡Lady Di, lista para las 12:00!',
     special: anahiSpecial, specialBot: anahiSpecialBot,
     staticCols: [RAMP.green[1], RAMP.green[2]], playCols: [RAMP.green[2], RAMP.green[3]], cardCol: RAMP.green,
   },
@@ -3749,13 +3801,40 @@ defCut('anahi_out', {
   shots: [
     { dur: 0, sfx: [[.2, 'slam'], [.4, 'sparkle']], lines: [['narr', '12:00 en punto. Y la ganadora es…'], ['lady', '¡LADY DI VILADOMAT! ¡Cuatro de cuatro!']],
       top(g, t) { podium(g, t); lady(g, 128, 140, 'happy'); if (CUT.li >= 1) rosette(g, 146, 112, C.red, '#ffffff'); },
-      bot(g, t) { rect(g, 0, 0, SW, SH, '#3b2757'); for (let i = 0; i < 18; i++) { const x = 8 + i * 14, y = 150 + Math.abs(Math.sin(t * 6 + i)) * -6; drawS(g, lifeWestie(i % 5 === 0), x, y); } txt(g, '¡GUAU! ¡GUAU! ¡GUAU!', SW / 2, 40 + Math.sin(t * 8) * 2, '#ffffff', { align: 'c', out: INK, bold: true }); } },
+      bot(g, t) {
+        // the stands: two rows of cheering westies above the dialogue box, confetti over them
+        rect(g, 0, 0, SW, SH, '#3b2757'); for (let i = 0; i < 6; i++) { g.globalAlpha = .1; polyPx(g, [[20 + i * 44, 0], [40 + i * 44, 0], [60 + i * 40, 140], [30 + i * 40, 140]], '#fff7ae'); } g.globalAlpha = 1;
+        rect(g, 0, 118, SW, 30, '#2a1d3f'); rect(g, 0, 118, SW, 2, '#4b3570');
+        for (let r = 0; r < 2; r++) for (let i = 0; i < 15; i++) { const x = 10 + i * 17 + r * 8, y = 96 + r * 22 + Math.abs(Math.sin(t * 7 + i * 1.3 + r)) * -7; drawS(g, lifeWestie(false), x, y); }
+        for (let i = 0; i < 24; i++) { const x = (i * 41 + t * 30) % SW, y = (i * 29 + t * 60) % 130; rect(g, x, y, 2, 2, [C.yellow, C.pink, C.mint, '#ffffff'][i % 4]); }
+        const k = spring(t - .1, 2.4, 6); g.save(); g.translate(SW / 2, 44); g.scale(k, k); txt(g, '¡GUAU! ¡GUAU! ¡GUAU!', 0, -4 + Math.sin(t * 8) * 2, '#ffffff', { align: 'c', out: INK, bold: true }); g.restore();
+      } },
     { dur: 0, lines: [['anahi', 'Y una más para la pared… ¡la número catorce!'], ['keiko', '¿Ñam? ¿Se come?'], ['anahi', '¡KEIKO! ¡Las rosetas no se comen!'], ['narr', 'Y así llegaron las rosetas a la pared verde de Westie BLVRD.']],
-      top(g, t) { g.drawImage(salonBackdrop(), 0, 0); rosette(g, 40, 64 + (CUT.li === 0 ? Math.max(0, 1 - t * 2) * -40 : 0), C.red, '#ffffff'); drawAnahiFull(g, 90, 170, CUT.li === 2 ? 'lose' : 'win', t); drawKeikoSit(g, 190, 186, CUT.li === 1 ? 'wow' : CUT.li === 2 ? 'sad' : 'happy'); },
-      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); drawPortalFrame(g, 'mirror', 64, 24, 128, 96, t); rect(g, 64, 24, 128, 96, '#dfe9ee'); rosette(g, 128, 70, C.red, '#ffffff'); txt(g, '1er PREMIO', 128, 90, INK, { align: 'c', bold: true }); } },
+      top(g, t) {
+        g.drawImage(salonBackdrop(), 0, 0);
+        const li = CUT.li, gulp = li === 2; // line 2: the rosette is in Keiko's mouth
+        if (!gulp) rosette(g, 40, 64 + (li === 0 ? Math.max(0, 1 - t * 2) * -40 : 0), C.red, '#ffffff');
+        drawAnahiFull(g, 90, 170, li === 2 ? 'lose' : 'win', t);
+        const kb = gulp ? Math.abs(Math.sin(t * 9)) * 2 : 0;
+        drawKeikoSit(g, 190, 186 - kb, li === 1 ? 'wow' : li === 2 ? 'wink' : 'happy');
+        if (gulp) { rosette(g, 196, 146 - kb, C.red, '#ffffff'); if (fl(t * 4) % 2) txt(g, '¡ÑAM!', 214, 104, '#ffffff', { out: INK, bold: true }); }
+        if (li === 1) { g.globalAlpha = .6 + .4 * Math.sin(t * 8); for (let i = 0; i < 3; i++) px(g, 150 - i * 30, 100 - i * 12, '#fff27a'); g.globalAlpha = 1; } // her gaze, rosette-bound
+      },
+      bot(g, t) {
+        // the first prize, framed in the salon's gilt mirror
+        g.drawImage(salonBotBackdrop(), 0, 0); drawPortalFrame(g, 'mirror', 64, 24, 128, 96, t); rect(g, 64, 24, 128, 96, '#dfe9ee');
+        for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + t * .5; g.globalAlpha = .18; polyPx(g, [[128, 64], [128 + Math.cos(a - .1) * 90, 64 + Math.sin(a - .1) * 90], [128 + Math.cos(a + .1) * 90, 64 + Math.sin(a + .1) * 90]], '#fff7ae'); } g.globalAlpha = 1;
+        g.save(); g.beginPath(); g.rect(64, 24, 128, 96); g.clip();
+        drawS(g, anahiBigRosette(), 128, 62 + Math.sin(t * 2) * 1.5, { s: 3 });
+        g.restore();
+        txt(g, '1er PREMIO', 128, 96, INK, { align: 'c', bold: true }); tiny(g, 'CONCURSO CANINO DE BARCELONA', 128, 108, '#6b6977', { align: 'c' });
+        for (let i = 0; i < 4; i++) drawStar(g, 84 + i * 30, 40 + Math.sin(t * 5 + i) * 4, 2 + Math.sin(t * 9 + i), '#fff27a');
+      } },
   ],
 });
 WHO.lady = { name: 'Lady Di', col: '#e05b98', voice: 'keiko' };
+// the first prize rosette at 1x, to be drawn scaled up (x3) in the gilt frame
+function anahiBigRosette() { return mdl('anahiBigRosette', () => { const c = mkCanvas(14, 20); rosette(c.g, 7, 6, C.red, '#ffffff'); return c; }); }
 // ============================================================================
 //  Stage 6 — DON BIGOTES · ¡GIRA!  "La ciencia del secado"
 //  An old salt-and-pepper schnauzer inventor (after Dr. Crygor): enormous white
@@ -4813,14 +4892,14 @@ function cenizaCounterBoard(g, x, y) {
 }
 function cenizaPoseFor(S) {
   const rt = S.reactT || 0;
-  let pose = rt < 1.3 ? ({ ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' }[S.react] || 'stir') : 'stir';
+  let pose = rt < Math.max(1.3, 3.2 * 60 / (S.bpm || 120)) ? ({ ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' }[S.react] || 'stir') : 'stir'; // held until the portal zooms in
   if (S.phase === 'inter' && S.special === 'speed' && S.pb >= 2) pose = 'speed';
   if (S.phase === 'inter' && S.special === 'boss' && S.pb >= 2) pose = 'boss';
   if (S.react === 'clear' || S.react === 'over') pose = S.react;
   return pose;
 }
 function cenizaRoomTop(g, S) {
-  if (S.phase === 'inter') cenizaPrewarm();
+  if (S.phase === 'inter') { cenizaPrewarm(); if (cenizaPrewarm.done && typeof cenizaStampWarm === 'function') cenizaStampWarm(); }
   const t = S.pt || 0, rt = S.reactT || 0, pose = cenizaPoseFor(S);
   g.drawImage(cenizaRoomBg(), 0, 0);
   // candles flicker on the shelves
@@ -4968,7 +5047,7 @@ function cenizaFaces() {
   };
   return CENIZA_FACES;
 }
-function cenizaFitWord(kind, w) { return cardFit(w, kind === 'level' ? 164 : 190, cenizaFaces()[kind]); }
+function cenizaFitWord(kind, w) { return cardFit(w, kind === 'level' ? 160 : 176, cenizaFaces()[kind]); }
 function cenizaPrewarm() {
   if (typeof cardPrewarm !== 'function' || cenizaPrewarm.done) return;
   const list = []; for (const k in CENIZA_WORDS) for (const w of CENIZA_WORDS[k]) list.push([w, cenizaFitWord(k, w)]);
@@ -5036,7 +5115,7 @@ function cenizaSpeedFx(g, S, t) {
   pass(1.05, 1.85, 116, 1); pass(2.15, 2.95, 80, -1);
   if (b > 1.05 && cenizaOnce(S, 'zoom1')) sfx('zoom'); if (b > 2.15 && cenizaOnce(S, 'zoom2')) sfx('zoom', { pitch: 1.2 });
   for (let i = 0; i < 8; i++) { const y = 70 + i * 13, x = SW - ((i * 61 + b * 260) % (SW + 60)); if (b > 1 && b < 3) rect(g, x, y, 16 + (i % 3) * 6, 1, 'rgba(255,255,255,.6)'); }
-  cenizaWords(g, 'speed', t, 150, 6, 146, 38);
+  cenizaWords(g, 'speed', t, 144, 6, 136, 38);
 }
 // ---- ¡JUEGO DEL JEFE!: the cauldron boils over and floods the den
 function cenizaBossFx(g, S, t) {
@@ -5062,7 +5141,7 @@ function cenizaBossFx(g, S, t) {
   if (b > 1.9 && b < 3) shout(g, '¡BLUB!', 150, 112, (b - 1.9) * 1.5);
   if (b > .2 && cenizaOnce(S, 'blub')) sfx('czBlub', { pitch: .6 });
   if (b > 1.9 && cenizaOnce(S, 'quack')) sfx('czQuack');
-  cenizaWords(g, 'boss', t, 150, 6, 144, 38);
+  cenizaWords(g, 'boss', t, 144, 6, 134, 38);
 }
 // ---- ¡MÁS DIFÍCIL!: the moon turns red, her hat glows, the bats come out
 function cenizaLevelFx(g, S, t) {
@@ -5087,7 +5166,7 @@ function cenizaLevelFx(g, S, t) {
   for (let i = 0; i < 6; i++) { const an = b * 3 + i * TAU / 6, r = 18 + Math.sin(b * 5 + i) * 3; drawStar(g, hx + Math.cos(an) * r, hy + Math.sin(an) * r * .6, 2 * k, i % 2 ? '#fff27a' : '#94dcbc', an); }
   if (b > .9 && cenizaOnce(S, 'hat')) sfx('czMagic', { pitch: .8 });
   if (b > .9 && b < 2.4) shout(g, '¡LUNA ROJA!', 80, 76, (b - .9) * 1.4);
-  cenizaWords(g, 'level', t, 164, 8, 158, 40);
+  cenizaWords(g, 'level', t, 154, 8, 148, 40);
 }
 function cenizaSpecial(g, S, kind, t) {
   if (typeof cardWord !== 'function') return false;
@@ -5139,7 +5218,7 @@ function cenizaGrimoire(g, t, items) {
   rect(g, bx, by, bw / 2 - 1, bh, '#fff4dc'); rect(g, bx + bw / 2 + 1, by, bw / 2 - 1, bh, '#fff4dc');
   rect(g, bx + bw / 2 - 1, by, 2, bh, '#c9b28c');
   for (let y = by + 6; y < by + bh; y += 9) { hline(g, bx + 6, bx + bw / 2 - 8, y, '#f2e2b8'); hline(g, bx + bw / 2 + 8, bx + bw - 6, y, '#f2e2b8'); }
-  txt(g, 'Pócima Nº 5', bx + bw / 4, by + 6, '#5a1f2a', { align: 'c', bold: true });
+  txt(g, 'Pócima N° 5', bx + bw / 4, by + 6, '#5a1f2a', { align: 'c', bold: true });
   txt(g, 'el champú', bx + bw / 4, by + 20, '#6b6977', { align: 'c' }); txt(g, 'definitivo', bx + bw / 4, by + 30, '#6b6977', { align: 'c' });
   drawS(g, cenizaCauldron(.7), bx + bw / 4, by + 80, {});
   cenizaPotion(g, bx + bw / 4, by + 70, 15, 3, '#5bd18b', t);
@@ -5148,7 +5227,7 @@ function cenizaGrimoire(g, t, items) {
 defCut('ceniza_in', {
   song: { spb: 4, loop: true, tracks: CENIZA_SONGS.play.tracks },
   shots: [
-    { dur: 0, sfx: [[.3, 'czMeow'], [1.4, 'czQuack']], lines: [['narr', 'Mientras tanto, en el almacén de Westie BLVRD…'], ['ceniza', 'Pato, el aloe. Anahí quiere un champú nuevo: natural, suave… y con MUCHA espuma.'], ['pato', '¡Cuac! ¿Y si le echamos una guindilla?'], ['ceniza', 'Ni se te ocurra. Esto es la Pócima Nº 5.']],
+    { dur: 0, sfx: [[.3, 'czMeow'], [1.4, 'czQuack']], lines: [['narr', 'Mientras tanto, en el almacén de Westie BLVRD…'], ['ceniza', 'Pato, el aloe. Anahí quiere un champú nuevo: natural, suave… y con MUCHA espuma.'], ['pato', '¡Cuac! ¿Y si le echamos una guindilla?'], ['ceniza', 'Ni se te ocurra. Esto es la Pócima N° 5.']],
       top(g, t) { cenizaRoomTop(g, { pt: t, pb: t * 2, reactT: 9, react: 'ready', phase: 'cut' }); const k = clamp(t / .5, 0, 1); caption(g, 'Almacén · 23:59', 22 - (1 - k) * 40); },
       bot(g, t) { g.drawImage(cenizaBotBg(), 0, 0); cenizaPato(g, 128, 78, CUT.li === 2 ? 'laugh' : 'grin', t, { s: 1 }); if (CUT.li === 2) { drawS(g, cenizaIngIcon('guindilla'), 158, 70, { rot: Math.sin(t * 8) * .3 }); } } },
     { dur: 0, sfx: [[.2, 'czMagic']], lines: [['ceniza', 'Aloe, avena, lavanda, manzanilla… y una pizca de purpurina.'], ['pato', '(Esto va a explotar…) ¡Cuac, cuac!'], ['ceniza', '¿Has dicho algo?'], ['pato', '¡Que qué bien huele, jefa!']],
@@ -5186,9 +5265,19 @@ defCut('ceniza_out', {
         if (CUT.li === 0) for (let i = 0; i < 5; i++) { const ph = (t * .5 + i * .2) % 1; g.globalAlpha = 1 - ph; disc(g, 40 + i * 44, 120 - ph * 60, 8 + ph * 8, '#ffffff'); g.globalAlpha = 1; }
       },
       bot(g, t) { g.drawImage(cenizaBotBg(), 0, 0); if (CUT.li >= 2) drawWestieSit(g, 72, 150, CUT.li === 2 ? 'wow' : 'happy'); drawS(g, cenizaBody(CUT.li >= 3 ? 'angry' : 'smug', true), 176, 120, { s: 1 }); if (CUT.li >= 2) txt(g, '?', 100, 40 + Math.sin(t * 6) * 2, '#ffffff', { out: INK, bold: true }); } },
-    { dur: 0, lines: [['anahi', '¡Qué espuma más perfecta! Ceniza, ¿esto lo podemos vender?'], ['ceniza', '…Miau.'], ['narr', 'Y así nació la Pócima Nº 5, el champú más espumoso de Westie BLVRD.']],
+    { dur: 0, lines: [['anahi', '¡Qué espuma más perfecta! Ceniza, ¿esto lo podemos vender?'], ['ceniza', '…Miau.'], ['narr', 'Y así nació la Pócima N° 5, el champú más espumoso de Westie BLVRD.']],
       top(g, t) { g.drawImage(salonBackdrop(), 0, 0); drawAnahiFull(g, 190, 170, 'win', t); cenizaDraw(g, 90, 178, 'smug', t, { white: true }); },
-      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); for (let i = 0; i < 5; i++) { const x = 60 + i * 34, y = 130; rect(g, x - 7, y - 26, 14, 28, INK); rect(g, x - 6, y - 25, 12, 26, '#ff93bf'); rect(g, x - 3, y - 32, 6, 7, INK); rect(g, x - 2, y - 31, 4, 6, '#ffffff'); rect(g, x - 5, y - 17, 10, 9, '#fff8e6'); tiny(g, 'N5', x, y - 15, RAMP.purple[2], { align: 'c' }); px(g, x - 4, y - 22, '#ffffff'); } txt(g, 'NOVEDAD · Pócima Nº 5', SW / 2, 146, INK, { align: 'c', bold: true }); } },
+      bot(g, t) {
+        g.drawImage(salonBotBackdrop(), 0, 0);
+        // the new product on the shop's shelf, under a hanging sign (all above the dialogue box)
+        const sk = E.outBack(clamp(t / .5, 0, 1)); g.save(); g.translate(SW / 2, rd(-30 + sk * 52)); g.rotate(Math.sin(t * 2.4) * .03);
+        vline(g, -52, -40, -10, INK); vline(g, 52, -40, -10, INK); panel(g, -70, -11, 140, 22, '#fff8e6', { r: 4 }); txt(g, 'NOVEDAD · Pócima N° 5', 0, -5, RAMP.purple[1], { align: 'c', bold: true }); g.restore();
+        rect(g, 36, 112, 184, 5, INK); rect(g, 37, 112, 182, 3, RAMP.wood[3]); rect(g, 37, 112, 182, 1, RAMP.wood[4]);
+        for (let i = 0; i < 5; i++) { const pop = spring(t - .5 - i * .12, 2.6, 6); if (pop <= 0) continue; const x = 60 + i * 34, y = 112; g.save(); g.translate(x, y); g.scale(1, pop); g.translate(-x, -y);
+          rect(g, x - 7, y - 26, 14, 26, INK); rect(g, x - 6, y - 25, 12, 25, '#ff93bf'); rect(g, x - 6, y - 25, 3, 25, '#ffd1e4'); rect(g, x - 3, y - 32, 6, 7, INK); rect(g, x - 2, y - 31, 4, 6, '#ffffff');
+          rect(g, x - 5, y - 17, 10, 9, '#fff8e6'); tiny(g, 'N5', x, y - 15, RAMP.purple[2], { align: 'c' }); g.restore();
+          if (fl(t * 3 + i) % 5 === 0) drawStar(g, x + 5, y - 28, 2, '#ffffff'); }
+      } },
   ],
 });
 
@@ -5540,7 +5629,7 @@ PORTAL_FRAMES.hermanasChalk = function (g, x, y, w, h, beat) {
 
 // ---------------------------------------------------------------- room ------
 function hermanasRoomTop(g, S) {
-  if (S.phase === 'inter') hermanasPrewarm();
+  if (S.phase === 'inter') { hermanasPrewarm(); if (hermanasPrewarm.done) hermanasStampWarm(); }
   // build every pose the interlude will need in the background, once
   if (!hermanasRoomTop.warmed) { hermanasRoomTop.warmed = 1; for (const w of ['kira', 'nala']) for (const [p, m] of [['bow', 'happy'], ['jump', 'happy'], ['lie', 'sad'], ['run', 'focus'], ['stand', 'wow'], ['stand', 'normal'], ['jump', 'normal']]) warm(() => hermanasAussieSide(w, p, m)); }
   g.drawImage(hermanasBeachBg(), 0, 0);
@@ -5550,7 +5639,7 @@ function hermanasRoomTop(g, S) {
   for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + NOW * .5; polyPx(g, [[sx + Math.cos(a - .12) * 22, sy + Math.sin(a - .12) * 22], [sx + Math.cos(a) * 31, sy + Math.sin(a) * 31], [sx + Math.cos(a + .12) * 22, sy + Math.sin(a + .12) * 22]], '#ffe45c'); }
   disc(g, sx, sy, 22, '#ffb020'); disc(g, sx, sy, 20, '#ffd23f'); disc(g, sx - 4, sy - 5, 12, '#ffe98a');
   // who does what
-  let react = rt < 1.3 ? (S.react || 'ready') : 'idle';
+  let react = rt < Math.max(1.3, 3.2 * 60 / (S.bpm || 120)) ? (S.react || 'ready') : 'idle'; // the reaction holds until the portal zooms in
   if (S.react === 'clear' || S.react === 'over') react = S.react;
   let poseK = 'stand', poseN = 'stand', moodK = 'normal', moodN = 'normal';
   const special = S.phase === 'inter' && S.special && S.pb >= 2 ? S.special : null;
@@ -5626,6 +5715,30 @@ function hermanasPrewarm() {
   const list = []; for (const k in HERMANAS_WORDS) for (const w of HERMANAS_WORDS[k]) list.push([w, hermanasFitWord(k, w)]);
   cardPrewarm(list);
   if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) hermanasPrewarm.done = 1;
+}
+// ---------------------------------------------------------------- result stamps
+// Every Kira & Nala microgame ends on the same stamp: their surf letters from the
+// card, sunny for a win and stormy for a miss, slammed in with a ring of sand
+// and foam. (Warmed up letter by letter from the room, like the announcements.)
+const HERMANAS_STAMP_WORDS = { ok: ['¡PRECIOSO!', '¡A SALVO!', '¡A PASEAR!', '¡ÑAM!', '¡TE PILLÉ!', '¡SALVADO!', '¡AL PARQUE!', '¡ATRAPADO!', '¡UN CORAZÓN!', '¡UNA ESTRELLA!', '¡UN PEZ!', '¡UN HUESO!', '¡UNA CASETA!', '¡KEIKO!'], bad: ['¡A MEDIAS!', '¡PLOF!', '¡NOOOO!', '¡SIN TIEMPO!', '¡NO LLEGAMOS!', '¡SIN BOCATAS!'] };
+function hermanasStampFace(ok) { const F = hermanasFaces(); return ok ? F.speed : F.level; }
+function hermanasStamp(c, word, x, y, t, ok = true, maxW = 196) {
+  if (t < 0) return;
+  if (typeof cardWord !== 'function') { shout(c, word, x, y + 10, t); return; }
+  const st = cardFit(word, maxW, hermanasStampFace(ok));
+  if (t < .6) { // sand and foam fly out as the letters land
+    const k = E.outQ(t / .6), n = 16;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + word.length * .7, r = 12 + k * 64; disc(c, x + Math.cos(a) * r * 1.6, y + 11 + Math.sin(a) * r * .55, Math.max(0, 3.4 * (1 - k)), ok ? (i % 3 === 0 ? '#ffd1e4' : i % 3 === 1 ? '#fff7ae' : '#ffffff') : (i % 2 ? '#d7e6f5' : '#9fb4cc')); }
+  }
+  cardWord(c, word, x, y, st, { anim: i => cardAnimSlam(t, i, { stagger: .035, from: 2 }) });
+}
+function hermanasStampWarm() {
+  if (typeof cardPrewarm !== 'function' || hermanasStampWarm.done) return;
+  const list = [];
+  for (const w of HERMANAS_STAMP_WORDS.ok) list.push([w, cardFit(w, 196, hermanasStampFace(true))]);
+  for (const w of HERMANAS_STAMP_WORDS.bad) list.push([w, cardFit(w, 196, hermanasStampFace(false))]);
+  cardPrewarm(list);
+  if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) hermanasStampWarm.done = 1;
 }
 // one-shot sounds inside a draw: once per announcement
 function hermanasOnce(S, key) { S._hnOnce = S._hnOnce || {}; const k = S.count + ':' + key; if (S._hnOnce[k]) return false; S._hnOnce[k] = 1; return true; }
@@ -6291,11 +6404,12 @@ function pomponLife(g, x, y, st, bt) {
   }
   drawS(g, pomponLifeBow(), x, y, { rot: Math.sin(NOW * 3 + x) * .08 });
 }
-function pomponMiniLife(g, x, y, alive) { if (alive) pomponBowAt(g, x, y, .6); else ringPx(g, x, y, 3, 'rgba(255,255,255,.5)'); }
+function pomponMiniLife(g, x, y, alive) { if (alive) pomponBowAt(g, x, y, .72); else { px(g, x - 3, y - 2, 'rgba(255,255,255,.45)'); px(g, x + 3, y - 2, 'rgba(255,255,255,.45)'); ringPx(g, x, y, 2.5, 'rgba(255,255,255,.45)'); } }
 function pomponMini(g, x, y, st, S) {
   const pose = st === 'win' ? 'joy' : st === 'lose' ? 'lose' : 'idle';
-  drawS(g, pomponBody(pose === 'joy' ? 'win' : pose), 34, SH + 52 - (st === 'win' ? 5 : 0), { ax: .5, ay: 1 });
-  void S;
+  // she peeks in from the corner and bops to the beat (a hop when you win)
+  const bop = Math.round(Math.abs(Math.sin((S.pb || 0) * Math.PI)) * -2), hop = st === 'win' ? -6 : 0;
+  drawS(g, pomponBody(pose === 'joy' ? 'win' : pose), 34, SH + 46 + bop + hop, { ax: .5, ay: 1 });
 }
 function pomponPlayTop(g, S) {
   const t = S.pt || 0;
@@ -6538,7 +6652,18 @@ defCut('pompon_out', {
       bot(g, t) { g.drawImage(pomponCurtainBg(), 0, 0); g.drawImage(pomponBigHead(), 0, 24); if (CUT.li >= 1) for (let i = 0; i < 3; i++) drawStar(g, 60 + i * 68, 40 + Math.sin(t * 6 + i) * 4, 4, '#fff27a'); } },
     { dur: 0, lines: [['pompon', '¡Vanesa, pásate un día por Westie BLVRD!'], ['pompon', 'Ese pelo pide a gritos un buen corte. ¡Con cariño, eh!'], ['narr', 'Y así, Pompón siguió siendo la número 1… con flequillo de gala.']],
       top(g, t) { g.drawImage(pomponArenaBg(), 0, 0); pomponBeams(g, t); pomponDraw(g, 128, 160, CUT.li === 1 ? 'ready' : 'win', { jump: Math.abs(Math.sin(t * 5)) * 5 }); pomponCrowd(g, 158, t * 2, t, 1); },
-      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); drawPortalFrame(g, 'mirror', 64, 24, 128, 96, t); rect(g, 64, 24, 128, 96, '#dfe9ee'); drawS(g, pomponHead('win'), 128, 118, { ax: .5, ay: 1 }); rosette(g, 180, 70, '#ff5d9e', '#ffffff'); } },
+      bot(g, t) {
+        // back at Westie BLVRD: Pompón admires her gala fringe in the salon mirror, the winner's rosette pinned to the frame
+        g.drawImage(salonBotBackdrop(), 0, 0);
+        g.save(); g.beginPath(); g.rect(64, 24, 128, 96); g.clip();
+        greenWall(g, 64, 24, 128, 96);
+        drawS(g, pomponBody(CUT.li === 1 ? 'ready' : 'win'), 128, 150 + Math.round(Math.abs(Math.sin(t * 4)) * -2), { ax: .5, ay: 1 });
+        g.globalAlpha = .3; for (let i = 0; i < 3; i++) linePx(g, 92 + i * 8 + (t * 30) % 90, 24, 62 + i * 8 + (t * 30) % 90, 120, '#ffffff'); g.globalAlpha = 1;
+        g.restore();
+        drawPortalFrame(g, 'mirror', 64, 24, 128, 96, t);
+        rosette(g, 184, 34, '#ff5d9e', '#ffffff');
+        for (let i = 0; i < 6; i++) { const a = t * 2 + i * TAU / 6, k = (Math.sin(t * 5 + i * 2) + 1) / 2; drawStar(g, 128 + Math.cos(a) * 78, 72 + Math.sin(a) * 56, 1.5 + k * 2.5, i % 2 ? '#fff27a' : '#ffd1e4', t * 3); }
+      } },
   ],
 });
 // a dog biscuit (thrown by the crowd, also the treat in "chuches")
@@ -6868,9 +6993,10 @@ function rizosRoomTop(g, S) {
   rizosNeonText(g, 'CHAMPÚ', 214, 50, RIZOS_NEON.cyan, NOW + 3, 1);
   ringPx(g, 238, 34, 4, RIZOS_NEON.cyan); ringPx(g, 244, 42, 3, RIZOS_NEON.pink);
   rizosDiscoBall(g, 44, 30, 13, NOW);
-  // the plate the counter sits on
+  // the plate the counter sits on; in the story it shows the club's clock instead
   panel(g, SW / 2 - 24, 2, 48, 30, '#1a0a38', { r: 6, line: RIZOS_NEON.pink });
   ringRect(g, SW / 2 - 22, 4, 44, 26, 1, '#5a2a9a');
+  if (S.clock) { rizosNeonText(g, S.clock, SW / 2, 9, RIZOS_NEON.cyan, NOW, 1); if (fl(NOW * 2) % 2) { px(g, SW / 2 - 1, 10, '#1a0a38'); px(g, SW / 2 - 1, 14, '#1a0a38'); } tiny(g, 'SÁBADO', SW / 2, 22, RIZOS_NEON.pink); }
   rizosDanceFloor(g, 150, beat);
   const pose = rizosPoseFor(S);
   const jump = pose === 'win' ? Math.max(0, Math.sin(Math.min(1, rt / .5) * Math.PI)) * 12 : pose === 'clear' ? Math.abs(Math.sin(rt * 5)) * 8 : pose === 'speed' ? Math.abs(Math.sin(t * 16)) * 3 : 0;
@@ -6973,7 +7099,29 @@ function rizosAnnWord(g, W, x, y, t, t0, o = {}) {
   const lit = i => { const on = t0 + i * (o.step || .06); if (t < on) return false; if (t < on + .22) return hash2(fl(t * 30), i, 9) > .42; return (t * (o.buzz || 1.3) + i * .37) % 3.1 >= (o.gap || .06); };
   return cardWord(g, W.w, x, y, i => lit(i) ? W.on : W.off, o.anim ? { anim: o.anim } : {});
 }
-function rizosAnnPrewarm() { if (typeof cardPrewarm === 'function' && typeof CARD_RIZOS_ON !== 'undefined') cardPrewarm(rizosAnnFaces().warm); }
+function rizosAnnPrewarm() { if (typeof cardPrewarm === 'function' && typeof CARD_RIZOS_ON !== 'undefined') { cardPrewarm(rizosAnnFaces().warm); cardPrewarm(rizosStampFaces().warm); } }
+// ---- the Club Champú win stamp: a small neon marquee drops on its chains and
+// the word buzzes on tube by tube (one fixed face, so its letters can be prewarmed)
+const RIZOS_STAMP_WORDS = ['¡AFRO LIBRE!', '¡AFRO DE ESPUMA!', '¡AFRO LISTO!', '¡OTRA, OTRA!', '¡GUAPÍSIMO!', '¡QUÉ GUSTAZO!', '¡QUÉ SUAVECITO!', '¡SIN BICHOS!', '¡A BAILAR!', '¡AFRO XXL!'];
+let RIZOS_STAMP_F = null;
+function rizosStampFaces() {
+  if (RIZOS_STAMP_F) return RIZOS_STAMP_F;
+  const on = Object.assign({}, CARD_RIZOS_ON, { id: 'rizosStampOn', u: 1.7, r: 1.2 }), off = Object.assign({}, CARD_RIZOS_OFF, { id: 'rizosStampOff', u: 1.7, r: 1.2 });
+  return (RIZOS_STAMP_F = { on, off, warm: RIZOS_STAMP_WORDS.flatMap(w => [[w, on], [w, off]]) });
+}
+function rizosStamp(c, g, word, x, y, delay = 0) {
+  const t = g.t - g.decidedAt - delay; if (t < 0) return;
+  if (typeof cardWord !== 'function' || typeof CARD_RIZOS_ON === 'undefined') { shout(c, word, x, y, t); return; }
+  if (!g._stampOn) { g._stampOn = true; g.fx.p = g.fx.p.filter(p => p.k !== 'txt'); } // the sign gets the screen to itself
+  const F = rizosStampFaces(), h = 36, w = Math.min(244, cardWordW(word, F.on) + 26);
+  const bx = rd(clamp(x, w / 2 + 3, SW - w / 2 - 3)), drop = t < .32 ? (1 - E.outBack(t / .32)) * -60 : 0, swing = Math.sin(t * 7) * Math.max(0, 1 - t * 1.5) * 2;
+  const by = rd(y - h / 2 + drop + swing);
+  for (const cx0 of [bx - w / 2 + 14, bx + w / 2 - 14]) for (let yy = by - 1; yy > by - 22; yy -= 3) { px(c, cx0, yy, '#8f98b8'); px(c, cx0, yy - 1, '#5b6380'); }
+  rizosMarquee(c, bx, by, w, h, g.b * 2);
+  if (!g._stampLit && t > .3) { g._stampLit = true; sfx('sparkle', { vol: .5 }); g.fx.burst(bx, by + h / 2, 16, { k: 'star', c: [RIZOS_NEON.pink, RIZOS_NEON.cyan, '#ffffff'], sp0: 50, sp1: 150 }); }
+  const lit = i => { const on = .3 + i * .045; if (t < on) return false; if (t < on + .18) return hash2(fl(t * 30), i, 5) > .4; return (t * 1.3 + i * .37) % 3.1 >= .05; };
+  cardWord(c, word, bx - 6, by + 10, i => lit(i) ? F.on : F.off); // −6: the italic slant pushes the letters right
+}
 // a marquee board with chasing bulbs (w×h centred on x, top at y)
 function rizosMarquee(g, x, y, w, h, beat, bulb = '#fff27a') {
   panel(g, x - w / 2, y, w, h, '#130726', { r: 7, line: INK }); panel(g, x - w / 2 + 4, y + 4, w - 8, h - 8, '#1b0b34', { r: 5, line: '#3b1a6a' });
@@ -7235,7 +7383,7 @@ defCut('rizos_in', {
   song: Object.assign({ loop: true }, RIZOS_SONGS.play),
   shots: [
     { dur: 0, lines: [['narr', 'Sábado, 23:59. Club Champú.'], ['rizos', '¡Yeah, baby! ¡Esta noche la pista es MÍA!'], ['dj', '¡Un aplauso para el rey del afro!']],
-      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: t, react: fl(t) % 3 === 2 ? 'ready' : 'x', phase: 'cut', bpm: 124 }); if (fl(t * 2) % 2) rizosNeonText(g, '♪', 60 + Math.sin(t * 3) * 10, 70, RIZOS_NEON.yellow, t); },
+      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: t, react: fl(t) % 3 === 2 ? 'ready' : 'x', phase: 'cut', bpm: 124, clock: '23:59' }); if (fl(t * 2) % 2) rizosNeonText(g, '♪', 60 + Math.sin(t * 3) * 10, 70, RIZOS_NEON.yellow, t); },
       bot(g, t) { g.drawImage(rizosBotBack(), 0, 0); rizosCrowd(g, t, .8, t * 2.07); for (let i = 0; i < 6; i++) { const x = (i * 51 + t * 40) % SW; txt(g, i % 2 ? '¡RI-ZOS!' : '♪', x, 96 + Math.sin(t * 5 + i) * 4, [RIZOS_NEON.pink, RIZOS_NEON.cyan, RIZOS_NEON.yellow][i % 3], { out: INK, bold: true }); } } },
     { dur: 3.4, box: 'none', sfx: [[.2, 'swoosh', { pitch: 2 }], [2.6, 'boing', { pitch: 1.6 }], [2.7, 'yip', { pitch: 2.2 }]],
       tall(g, t) {
@@ -7248,7 +7396,7 @@ defCut('rizos_in', {
         caption(g, 'Pero alguien más bajaba a bailar…', 22);
       } },
     { dur: 0, lines: [['pulgui', '¡Qué pelazo! ¡Me hago aquí una casita con piscina!'], ['rizos', '¡Ay, ay, AY! ¡ME PICA EL AFRO!'], ['rizos', '¡Emergencia capilar! ¡A Westie BLVRD, YA!']],
-      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: .2, react: 'lose', phase: 'cut', bpm: 124 }); },
+      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: .2, react: 'lose', phase: 'cut', bpm: 124, clock: '00:01' }); },
       bot(g, t) {
         g.drawImage(rizosAfroWall(), 0, 0);
         // Pulgui's little camp in the afro: a tent and a flag
@@ -7273,10 +7421,10 @@ defCut('rizos_out', {
   song: Object.assign({ loop: true }, RIZOS_SONGS.card, { loop: true }),
   shots: [
     { dur: 0, sfx: [[.2, 'slam'], [.4, 'sparkle']], lines: [['narr', 'Una hora (y mucho champú) después…'], ['rizos', '¡Afro PERFECTO, nena! ¡Gracias, Anahí!'], ['narr', '¡RI-ZOS! ¡RI-ZOS! ¡RI-ZOS!']],
-      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: t, react: 'clear', phase: 'cut', bpm: 124 }); for (let i = 0; i < 16; i++) { const x = (i * 37 + t * 50) % SW, y = (i * 53 + t * 90) % SH; rect(g, x, y, 2, 2, [RIZOS_NEON.pink, RIZOS_NEON.cyan, RIZOS_NEON.yellow, '#ffffff'][i % 4]); } },
+      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: t, react: 'clear', phase: 'cut', bpm: 124, clock: '01:02' }); for (let i = 0; i < 16; i++) { const x = (i * 37 + t * 50) % SW, y = (i * 53 + t * 90) % SH; rect(g, x, y, 2, 2, [RIZOS_NEON.pink, RIZOS_NEON.cyan, RIZOS_NEON.yellow, '#ffffff'][i % 4]); } },
       bot(g, t) { g.drawImage(rizosBotBack(), 0, 0); rizosCrowd(g, t, 1, t * 2.07); } },
     { dur: 0, sfx: [[.1, 'swoosh', { pitch: 2 }], [.9, 'boing'], [1.1, 'slam']], lines: [['pulgui', '¡Holaaa! ¿Me habéis echado de menos?'], ['rizos', '¡¡OTRA VEZ NOOOO!!'], ['narr', 'Continuará… en el próximo lavado.']],
-      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: .2, react: 'x', special: 'boss', phase: 'inter', bpm: 124 }); const k = clamp(t / .9, 0, 1); if (k < 1) rizosPulguiChute(g, 128 + Math.sin(t * 3) * 12, lerp(-10, 60, k), t); },
+      top(g, t) { rizosRoomTop(g, { pt: t, pb: t * 2.07, reactT: .2, react: 'x', special: 'boss', phase: 'inter', bpm: 124, clock: '01:03' }); const k = clamp(t / .9, 0, 1); if (k < 1) rizosPulguiChute(g, 128 + Math.sin(t * 3) * 12, lerp(-10, 60, k), t); },
       bot(g, t) { g.drawImage(rizosAfroWall(), 0, 0); drawS(g, rizosPulguiSpr(fl(t * 5) % 2 ? 'sit' : 'jump'), 128, 96 - Math.abs(Math.sin(t * 7)) * 10, { s: 2 }); if (t > .9) shout(g, '¡JI, JI, JI!', 128, 56, t - .9); } },
   ],
 });
@@ -7837,13 +7985,28 @@ defCut('superwestie_art', { shots: [{ dur: 0, box: 'none', lines: [['narr', '…
     ['superwestie', 'mezcla', 'unpelo'].forEach((id, r) => ['walk0', 'walk1', 'idle', 'happy', 'held'].forEach((f, i) => drawS(g, STAGES[id].chibi(f, t), 30 + i * 46, 40 + r * 56, { ax: .5, ay: 1, s: 1 })));
     drawS(g, prepDog('scruffy', .56), 30, 188, { ax: .5, ay: 1 }); drawS(g, prepDog('wet', .56), 90, 188, { ax: .5, ay: 1 }); drawS(g, prepDog('frizzy', .56), 150, 188, { ax: .5, ay: 1 }); drawS(g, prepDog('clean', .56), 210, 188, { ax: .5, ay: 1 }); } }] });
 // ============================================================================
-//  Microgames of ANAHÍ's stage (¡TOCA!). The boss (¡PAPELEO!, the Hacienda
-//  inspector) lives in anahi_boss.js.
+//  Microgames of ANAHÍ's stage (¡TOCA!). The boss (¡PREPARA EL PERRO!, Lady Di
+//  before the 12:00 show) lives in anahi_boss.js.
 //  Every game here has a hint(g) → { x, y, mech } for the ghost hand.
 // ============================================================================
 'use strict';
 
 // ---------------------------------------------------------------- shared art
+// the salon's rubber stamp, slammed onto the scene when a job is judged: Westie
+// green for a job well done, red for a mess (same family as Hacienda's APROBADO).
+// t = seconds since the verdict; (x, y) = its centre
+const ANA_OK = '#2a9a5a', ANA_KO = '#e0283c';
+const ANA_SCRATCH = mkCanvas(1, 1); // to prebuild pictures by drawing them once, off screen
+function anaStamp(c, word, t, ok, x = SW / 2, y = 56, rot) {
+  if (!(t >= 0)) return; // no verdict yet (or a timeout: the bath bomb says it all)
+  const k = clamp(t / .14, 0, 1), img = hacStamp(word, ok ? ANA_OK : ANA_KO);
+  const s = k < 1 ? lerp(2.4, 1, E.inQ(k)) : 1 + Math.max(0, .06 - (t - .14) * .3) * Math.sin((t - .14) * 40);
+  c.globalAlpha = k < 1 ? .4 + .6 * k : 1;
+  drawS(c, img, x, y, { rot: rot != null ? rot : ok ? -.1 : .08, s });
+  c.globalAlpha = 1;
+}
+// call on the verdict: the thump of the stamp lands a beat after
+function anaStampHit(g, ok) { g.stampT = g.t; g.stampOk = ok; sfx('stamp', { delay: .12 }); if (typeof after === 'function') after(.14, () => { if (g.shake) g.shake(ok ? 2 : 3, .15); }); }
 function splatSpr() { return mdl('splat', () => spr(['.k...k.', 'k.kkk.k', '.kbbbk.', 'kbbBbbk', '.kbbbk.', 'k.kkk.k', '.k...k.'], { k: INK, b: '#5b3a1d', B: '#a07748' })); }
 
 // ---------------------------------------------------------------- 1 PULGAS --
@@ -7880,6 +8043,7 @@ defMG({
     g.fleas = [];
     for (let i = 0; i < n; i++) g.fleas.push(this.spot(g, { dead: false, jump: 0, sit: g.r(.3, .8), f: 0, flip: g.r() < .5 }));
     g.bounce = 0; g.scr = 0;
+    hacStamp('¡SIN PULGAS!', ANA_OK); keikoSide(2, 'wag', 'happy'); // built now, not mid-game
   },
   // landing spots on Keiko's coat (back, flank, head)
   spot(g, q) {
@@ -7910,7 +8074,11 @@ defMG({
         g.fx.burst(best.x, best.y, 10, { k: 'star', c: [C.yellow, '#fff'], sp0: 40, sp1: 100, life0: .25, life1: .45 });
         g.fx.add({ k: 'txt', s: '¡PAF!', x: best.x, y: best.y - 12, life: .5, c: '#ffffff' });
         g.bounce = 1; g.shake(1.5, .1);
-        if (g.fleas.every(f => f.dead)) { g.win(); sfx('bark', { pitch: 1.3, delay: .15 }); for (let i = 0; i < 6; i++) g.fx.add({ k: 'heart', x: 176 + g.r(-20, 20), y: 50, vx: g.r(-20, 20), vy: g.r(-60, -30), life: 1, c: C.pink }); }
+        if (g.fleas.every(f => f.dead)) {
+          g.win(); anaStampHit(g, true); sfx('bark', { pitch: 1.3, delay: .15 });
+          for (let i = 0; i < 6; i++) g.fx.add({ k: 'heart', x: 176 + g.r(-20, 20), y: 50, vx: g.r(-20, 20), vy: g.r(-60, -30), life: 1, c: C.pink });
+          g.fx.burst(120, 100, 16, { k: 'star', c: ['#fff27a', '#ffffff'], sp0: 40, sp1: 130 });
+        }
       } else g.fx.add({ k: 'ring', x: IN.x, y: IN.y, r: 3, life: .25, c: '#ffffff' });
     }
   },
@@ -7925,8 +8093,11 @@ defMG({
       if (f.jump > 0) shadowOval(c, lerp(f.x0, f.x1, Math.min(1, f.jump)), lerp(f.y0, f.y1, Math.min(1, f.jump)) + 6, 5, 1.5, .6);
       drawFlea(c, rd(f.x), rd(f.y), fl(f.f), f.flip);
     }
-    const left = g.fleas.filter(f => !f.dead).length;
-    panel(c, 6, 6, 70, 16, '#ffffff', { r: 4 }); drawFlea(c, 18, 14, 0, false); txt(c, left ? 'x ' + left : '¡0!', 30, 10, INK, { bold: true });
+    const dead = g.fleas.filter(f => f.dead).length, n = g.fleas.length;
+    panel(c, 6, 6, 62, 18, '#ffffff', { r: 5 }); drawFlea(c, 18, 15, 0, false); txt(c, dead + '/' + n, 30, 11, dead === n ? ANA_OK : INK, { bold: true });
+    // a clean, shiny coat once they're all gone
+    if (g.state === 'won') { const st = g.t - g.decidedAt; for (let i = 0; i < 4; i++) { const a = st * 3 + i * 1.6; drawStar(c, 100 + i * 22 + Math.cos(a) * 4, 96 + Math.sin(a * 1.3) * 12, 2 + Math.sin(st * 9 + i) * 1.2, '#fff27a'); } }
+    if (g.state === 'won') anaStamp(c, '¡SIN PULGAS!', g.t - g.stampT, true, 118, 50);
   },
   bot(g) { const f = g.fleas.find(f => !f.dead && f.jump === 0); if (!f) return { down: false }; return { x: f.x, y: f.y, down: fl(g.t * 10) % 3 === 0 }; },
   hint(g) { const f = g.fleas.find(f => !f.dead) || g.fleas[0]; return { x: f.x, y: f.y, mech: 'tap' }; },
@@ -7999,6 +8170,7 @@ defMG({
     g.nails = [0, 1, 2, 3].map(i => ({ cut: false, tip: 0 }));
     g.order = shuffle([0, 1, 2, 3]).slice(0, g.need);
     g.blade = 0; g.flyers = []; g.ouch = 0; g.jerk = 0;
+    okPaw(); // the victory paw is heavy: build it before the game starts
   },
   // claw centre line: from the toe, 48px long, hooking down; radius tapers
   clawAt(i, t) { const [x, y] = UNAS_TOES[i]; return [x + 12 + t * 58, y - 1 + t * t * 13 + (i - 1.5) * t * 7, 5.4 - t * 3.8]; },
@@ -8225,6 +8397,8 @@ defMG({
     g.need = g.level >= 2 ? 2 : 1; g.stack = 0; g.drop = null;
     g.coneX = g.level === 1 ? 160 : g.r(130, 200); g.coneV = [0, 22, 36][g.level - 1] * g.tempo * (g.r() < .5 ? -1 : 1);
     g.swingT = g.r(TAU); g.cols = ['#ffb3d1', '#fff7ae', '#b3d9ff']; g.splats = []; g.squash = 0;
+    hacStamp('¡ÑAM!', ANA_OK); hacStamp('¡PLOF!', ANA_KO);
+    for (const ex of ['love', 'sad']) drawKeikoSit(ANA_SCRATCH.g, 0, 0, ex); // her reactions, prebuilt
   },
   armX(g) { return 150 + Math.sin(g.swingT) * 92; },
   coneTop(g) { return 118 - g.stack * 12; },
@@ -8234,8 +8408,8 @@ defMG({
     if (g.drop) {
       const d = g.drop; d.vy += 700 * dt; d.y += d.vy * dt;
       if (d.y >= this.coneTop(g) - 4 && !d.done) {
-        if (Math.abs(d.x - g.coneX) < 14) { d.done = true; g.stack++; g.drop = null; sfx('pop', { pitch: .7 }); sfx('gulp', { delay: .1 }); HITSTOP = 2; g.fx.burst(g.coneX, this.coneTop(g), 12, { k: 'star', c: [C.yellow, '#fff', C.pinkL] }); g.squash = 1; if (g.stack >= g.need) { g.win(); sfx('bark', { pitch: 1.4, delay: .15 }); g.fx.add({ k: 'txt', s: '¡ÑAM!', x: 66, y: 110, life: .8, c: '#ffffff' }); } }
-        else if (d.y > 176) { d.done = true; g.splats.push({ x: d.x, col: d.col }); g.drop = null; sfx('squish', { pitch: .8 }); g.lose(); g.shake(2, .15); }
+        if (Math.abs(d.x - g.coneX) < 14) { d.done = true; g.stack++; g.drop = null; sfx('pop', { pitch: .7 }); sfx('gulp', { delay: .1 }); HITSTOP = 2; g.fx.burst(g.coneX, this.coneTop(g), 12, { k: 'star', c: [C.yellow, '#fff', C.pinkL] }); g.squash = 1; if (g.stack >= g.need) { g.win(); anaStampHit(g, true); sfx('bark', { pitch: 1.4, delay: .15 }); for (let i = 0; i < 5; i++) g.fx.add({ k: 'heart', x: 56 + g.r(-12, 12), y: 110, vx: g.r(-20, 20), vy: g.r(-60, -30), life: 1, c: C.pink }); } }
+        else if (d.y > 176) { d.done = true; g.splats.push({ x: d.x, col: d.col }); g.drop = null; sfx('squish', { pitch: .8 }); g.lose(); anaStampHit(g, false); g.shake(2, .15); g.fx.burst(d.x, 178, 10, { k: 'drop', c: [d.col, '#ffffff'], sp0: 40, sp1: 110, g: 300, life0: .3, life1: .5 }); }
       }
     } else if (IN.tap && g.state === 'play') { g.drop = { x: this.armX(g), y: 44, vy: 0, col: g.cols[g.stack % 3] }; sfx('swoosh', { pitch: 1.4 }); }
     g.squash = Math.max(0, g.squash - dt * 4);
@@ -8262,6 +8436,7 @@ defMG({
     if (!g.drop && g.state === 'play') drawS(c, heladoScoop(g.cols[g.stack % 3]), ax, 46, {});
     if (g.drop) drawS(c, heladoScoop(g.drop.col), g.drop.x, g.drop.y, { sy: 1 + Math.min(.3, g.drop.vy / 2000) });
     if (g.state === 'play' && !g.drop && g.level < 3) { const hit = Math.abs(ax - g.coneX) < 14; for (let y = 58; y < 112; y += 6) px(c, ax, y, hit ? '#5bd18b' : '#ffffff'); }
+    if (g.state !== 'play') anaStamp(c, g.state === 'won' ? '¡ÑAM!' : '¡PLOF!', g.t - g.stampT, g.state === 'won', 150, 76);
   },
   bot(g) {
     // predict where the cone will be when a scoop dropped now arrives
@@ -8324,6 +8499,7 @@ defMG({
     { i: 'd', v: .55, n: 'k . z z . . z . k . z z . . z z k . z z . . z . k . z z s . s .' }] }),
   init(g) {
     g.need = [5, 7, 9][g.level - 1]; g.popped = 0; g.bubbles = []; g.spawned = 0; g.spawnT = 0; g.combo = 0;
+    hacStamp('¡LIMPITA!', ANA_OK);
   },
   spawn(g) { const r = g.r(10, 16); g.bubbles.push({ x: g.r(30, 226), y: 170 + r, r, vy: -g.r(22, 40) * [1, 1.2, 1.45][g.level - 1] * g.tempo, ph: g.r(TAU), hue: g.r(TAU) }); g.spawned++; },
   update(g, dt) {
@@ -8338,7 +8514,7 @@ defMG({
         g.fx.add({ k: 'ring', x: hit.x, y: hit.y, r: hit.r * .8, grow: 10, life: .25, c: '#ffffff' });
         g.fx.burst(hit.x, hit.y, 8, { k: 'drop', c: ['#dff4ff', '#9bd6f7'], sp0: 40, sp1: 110, g: 300, life0: .3, life1: .5 });
         g.fx.add({ k: 'txt', s: '¡PLOP!', x: hit.x, y: hit.y - hit.r - 4, life: .45, c: '#ffffff' });
-        if (g.popped >= g.need) { g.win(); g.fx.burst(128, 150, 20, { k: 'bubble', c: '#ffffff', sp0: 40, sp1: 140, r: 4 }); }
+        if (g.popped >= g.need) { g.win(); anaStampHit(g, true); sfx('sparkle', { delay: .2 }); g.fx.burst(128, 150, 20, { k: 'bubble', c: '#ffffff', sp0: 40, sp1: 140, r: 4 }); g.fx.burst(128, 110, 12, { k: 'star', c: ['#fff27a', '#ffffff'], sp0: 40, sp1: 120 }); }
       }
     }
   },
@@ -8357,7 +8533,8 @@ defMG({
       for (let a = 3.6; a < 4.6; a += .12) px(c, b.x + Math.cos(a) * (r - 3.5), b.y + Math.sin(a) * (r - 3.5), '#ffffff');
       disc(c, b.x - r * .45, b.y - r * .45, 1.5, '#ffffff');
     }
-    panel(c, SW - 66, 6, 60, 18, '#ffffff', { r: 5 }); ringPx(c, SW - 54, 15, 5, '#63a0ef'); px(c, SW - 56, 13, '#ffffff'); txt(c, g.popped + '/' + g.need, SW - 44, 11, INK, { bold: true });
+    panel(c, SW - 66, 6, 60, 18, '#ffffff', { r: 5 }); ringPx(c, SW - 54, 15, 5, '#63a0ef'); px(c, SW - 56, 13, '#ffffff'); txt(c, g.popped + '/' + g.need, SW - 44, 11, g.state === 'won' ? ANA_OK : INK, { bold: true });
+    if (g.state === 'won') anaStamp(c, '¡LIMPITA!', g.t - g.stampT, true, 118, 58);
   },
   bot(g) { const b = g.bubbles.find(b => b.y < 160 && b.y > 10); if (!b) return { down: false }; return { x: b.x, y: b.y + b.vy * .02, down: fl(g.t * 20) % 3 === 0 }; },
   hint(g) { const b = g.bubbles[0]; return b ? { x: b.x, y: Math.max(40, b.y - 30), mech: 'tap' } : { x: 128, y: 120, mech: 'tap' }; },
@@ -8376,6 +8553,7 @@ defMG({
     g.holes = [];
     for (let j = 0; j < 2; j++) for (let i = 0; i < 3; i++) g.holes.push({ x: 50 + i * 78, y: 88 + j * 72, up: 0, st: 'down', t: 0, dur: 0, kind: 'mud' });
     g.nextT = .2;
+    hacStamp('¡TODOS LIMPIOS!', ANA_OK); hacStamp('¡ES UN GATO!', ANA_KO);
   },
   update(g, dt) {
     const sp = [1, 1.2, 1.4][g.level - 1] * g.tempo;
@@ -8386,17 +8564,22 @@ defMG({
     }
     for (const h of g.holes) {
       h.t += dt;
+      if (h.st === 'cheer') { if (g.t >= h.cheerAt) h.up = Math.min(1, h.up + dt * 8); continue; }
       if (h.st === 'rise') { h.up = Math.min(1, h.up + dt * 7 * sp); if (h.up >= 1) { h.st = 'up'; h.t = 0; } }
       else if (h.st === 'up') { if (h.t > h.dur) { h.st = 'sink'; } }
       else if (h.st === 'sink' || h.st === 'clean') { h.up = Math.max(0, h.up - dt * (h.st === 'clean' ? 3 : 6) * sp); if (h.up <= 0) { h.st = 'down'; } }
     }
     if (IN.tap && g.state === 'play') {
       for (const h of g.holes) if ((h.st === 'up' || h.st === 'rise') && Math.abs(IN.x - h.x) < 26 && IN.y > h.y - 50 * h.up - 10 && IN.y < h.y + 8) {
-        if (h.kind === 'cat') { sfx('whine', { pitch: 1.8 }); g.fx.add({ k: 'txt', s: '¡MIAU!', x: h.x, y: h.y - 50, life: .7, c: '#ffd1e4' }); g.lose(); break; }
+        if (h.kind === 'cat') { sfx('whine', { pitch: 1.8 }); g.fx.add({ k: 'txt', s: '¡FFFSH!', x: h.x, y: h.y - 56, life: .7, c: '#ffd1e4' }); g.lose(); anaStampHit(g, false); g.shake(3, .2); h.hiss = g.t; break; }
         h.st = 'clean'; h.sprayT = g.t; g.washed++; sfx('splash', { vol: .5 }); sfx('sparkle', { pitch: 1 + g.washed * .1 }); HITSTOP = 2; buzz(8);
         g.fx.burst(h.x, h.y - 30, 12, { k: 'bubble', c: '#ffffff', sp0: 40, sp1: 120, r: 3 });
         g.fx.burst(h.x, h.y - 30, 8, { k: 'star', c: [C.yellow, '#fff'] });
-        if (g.washed >= g.need) g.win();
+        if (g.washed >= g.need) {
+          g.win(); anaStampHit(g, true); sfx('bark', { n: 2, pitch: 1.3, delay: .2 });
+          // curtain call: every basin pops a clean, happy westie
+          for (const q of g.holes) { q.st = 'cheer'; q.kind = 'mud'; q.cheerAt = g.t + g.r(.05, .3); }
+        }
         break;
       }
     }
@@ -8409,9 +8592,9 @@ defMG({
       ellipsePx(c, h.x, h.y + 3, 31, 10, INK); ellipsePx(c, h.x, h.y + 1, 30, 9, RAMP.steel[2]); ellipsePx(c, h.x, h.y, 28, 7.5, RAMP.steel[4]); ellipsePx(c, h.x, h.y, 25, 6, '#3d6f7a'); ellipsePx(c, h.x - 4, h.y - 1, 15, 3, '#5aaee6');
       if (h.up > 0) {
         c.save(); c.beginPath(); c.rect(h.x - 32, h.y - 90, 64, 90); c.clip();
-        const y = h.y + 40 - h.up * 52;
-        if (h.kind === 'cat') drawCatHead(c, h.x, y);
-        else drawS(c, buleHead(h.st === 'clean' ? 'happy' : 'grr', h.st === 'clean' ? RAMP.fur : RAMP.mud), h.x, y, { s: 1 });
+        const cheer = h.st === 'cheer', hop = cheer ? Math.abs(Math.sin((g.t - h.cheerAt) * 9)) * 4 : 0, y = h.y + 40 - h.up * 52 - hop;
+        if (h.kind === 'cat') drawCatHead(c, h.x + (h.hiss && g.t - h.hiss < .6 ? Math.sin(g.t * 60) * 2 : 0), y);
+        else drawS(c, buleHead(h.st === 'clean' || cheer ? 'happy' : 'grr', h.st === 'clean' || cheer ? RAMP.fur : RAMP.mud), h.x, y, { s: 1 });
         c.restore();
       }
       // foam rim in front
@@ -8426,7 +8609,10 @@ defMG({
     }
     panel(c, 6, 6, 58, 18, '#ffffff', { r: 5 });
     polyPx(c, [[17, 8], [22, 16], [12, 16]], INK); disc(c, 17, 16, 5, INK); polyPx(c, [[17, 10], [21, 16], [13, 16]], '#63a0ef'); disc(c, 17, 16, 4, '#63a0ef'); px(c, 15, 15, '#dff4ff'); px(c, 15, 16, '#dff4ff');
-    txt(c, g.washed + '/' + g.need, 28, 11, INK, { bold: true });
+    txt(c, g.washed + '/' + g.need, 28, 11, g.state === 'won' ? ANA_OK : INK, { bold: true });
+    // sparkles over the clean heads, then the salon's verdict
+    if (g.state === 'won') for (const h of g.holes) if (h.up > .8) drawStar(c, h.x + 16, h.y - 58 + Math.sin(g.t * 8 + h.x) * 3, 2 + Math.sin(g.t * 12 + h.x) * 1, '#fff27a');
+    if (g.state !== 'play') anaStamp(c, g.state === 'won' ? '¡TODOS LIMPIOS!' : '¡ES UN GATO!', g.t - g.stampT, g.state === 'won', 142, 46);
   },
   bot(g) { const h = g.holes.find(h => (h.st === 'up') && h.kind === 'mud'); if (!h) return { down: false }; return { x: h.x, y: h.y - 30, down: fl(g.t * 20) % 3 === 0 }; },
   hint(g) { const h = g.holes.find(h => h.st !== 'down') || g.holes[1]; return { x: h.x, y: h.y - 30, mech: 'tap' }; },
@@ -8683,6 +8869,7 @@ defMG({
     const xs = { 2: [84, 172], 3: [62, 128, 194], 4: [46, 101, 156, 211] }[n];
     g.forms = opts.map((num, i) => ({ num, x: xs[i], y: 86, tx: xs[i], rot: g.r(-.12, .12), hand: 0 }));
     g.pick = null; g.handT = -1; g.verdictT = -1; g.hand = { x: 128, y: 196 }; g.shuf = g.level >= 3 ? .9 : -1;
+    hacStamp('APROBADO', '#2a9a5a'); hacStamp('DENEGADO', '#e0283c');
   },
   update(g, dt) {
     // level 3: the forms swap places once, just to keep you honest
@@ -8705,8 +8892,9 @@ defMG({
   },
   draw(g, c) {
     c.drawImage(modeloOffice(), 0, 0);
-    for (const f of g.forms) { if (f === g.pick && g.verdictT >= 0) continue; drawS(c, modeloForm(f.num), f.x, f.y, { rot: f === g.pick ? 0 : f.rot }); }
-    drawS(c, anaHandOpen(), g.hand.x, g.hand.y, { ax: .45, ay: .3 });
+    g.forms.forEach((f, i) => { if (f === g.pick && g.verdictT >= 0) return; const idle = f === g.pick ? 0 : Math.sin(g.t * 3 + i * 1.7) * 1.2; drawS(c, modeloForm(f.num), f.x, f.y + idle, { rot: f === g.pick ? 0 : f.rot + idle * .02 }); });
+    const wait = g.handT < 0 ? -12 + Math.sin(g.t * 4) * 2 : 0; // her hand hovers, ready to grab a form
+    drawS(c, anaHandOpen(), g.hand.x, g.hand.y + wait, { ax: .45, ay: .3 });
     if (g.verdictT >= 0) {
       const k = spring(g.t - g.verdictT, 2.6, 7), ok = g.state === 'won';
       drawS(c, hacStamp(ok ? 'APROBADO' : 'DENEGADO', ok ? '#2a9a5a' : '#e0283c'), 128, 92, { rot: -.16, s: lerp(2.6, 1, Math.min(1, k)) * (k > 1 ? 1 : 1) });
@@ -8822,6 +9010,7 @@ defMG({
     const x0 = 96, x1 = 236; g.dogs.forEach((d, i) => { d.x = n === 1 ? 170 : lerp(x0, x1, i / (n - 1)); d.vx = g.level >= 3 ? g.r(18, 34) * (g.r() < .5 ? -1 : 1) * g.tempo : 0; });
     g.target = g.dogs[fl(g.r(n))];
     g.leash = null; g.hugT = -1; g.ab = { x: 38, y: 176 };
+    for (const m of ['happy', 'hug', 'cross']) abuela(m); empDog(g.target.breed, g.target.coll, 'hop'); // the endings, prebuilt
   },
   update(g, dt) {
     for (const d of g.dogs) {
@@ -9148,7 +9337,7 @@ defMG({
     { i: 'd', v: .5, n: 'k . h . s . h . k . h . s . h h k . h . s . h . k . h . s . s .' }] }),
   init(g) {
     const n = [2, 3, 3][g.level - 1], pool = shuffle(g.level >= 3 ? ['guiri', 'inspector', 'gato', 'globo'] : ['guiri', 'inspector', 'gato']);
-    const ci = g.level === 1 ? g.ri(0, 1) : g.ri(1, n - 1);
+    const ci = g.level === 1 ? 1 : g.ri(1, n - 1); // level 1: first someone you mustn't let in, then the dog
     g.q = []; let di = 0;
     for (let i = 0; i < n; i++) g.q.push(i === ci ? { kind: 'cliente', breed: g.pick(EMP_BREEDS), coll: g.pick(['#e23b4e', '#3565cc', '#ffdf4f']) } : { kind: pool[di++ % pool.length] });
     g.slot = [2.2, 2, 1.8][g.level - 1]; g.t0 = .6; g.rang = -1;
@@ -9559,22 +9748,14 @@ function prepKeys(x, y, level) {
 
 // ---------------------------------------------------------------- transitions
 // the "room turn": the old room folds away like a cube face, the new one swings in
+// the camera whips from one room to the next: a quick slide with speed streaks
 function prepTurn(g, from, to, k, dir = 1) {
-  const e = E.ioC(k), wOld = SW * (1 - e), wNew = SW * e, slices = 32;
-  rect(g, 0, 0, SW, SH, '#20303a');
-  const face = (img, x0, w, shrinkLeft) => {
-    if (w < 1) return;
-    for (let i = 0; i < slices; i++) {
-      const u0 = i / slices, u1 = (i + 1) / slices, sx = u0 * SW, sw = SW / slices;
-      const persp = shrinkLeft ? lerp(.82, 1, u0) : lerp(1, .82, u0);
-      const h = SH * lerp(1, persp, Math.min(1, (1 - w / SW) * 1.6)), dy = (SH - h) / 2;
-      g.drawImage(img, sx, 0, sw, SH, rd(x0 + u0 * w), rd(dy), Math.ceil(w * (u1 - u0)) + 1, rd(h));
-    }
-  };
-  if (dir > 0) { face(from, 0, wOld, false); face(to, wOld, wNew, true); }
-  else { face(to, 0, wNew, false); face(from, wNew, wOld, true); }
-  // a crease of shadow where the faces meet
-  const cxp = dir > 0 ? wOld : wNew; g.globalAlpha = .35; rect(g, cxp - 2, 0, 4, SH, INK); g.globalAlpha = 1;
+  const e = E.ioC(k), off = rd(e * SW) * dir;
+  g.drawImage(from, -off, 0); g.drawImage(to, SW * dir - off, 0);
+  const s = Math.sin(k * Math.PI);
+  g.globalAlpha = .6 * s;
+  for (let i = 0; i < 18; i++) { const y = (i * 37 + 11) % SH, w = 30 + (i * 53) % 90, x = ((i * 71 + fl(k * 520)) % (SW + w)) - w; rect(g, dir > 0 ? SW - x - w : x, y, w, i % 3 === 0 ? 2 : 1, '#ffffff'); }
+  g.globalAlpha = 1;
 }
 // door wipe: two mint panels close/open over the scene (k: 0 open → 1 shut)
 function prepDoors(g, k) {
@@ -9596,7 +9777,7 @@ SFX.prepPump = (t, d, p, v) => { SFX.squish(t, d, 1.4 * p, .8 * v); INST.w(0, t 
 SFX.prepKaching = (t, d, p, v) => { INST.b(0, t, 0, 1.2 * v, d); INST.bell(2093 * p, t + .05, .2, 1 * v, d); INST.bell(2637 * p, t + .12, .4, 1 * v, d); for (let i = 0; i < 6; i++) SFX.coin(t + .1 + i * .06, d, 1 + i * .08, .5 * v); };
 
 const PREP_PH = [
-  ['¡CEPILLA!', 'Quítale los nudos', 'rub'], ['¡CHAMPÚ!', 'Toca el bote encima', 'tap'], ['¡FROTA!', 'Mucha espuma', 'rub'],
+  ['¡CEPILLA!', 'Quítale los nudos', 'rub'], ['¡CHAMPÚ!', 'Toca cuando esté sobre ella', 'tap'], ['¡FROTA!', 'Mucha espuma', 'rub'],
   ['¡ACLARA!', 'Pasa la ducha', 'drag'], ['¡SECA!', 'Rodéala con el secador', 'drag'], ['¡CORTA!', 'Repasa con la máquina', 'drag'], ['¡COBRA!', 'Diez euros', 'tap']];
 const PREP_SONG = { spb: 4, loop: true, tracks: [
   { i: 'brass', v: .55, n: 'C5 . E5 G5 . E5 D5 . C5 . A4 . G4 - . . C5 . E5 G5 . A5 G5 . E5 . D5 . C5 - . . F5 . E5 D5 . C5 A4 . G4 . E4 . G4 - A4 . C5 . D5 . E5 . G5 . A5 . G5 . C6! - . .' },
@@ -9636,12 +9817,13 @@ defMG({
     sfx('good'); sfx('sparkle'); HITSTOP = 4; g.shake(2, .2);
     const [dx, dy] = this.dogXY(g); g.fx.burst(dx + 52, dy + 56, 16, { k: 'star', c: ['#fff27a', '#ffffff', '#ffd1e4'], sp0: 60, sp1: 170 });
     g.patience = Math.min(100, g.patience + 12);
+    g.stepPop = { i: g.ph - 1, t: 0 }; g.patPop = 0; // the step ticks off in the HUD, the patience bar gets a "+12"
     if (g.ph === 1) this.turnTo(g, 'shower', 1);
-    if (g.ph === 4) this.turnTo(g, 'table', -1);
+    if (g.ph === 4) { g.shakeOff = .9; sfx('splash', { pitch: 1.2 }); } // she shakes the water off before going back to the table
     if (g.ph === 6) this.turnTo(g, 'till', 1);
     if (g.ph >= 7) { g.win(); }
   },
-  turnTo(g, room, dir) { g.turn = { from: g.room, to: room, t: 0, dir }; sfx('whoosh'); },
+  turnTo(g, room, dir) { g.turn = { from: g.room, to: room, t: 0, dir }; g.tufts = []; sfx('whoosh'); }, // tufts in the air stay in the old room
   roomPic(g, room) { return room === 'shower' ? prepShowerRoom() : room === 'till' ? prepTillRoom() : prepTableRoom(); },
   update(g, dt) {
     g.phT += dt; g.cmdT += dt; g.enterT += dt;
@@ -9651,7 +9833,17 @@ defMG({
       const onTable = g.room === 'table' && Math.abs(tf.x - PREP_TABLE.x) < 62, floorY = onTable ? PREP_TABLE.y - 2 : 186;
       if (tf.y >= floorY && tf.vy > 0) { tf.dead = true; if (g.piles.length < 120) { const near = g.piles.filter(p => p.room === g.room && Math.abs(p.x - tf.x) < 6 && p.base === floorY).length; g.piles.push({ x: tf.x, y: floorY - near * 2.2, base: floorY, room: g.room, r: tf.r, col: tf.col, lite: tf.lite, dark: tf.dark, rot: tf.rot }); } } }
     g.tufts = g.tufts.filter(t => !t.dead);
-    if (g.turn) { g.turn.t += dt / .75; if (g.turn.t >= 1) { g.room = g.turn.to; g.turn = null; g.cmdT = 0; } return; }
+    if (g.stepPop) g.stepPop.t += dt; if (g.patPop != null) g.patPop += dt;
+    if (g.shakeOff > 0) { // the rinse is done: a big wet-dog shake, drops everywhere, then off to the table
+      g.shakeOff -= dt;
+      for (let i = 0; i < 4; i++) { const a = g.r(TAU); g.fx.add({ k: 'drop', x: PREP_DOG_S.x + Math.cos(a) * 26, y: PREP_DOG_S.y - 52 + Math.sin(a) * 30, vx: Math.cos(a) * g.r(140, 280), vy: Math.sin(a) * g.r(80, 200) - 60, g: 380, life: .8, r: g.r(1.5, 3), c: pick(['#9bd6f7', '#dff4ff', '#5aaee6']) }); }
+      if (FRAME % 6 === 0) g.fx.add({ k: 'bubble', x: PREP_DOG_S.x + g.r(-30, 30), y: PREP_DOG_S.y - g.r(20, 80), vy: -20, life: .6, r: g.r(2, 4), c: '#dff4ff' });
+      if (FRAME % 9 === 0) sfx('drip', { pitch: 1.4 + Math.random() * .4, vol: .5 });
+      if (FRAME % 20 === 0) g.shake(2, .1);
+      if (g.shakeOff <= 0) { g.shakeOff = 0; this.turnTo(g, 'table', -1); }
+      return;
+    }
+    if (g.turn) { g.turn.t += dt / .6; if (g.turn.t >= 1) { g.room = g.turn.to; g.turn = null; g.cmdT = 0; } return; }
     if (g.state !== 'play') return;
     if (g.enterT < .9) return; // doors + the crust falling off
     g.patience = Math.max(0, g.patience - dt * g.drain * (g.ph === 6 ? .5 : 1));
@@ -9744,12 +9936,14 @@ defMG({
   // ------------------------------------------------------------ drawing ----
   drawRoom(g, c, room) {
     c.drawImage(this.roomPic(g, room), 0, 0);
+    if (room === 'shower' && g.ph !== 3) prepShower(c, 92, 44, false, g.t); // resting on its hook
     if (room === 'table') prepTable(c, PREP_TABLE.x, PREP_TABLE.y);
     for (const p of g.piles) if (p.room === room) prepFluff(c, p.x, p.y - 2, p.r, p, p.rot);
     if (room === 'shower' && g.puddle > 0) { ellipsePx(c, PREP_DOG_S.x, PREP_DOG_S.y + 2, 20 + g.puddle * 40, 4 + g.puddle * 5, '#5aaee6'); ellipsePx(c, PREP_DOG_S.x - 6, PREP_DOG_S.y + 1, 10 + g.puddle * 20, 2 + g.puddle * 2, '#9bd6f7'); }
   },
   drawDog(g, c, room) {
-    const A = room === 'shower' ? PREP_DOG_S : PREP_DOG_T, dx = A.x - 52, dy = A.y - 110, C = g.cells;
+    const A = room === 'shower' ? PREP_DOG_S : PREP_DOG_T, C = g.cells, wig = room === 'shower' && g.shakeOff > 0 ? Math.sin(g.t * 55) * 6 * Math.min(1, g.shakeOff * 1.6) : 0;
+    const dx = A.x - 52 + wig, dy = A.y - 110;
     const ph = g.ph, bob = Math.sin(g.t * 3) * .6;
     if (room === 'till') return;
     if (ph === 0) {
@@ -9778,6 +9972,7 @@ defMG({
   drawTools(g, c) {
     const T = g.tool, ph = g.ph;
     if (g.state !== 'play' && ph < 6) return;
+    if (g.shakeOff > 0) return; // hands off while she shakes
     if (ph === 0) prepBrush(c, T.x, T.y, IN.down ? Math.sin(g.t * 30) * .2 : -.3);
     if (ph === 1) { const B = g.bottle; prepBottle(c, B.x, 60, B.press); for (let y = 70; y < 104; y += 6) px(c, B.x, y, Math.abs(B.x - PREP_DOG_S.x) < 26 ? '#5bd18b' : 'rgba(255,255,255,.6)'); for (const b of g.blobs) if (!b.done) { disc(c, b.x, b.y, 4, INK); disc(c, b.x, b.y, 3, '#5bd18b'); px(c, b.x - 1, b.y - 1, '#e8fff4'); } }
     if (ph === 2 && IN.down) prepHands(c, T.x, T.y, g.t);
@@ -9808,11 +10003,16 @@ defMG({
     // doors open at the start
     if (g.enterT < .5) prepDoors(c, 1 - g.enterT / .5);
     // phase stamp
-    if (g.state === 'play' && !g.turn && g.enterT > .9 && g.cmdT < 1.25) {
-      const [cmd, sub, mech] = PREP_PH[g.ph] || PREP_PH[0], a = g.cmdT > .95 ? 1 - (g.cmdT - .95) / .3 : 1;
-      mord(c, cmd, SW / 2, 14, fitMord(cmd, 200, { u: 1.9, r: 2.1, rim: 2, sy: 2 }), { anim: i => ({ s: Math.max(0, spring(g.cmdT - i * .03, 2.6, 8)), a }) });
-      c.globalAlpha = a; txt(c, sub, SW / 2, 48, '#ffffff', { align: 'c', out: INK }); c.globalAlpha = 1;
-      if (typeof drawMechMini === 'function') { c.globalAlpha = a; drawMechMini(c, SW - 22, 26, mech, g.t); c.globalAlpha = 1; }
+    if (g.state === 'play' && !g.turn && !(g.shakeOff > 0) && g.enterT > .9 && g.cmdT < 1.5) {
+      const [cmd, sub, mech] = PREP_PH[g.ph] || PREP_PH[0], out = g.cmdT > 1.2 ? E.inQ((g.cmdT - 1.2) / .3) : 0, drop = (1 - E.outBack(clamp(g.cmdT / .3, 0, 1))) * -60 - out * 70;
+      // a green-and-gold plate drops in with the step (Anahí's salon colours), then flies off
+      c.save(); c.translate(0, rd(drop));
+      rect(c, 26, 5, SW - 52, 50, INK); rect(c, 27, 6, SW - 54, 48, RAMP.gold[2]); rect(c, 29, 8, SW - 58, 44, RAMP.green[1]); rect(c, 29, 8, SW - 58, 2, RAMP.green[3]);
+      for (const x of [33, SW - 34]) { disc(c, x, 12, 1.5, RAMP.gold[4]); disc(c, x, 47, 1.5, RAMP.gold[4]); }
+      mord(c, cmd, SW / 2 - 8, 9, fitMord(cmd, 150, { u: 1.8, r: 2, rim: 2, sy: 2 }), { anim: i => ({ s: Math.max(0, spring(g.cmdT - .08 - i * .03, 2.6, 8)) }) });
+      txt(c, sub, SW / 2 - 8, 40, '#fff8e6', { align: 'c' });
+      if (typeof drawMechMini === 'function') drawMechMini(c, SW - 44, 30, mech, g.t);
+      c.restore();
     }
     if (g.state === 'lost') { c.globalAlpha = .45; rect(c, 0, 0, SW, SH, INK); c.globalAlpha = 1; shout(c, '¡SE HA HARTADO!', SW / 2, 90, g.t - g.decidedAt); }
   },
@@ -9828,13 +10028,16 @@ defMG({
     // HUD: the seven steps, the client's patience, Keiko cheering
     rect(c, 0, 44, SW, SH - 44, '#fff8e6');
     prepZigzag(c, 44, false);
-    const icons = ['CEPILLA', 'CHAMPU', 'FROTA', 'ACLARA', 'SECA', 'CORTA', 'COBRA'];
+    const icons = ['CEPILLA', 'CHAMPÚ', 'FROTA', 'ACLARA', 'SECA', 'CORTA', 'COBRA'];
     icons.forEach((l, i) => {
       const x = 12 + i * 34, y = 58, done = i < g.ph, cur = i === g.ph && g.state === 'play';
+      const pop = g.stepPop && g.stepPop.i === i && g.stepPop.t < .6 ? 1 + Math.sin(Math.min(1, g.stepPop.t / .6) * Math.PI) * .35 : 1;
+      c.save(); c.translate(x + 15, y + 13); c.scale(pop, pop); c.translate(-(x + 15), -(y + 13));
       panel(c, x, y + (cur ? -2 + Math.sin(g.t * 8) : 0), 30, 26, done ? PREP_MINT[3] : cur ? '#ffdf4f' : '#ffffff', { r: 4, line: INK, lo: '#dce7ea' });
       prepStepIcon(c, i, x + 15, y + 11 + (cur ? -2 + Math.sin(g.t * 8) : 0));
-      tiny(c, l, x + 15, y + 29, cur ? INK : '#6b6977', { align: 'c' });
       if (done) { disc(c, x + 26, y + 3, 4, INK); disc(c, x + 26, y + 3, 3, '#35a869'); px(c, x + 25, y + 3, '#ffffff'); px(c, x + 26, y + 4, '#ffffff'); px(c, x + 27, y + 2, '#ffffff'); }
+      c.restore();
+      tiny(c, l, x + 15, y + 30, cur ? INK : '#6b6977', { align: 'c' });
     });
     // client card
     panel(c, 8, 94, 96, 92, '#ffffff', { r: 6, lo: '#dce7ea' });
@@ -9849,6 +10052,7 @@ defMG({
     rect(c, 118, 111, 122, 11, INK); rect(c, 119, 112, 120, 9, '#dce7ea');
     const w = rd(120 * g.patience / 100), col = g.patience > 60 ? '#35a869' : g.patience > 30 ? '#ffb020' : '#e23b4e';
     rect(c, 119, 112, w, 9, col); rect(c, 119, 112, w, 2, '#ffffff');
+    if (g.patPop != null && g.patPop < .9) { c.globalAlpha = 1 - clamp((g.patPop - .5) / .4, 0, 1); txt(c, '+12', 119 + w - 10, 101 - g.patPop * 14, '#35a869', { bold: true, out: '#ffffff' }); c.globalAlpha = 1; }
     // Keiko cheering from her corner
     prepKeikoCheer(c, 212, 196, g.t, g.state === 'lost' ? 'sad' : g.patience < 30 ? 'wow' : 'happy');
     const say = g.state === 'lost' ? '¡Nooo!' : g.patience < 30 ? '¡Rápido!' : g.state === 'won' ? '¡GUAU!' : fl(g.t * .6) % 3 === 0 ? '¡Ánimo!' : '';
@@ -9900,20 +10104,31 @@ function prepLadyBow(g, x, y, k = 1) {
   polyPx(g, [[bx, by], [bx - s(9), by - s(5)], [bx - s(9), by - s(1)]], '#ff93bf'); polyPx(g, [[bx, by], [bx + s(9), by - s(5)], [bx + s(9), by - s(1)]], '#ff93bf');
   disc(g, bx, by, Math.max(1.5, s(3)), INK); disc(g, bx, by, Math.max(1, s(2)), '#ffd1e4');
 }
-// Lady Di's owner: silver bouffant, magenta jacket, pearls
+// Lady Di's owner: a silver bouffant with sunglasses pushed up, magenta jacket, pearls
+const PREP_SILVER = ['#5b5a67', '#8f8c99', '#c4c1cc', '#e6e3ec', '#ffffff'], PREP_MAGENTA = ['#5a1650', '#8f2379', '#c23b9f', '#ef6cc4', '#ffb3e3'];
 function prepOwner(g, x, y, ex, t) {
-  const img = mdl('prepOwner', () => model(56, 64, [
-    { f: SD.smooth(4, SD.ellipse(28, 18, 17, 15), SD.ellipse(28, 8, 12, 9)), ramp: ['#5b5a67', '#8f8c99', '#c4c1cc', '#eceaf2', '#ffffff'], z: 0, th: 10 },
-    { f: SD.box(28, 58, 19, 14, 7), ramp: RAMP.pink, z: 1, th: 10 },
-    { f: SD.box(28, 40, 4, 5, 2), ramp: RAMP.skin, z: 1.5, th: 3 },
-    { f: SD.smooth(3, SD.ellipse(28, 26, 11, 13), SD.ellipse(28, 32, 8, 7)), ramp: RAMP.skin, z: 2, th: 8 },
-    { f: SD.sub(SD.ellipse(28, 16, 13, 9), SD.ellipse(28, 27, 12, 12)), ramp: ['#5b5a67', '#8f8c99', '#c4c1cc', '#eceaf2', '#ffffff'], z: 3, th: 6 },
-  ], { post: c => { for (let i = 0; i < 9; i++) { const a = .5 + i / 8 * 2.14; disc(c, 28 + Math.cos(a) * 11, 44 + Math.sin(a) * 5, 1.3, '#fffaf0'); } } }));
-  drawS(g, img, x, y + Math.sin(t * 2) * 1, { ax: .5, ay: .55 });
-  const fx = rd(x), fy = rd(y + Math.sin(t * 2) * 1 - 10);
-  if (ex === 'happy') { px(g, fx - 5, fy, INK); px(g, fx - 4, fy - 1, INK); px(g, fx - 3, fy, INK); px(g, fx + 3, fy, INK); px(g, fx + 4, fy - 1, INK); px(g, fx + 5, fy, INK); hline(g, fx - 3, fx + 3, fy + 6, '#b3202e'); hline(g, fx - 2, fx + 2, fy + 7, '#b3202e'); }
-  else { rect(g, fx - 5, fy - 1, 2, 3, INK); rect(g, fx + 3, fy - 1, 2, 3, INK); linePx(g, fx - 6, fy - 3, fx - 3, fy - 4, INK); linePx(g, fx + 6, fy - 3, fx + 3, fy - 4, INK); hline(g, fx - 2, fx + 2, fy + 6, '#b3202e'); }
+  // a neat silver bun with soft waves framing the face, pearls, red lips, magenta jacket
+  const img = mdl('prepOwner3', () => model(60, 66, [
+    { f: SD.ellipse(30, 6, 7, 6), ramp: PREP_SILVER, z: 0, th: 8 },
+    { f: SD.smooth(4, SD.ellipse(30, 19, 14, 11), SD.union(SD.ellipse(18, 27, 6, 9), SD.ellipse(42, 27, 6, 9))), ramp: PREP_SILVER, z: .5, th: 10 },
+    { f: SD.box(30, 58, 21, 12, 7), ramp: PREP_MAGENTA, z: 1, th: 10 },
+    { f: SD.poly([[23, 47], [37, 47], [30, 57]]), ramp: ['#c8c6d3', '#e6e3ec', '#ffffff', '#ffffff', '#ffffff'], z: 1.2, th: 3 },
+    { f: SD.box(30, 42, 4, 5, 2), ramp: RAMP.skin, z: 1.5, th: 3 },
+    { f: SD.smooth(3, SD.ellipse(30, 28, 10, 12), SD.ellipse(30, 34, 7, 6)), ramp: RAMP.skin, z: 2, th: 8 },
+    { f: SD.sub(SD.ellipse(30, 17, 13, 7), SD.ellipse(30, 27, 12, 9)), ramp: PREP_SILVER, z: 3, th: 6 },
+  ], { post: (q) => {
+    // the waves: soft darker arcs through the hair, a band round the bun
+    for (const [cx, cy, r, a0, a1] of [[24, 17, 5, 3.3, 5.2], [36, 17, 5, 4.2, 6.1], [19, 26, 4, 1.8, 4.2], [41, 26, 4, 5.2, 7.6], [30, 12, 6, 3.6, 5.8]])
+      for (let a = a0; a < a1; a += .12) px(q, cx + Math.cos(a) * r, cy + Math.sin(a) * r, '#9896a4');
+    hline(q, 25, 35, 11, '#c23b9f'); hline(q, 26, 34, 12, '#8f2379');
+    for (let i = 0; i < 9; i++) { const a = .45 + i / 8 * 2.25; disc(q, 30 + Math.cos(a) * 9, 46 + Math.sin(a) * 4, 1.2, '#fffaf0'); px(q, 30 + Math.cos(a) * 9 - .5, 45.5 + Math.sin(a) * 4, '#ffffff'); }
+  } }));
+  const bob = Math.sin(t * 2), fx = rd(x), fy = rd(y + bob - 9);
+  drawS(g, img, x, y + bob, { ax: .5, ay: .55 });
+  if (ex === 'happy') { for (const ox of [-4, 4]) { px(g, fx + ox - 1, fy, INK); px(g, fx + ox, fy - 1, INK); px(g, fx + ox + 1, fy, INK); } rect(g, fx - 3, fy + 6, 7, 2, '#c0182e'); px(g, fx - 2, fy + 8, '#c0182e'); px(g, fx + 2, fy + 8, '#c0182e'); }
+  else { for (const ox of [-4, 4]) { rect(g, fx + ox - 1, fy - 1, 2, 3, INK); px(g, fx + ox - 1, fy - 1, '#ffffff'); } linePx(g, fx - 7, fy - 4, fx - 3, fy - 5, '#5b5a67'); linePx(g, fx + 7, fy - 4, fx + 3, fy - 5, '#5b5a67'); hline(g, fx - 2, fx + 2, fy + 6, '#c0182e'); hline(g, fx - 1, fx + 1, fy + 7, '#c0182e'); }
   rect(g, fx - 8, fy + 3, 3, 2, '#f29aa8'); rect(g, fx + 6, fy + 3, 3, 2, '#f29aa8');
+  disc(g, fx - 11, fy + 5, 1.2, '#fffaf0'); disc(g, fx + 11, fy + 5, 1.2, '#fffaf0'); // pearl earrings
 }
 
 // a clump of cut fur: three puffs and a couple of strands
@@ -10828,6 +11043,7 @@ defMG({
   update(g, dt) {
     const d = g.state === 'play' ? g.trk.update(dt) : 0;
     if (d) { g.min = g.start + g.trk.ang / TAU * 60; if (fl(g.min / 5) !== g._m5) { g._m5 = fl(g.min / 5); sfx('tick', { pitch: 1.2, vol: .5 }); } }
+    if (g.state === 'won') { g.min += (g.target - g.min) * Math.min(1, dt * 14); return; } // the hands click onto the appointment: it reads exactly 10:30
     if (g.state !== 'play') return;
     if (Math.abs(g.min - g.target) <= g.tol && (!IN.down || Math.abs(g.trk.vel) < .8)) {
       g.still += dt;
@@ -11079,8 +11295,9 @@ defMG({
     bigotesGauge(c, 192, 80, 12, g.heat, g.t, null); txt(c, 'TEMP', 226, 67, INK, { align: 'c', bold: true });
     txt(c, g.heat > .7 ? '¡QUEMA!' : g.heat > .4 ? 'CALIENTE' : 'OK', 226, 80, g.heat > .7 ? '#c02d45' : g.heat > .4 ? '#c38a21' : '#2a9a6a', { align: 'c' });
     // shots
-    panel(c, 8, 164, 166, 22, '#fff8e6', { r: 4 }); txt(c, 'DISPAROS', 16, 170, INK, { bold: true });
-    for (let i = 0; i < g.shots; i++) { const x = 104 + i * 16, on = i < g.hits; disc(c, x, 175, 6, INK); disc(c, x, 175, 5, on ? '#fff27a' : '#6b6977'); if (on) { px(c, x - 2, 173, '#ffffff'); px(c, x - 1, 173, '#ffffff'); } }
+    // (the bottom strip stays clear: the stage draws the little lives there)
+    panel(c, 8, 150, 150, 19, '#fff8e6', { r: 4 }); txt(c, 'DISPAROS', 15, 155, INK, { bold: true });
+    for (let i = 0; i < g.shots; i++) { const x = 98 + i * 14, on = i < g.hits, pop = on && g.t - g.shotT < .4 && i === g.hits - 1 ? 1.4 - (g.t - g.shotT) : 1; disc(c, x, 159, 6 * pop, INK); disc(c, x, 159, 5 * pop, on ? '#fff27a' : '#6b6977'); if (on) { px(c, x - 2, 157, '#ffffff'); px(c, x - 1, 157, '#ffffff'); } }
     // Don Bigotes runs the show from where he always peeks in (bottom right)
     const ev = g.t < g.sayUntil, line = BIGOTES_BOSS_LINES[g.ph], pose = ev ? g.sayPose : g.state === 'won' ? 'clear' : g.state === 'lost' ? 'over' : line[2];
     const hop = ev && g.t - g.sayT < .3 ? Math.sin((g.t - g.sayT) / .3 * Math.PI) * 4 : 0;
@@ -11266,8 +11483,8 @@ defMG({
     drawS(c, funcionario('inspector', g.mood), 70 + shake, 150, { ax: .5, ay: 1 });
     if (g.mood === 'angry') for (const s of [-1, 1]) { const k = (g.t * 2) % 1; disc(c, 70 + s * 18, 70 - k * 12, 3 + k * 3, '#ffffff'); }
     if (g.state === 'won' && g.t - g.endT > .6) { const k = spring(g.t - g.endT - .6, 2.4, 6); drawS(c, hacScruffy(), 108, 146 - Math.abs(Math.sin(g.t * 6)) * 3, { ax: .5, ay: 1, s: 1.35 * Math.min(1.1, k) }); }
-    rect(c, 10, 140, 124, 36, INK); rect(c, 11, 141, 122, 34, RAMP.cream[3]); rect(c, 11, 141, 122, 3, RAMP.gold[2]);
-    for (const x of [20, 60, 100]) { rect(c, x, 148, 30, 22, RAMP.cream[2]); ringRect(c, x, 148, 30, 22, 1, RAMP.gold[1]); disc(c, x + 15, 159, 1.6, RAMP.gold[1]); }
+    rect(c, 10, 140, 124, 31, INK); rect(c, 11, 141, 122, 29, RAMP.cream[3]); rect(c, 11, 141, 122, 3, RAMP.gold[2]);
+    for (const x of [20, 60, 100]) { rect(c, x, 147, 30, 19, RAMP.cream[2]); ringRect(c, x, 147, 30, 19, 1, RAMP.gold[1]); disc(c, x + 15, 156, 1.6, RAMP.gold[1]); }
     // his last stamped form in hand
     if (g.t - g.stampT < .9 && g.stampT > 0) { const k = spring(g.t - g.stampT, 2.4, 7); drawS(c, modeloForm(g.used[g.used.length - 1] || '303'), 108, 118, { rot: .08, s: .7 + .3 * Math.min(1, k) }); drawS(c, hacStamp('APROBADO', '#2a9a5a'), 108, 118, { rot: -.2, s: .5 }); }
     // speech bubble
@@ -11281,11 +11498,12 @@ defMG({
     txt(c, say, bx + 8, by + 8, INK, { wrap: bw - 14 });
     // rounds: little forms, stamped ones get a tick
     for (let i = 0; i < g.rounds; i++) { const x = 140 + i * 18, y = 118; rect(c, x, y, 13, 16, INK); rect(c, x + 1, y + 1, 11, 14, i < g.round ? '#d2f5e4' : '#fdfbf5'); if (i < g.round) { linePx(c, x + 3, y + 8, x + 5, y + 11, '#2a9a5a'); linePx(c, x + 5, y + 11, x + 10, y + 4, '#2a9a5a'); } }
-    // patience meter
-    panel(c, 64, 170, 186, 18, '#fff8e6', { r: 4 });
-    txt(c, 'PACIENCIA', 70, 175, INK, { bold: true });
-    const w = rd(clamp(g.patience, 0, 100) * 1.08), col = g.patience > 55 ? '#5bd18b' : g.patience > 25 ? '#ffb020' : '#e23b4e';
-    rect(c, 134, 174, 110, 10, INK); rect(c, 135, 175, 108, 8, '#dce7ea'); rect(c, 135, 175, w, 8, col); rect(c, 135, 175, w, 2, '#ffffff');
+    // patience meter (right column, clear of the stage's little lives at the bottom)
+    const pshake = g.patience < 25 && g.state === 'play' ? Math.sin(g.t * 50) : 0;
+    panel(c, 138, 140, 112, 28, '#fff8e6', { r: 4 });
+    txt(c, 'PACIENCIA', 144, 144, INK, { bold: true });
+    const w = rd(clamp(g.patience, 0, 100) * .98), col = g.patience > 55 ? '#5bd18b' : g.patience > 25 ? '#ffb020' : '#e23b4e';
+    rect(c, 144 + pshake, 155, 100, 9, INK); rect(c, 145 + pshake, 156, 98, 7, '#dce7ea'); rect(c, 145 + pshake, 156, w, 7, col); rect(c, 145 + pshake, 156, w, 2, '#ffffff');
     if (g.state === 'won' && g.t - g.endT < .75) { const k = spring(g.t - g.endT, 2.4, 6); drawS(c, hacStamp('¡APROBADO!', '#2a9a5a'), 96, 96, { rot: -.12, s: lerp(2.2, 1, Math.min(1, k)), alpha: g.t - g.endT > .55 ? (.75 - (g.t - g.endT)) / .2 : 1 }); }
     if (g.state === 'lost') { const k = spring(g.t - g.endT, 2.4, 6); drawS(c, hacStamp('¡MULTA!', '#e0283c'), 128, 96, { rot: .1, s: lerp(2.4, 1.2, Math.min(1, k)) }); }
   },
@@ -11463,12 +11681,38 @@ function cenizaHalo(c, img, x, y, t, col = '#ffffff', o = {}) {
   drawS(c, cenizaRing(img, col), x + (ax - .5) * 4 * s * (o.flip ? -1 : 1), y + (ay - .5) * 4 * s, Object.assign({}, o, { alpha: .4 + k * .6 }));
 }
 // a big word stamped on the screen (success / failure), springing in
+const CENIZA_WIN_FILL = ['#ffffff', '#d2f5e4', '#5bd18b'], CENIZA_BAD_FILL = ['#ffffff', '#d7dde8', '#7b8398'], CENIZA_PINK_FILL = ['#ffffff', '#ffd1e4', '#ff5d9e'];
+const CENIZA_PUAJ_FILL = ['#ffffff', '#e5f7a0', '#8ec63f'], CENIZA_WATER_FILL = ['#ffffff', '#dff4ff', '#5aaee6'], CENIZA_GOLD_FILL = ['#ffffff', '#fff7ae', '#e2b21b'], CENIZA_LILAC_FILL = ['#ffffff', '#e5d3fa', '#8959c5'];
+// Every Ceniza microgame ends on her gothic card lettering (green glow and all),
+// tinted per game; a miss fizzles out in grey. The letters condense out of smoke
+// like her name on the card, and stars and smoke burst out as they land.
+const CENIZA_STAMP_FACES = {};
+const cenizaStampBad = fill => fill === CENIZA_BAD_FILL || fill === CENIZA_PUAJ_FILL;
+function cenizaStampFace(fill) {
+  fill = fill || CENIZA_PINK_FILL; const key = fill.join('');
+  if (CENIZA_STAMP_FACES[key]) return CENIZA_STAMP_FACES[key];
+  const F = CARD_WITCH_FACE, bad = cenizaStampBad(fill);
+  return (CENIZA_STAMP_FACES[key] = Object.assign({}, F, { id: 'czSt' + key, fill }, bad ? { line2: '#44424f', glow: null } : {}));
+}
 function cenizaStamp(c, word, x, y, t, fill) {
   if (t < 0) return;
-  const s = spring(t, 2.6, 6), st = fitMord(word, 230, { u: 1.9, r: 2.1, rim: 2, sy: 3, fill: fill || ['#ffffff', '#ffd1e4', '#ff5d9e'] });
-  mord(c, word, x, y, st, { anim: (i) => ({ s: Math.max(0, spring(t - i * .03, 2.6, 7)) * s, rot: Math.sin(t * 6 + i) * .04 }) });
+  fill = fill || CENIZA_PINK_FILL;
+  if (typeof cardWord !== 'function') { const st = fitMord(word, 230, { u: 1.9, r: 2.1, rim: 2, sy: 3, fill }); mord(c, word, x, y, st, { anim: i => ({ s: Math.max(0, spring(t - i * .03, 2.6, 7)) }) }); return; }
+  const bad = cenizaStampBad(fill), st = cardFit(word, 224, cenizaStampFace(fill));
+  if (t < .7) { const k = E.outQ(t / .7), n = 14;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + word.length, r = 10 + k * 62, px0 = x + Math.cos(a) * r * 1.5, py0 = y + 11 + Math.sin(a) * r * .55;
+      if (bad) disc(c, px0, py0, Math.max(0, 4 * (1 - k)), i % 2 ? '#7b8398' : '#b3b8d4');
+      else if (i % 2) drawStar(c, px0, py0, Math.max(0, 3.2 * (1 - k)), fill[1]); else disc(c, px0, py0, Math.max(0, 3.6 * (1 - k)), 'rgba(191,149,233,.7)'); } }
+  cardWord(c, word, x, y, st, { anim: i => { const lt = t - i * .05; if (lt <= 0) return { s: 0 }; const k = E.outC(clamp(lt / .28, 0, 1)); return { s: lerp(1.6, 1, k), a: k, rot: (1 - k) * .3 }; } });
 }
-const CENIZA_WIN_FILL = ['#ffffff', '#d2f5e4', '#5bd18b'], CENIZA_BAD_FILL = ['#ffffff', '#d7dde8', '#7b8398'];
+// letter by letter, from the room, so the stamps never hitch
+const CENIZA_STAMPS = [['¡OLÉ!', CENIZA_PINK_FILL], ['¡PUAJ!', CENIZA_PUAJ_FILL], ['¡PERFECTO!', CENIZA_WIN_FILL], ['¡GUAPÍSIMA!', CENIZA_PINK_FILL], ['¡GUAPÍSIMAS!', CENIZA_PINK_FILL], ['¡AL AGUA!', CENIZA_WATER_FILL], ['¡A PASEAR!', CENIZA_WIN_FILL], ['¡MAGIA!', CENIZA_GOLD_FILL], ['¡SE ESCAPAN!', CENIZA_BAD_FILL], ['¡A DORMIR!', CENIZA_LILAC_FILL], ['¡PILLADO!', CENIZA_WIN_FILL], ['¡PÓCIMA PERFECTA!', CENIZA_PINK_FILL], ['¡BUUUM!', CENIZA_BAD_FILL]];
+function cenizaStampWarm() {
+  if (typeof cardPrewarm !== 'function' || cenizaStampWarm.done) return;
+  const list = CENIZA_STAMPS.map(([w, f]) => [w, cardFit(w, 224, cenizaStampFace(f))]);
+  cardPrewarm(list);
+  if (list.every(([w, st]) => [...w].every(ch => ch === ' ' || CARD_GLYPHS.has(ch + '|' + cardStyle(st).id + '|' + cardStyle(st).u + '|' + cardStyle(st).r + '|')))) cenizaStampWarm.done = 1;
+}
 // Keiko in profile: the westie body plus her Westie-green bandana (cached)
 function cenizaKeikoSpr(k, pose, mood) {
   return mdl('cz:keikoSide' + k + pose + mood, () => {
@@ -11575,7 +11819,7 @@ defMG({
       drawS(c, cenizaIngIcon(it.id), it.x, it.y, { s: 1 + it.sq * .25 - it.back * .15, rot: Math.sin(it.wob) * .08 });
     }
     if (g.state === 'won') cenizaStamp(c, '¡OLÉ!', P.x, 70, g.t - g.stampT);
-    if (g.state === 'lost' && g.stampT >= 0) cenizaStamp(c, '¡PUAJ!', P.x, 70, g.t - g.stampT, ['#ffffff', '#e5f7a0', '#8ec63f']);
+    if (g.state === 'lost' && g.stampT >= 0) cenizaStamp(c, '¡PUAJ!', P.x, 70, g.t - g.stampT, CENIZA_PUAJ_FILL);
   },
   // the recipe card, on the top screen
   top(g, c) {
@@ -11794,7 +12038,8 @@ defMG({
       const b = g.held; cenizaFollow(b, dt, .6);
       if (IN.rel || !IN.down) {
         g.held = null;
-        const d = g.dogs.find(d => !d.bow && dist(b.x, b.y, this.headOf(d).x, this.headOf(d).y) < 20);
+        const snap = 20 * clamp(Math.pow(g.tempo || 1, .3), 1, 1.25); // a touch more forgiving when everything is flying
+        const d = g.dogs.find(d => !d.bow && dist(b.x, b.y, this.headOf(d).x, this.headOf(d).y) < snap);
         if (d) {
           d.bow = b; b.on = d; d.happy = 1.2; b.sq = 1; sfx('sparkle'); sfx('bark', { pitch: 1.3, delay: .08 }); HITSTOP = 3; buzz(8);
           const h = this.headOf(d); g.fx.burst(h.x, h.y, 14, { k: 'star', c: ['#fff27a', '#ffffff', '#ffd1e4'], sp0: 40, sp1: 120 });
@@ -11831,8 +12076,9 @@ defMG({
       cenizaBotGrab(b, bow.x, bow.y); return b;
     }
     const d = g.dogs.find(d => !d.bow); const h = this.headOf(d);
-    const lead = d.stopT > 0 ? 0 : d.v * .15;
-    if (cenizaBotMove(b, h.x + lead, h.y, 5.5) && dist(g.held.x, g.held.y, h.x, h.y) < 10) { b.down = false; b.wait = .15 / b.k; }
+    const nearEdge = (d.v > 0 && d.x > 200) || (d.v < 0 && d.x < 104); // about to turn round: don't lead
+    const lead = d.stopT > 0 || nearEdge ? 0 : d.v * .08;
+    if (cenizaBotMove(b, h.x + lead, h.y, 5.5) && dist(g.held.x, g.held.y, h.x, h.y) < 11) { b.down = false; b.wait = .15 / b.k; }
     return b;
   },
 });
@@ -11934,7 +12180,7 @@ defMG({
       }
       if (g.held && g.warn > 0) { c.globalAlpha = g.warn; panel(c, d.x - 30, d.y - 80, 60, 14, '#ffffff', { r: 4 }); txt(c, '¡Despacio!', d.x, d.y - 76, '#c02d45', { align: 'c', bold: true }); c.globalAlpha = 1; }
     }
-    if (g.state === 'won') cenizaStamp(c, '¡AL AGUA!', 128, 22, g.t - g.stampT, ['#ffffff', '#dff4ff', '#5aaee6']);
+    if (g.state === 'won') cenizaStamp(c, '¡AL AGUA!', 128, 22, g.t - g.stampT, CENIZA_WATER_FILL);
   },
   hint(g) { const d = g.dog; return { x: d.x, y: d.y - 24, path: [[d.x, d.y - 24], [118, d.y - 70], [g.tub.x - 6, g.tub.y - 34]] }; },
   bot(g) {
@@ -12183,7 +12429,7 @@ defMG({
     // the stars she still needs
     panel(c, 6, 170, 14 + g.need * 14, 18, '#1b1627', { r: 5 });
     for (let i = 0; i < g.need; i++) { const x = 17 + i * 14, on = i < g.got; drawStar(c, x + 1, 180, 5.5, INK); drawStar(c, x, 179, 5, on ? '#ffdf4f' : '#40395e'); }
-    if (g.state === 'won') cenizaStamp(c, '¡MAGIA!', 128, 60, g.t - g.stampT, ['#ffffff', '#fff7ae', '#e2b21b']);
+    if (g.state === 'won') cenizaStamp(c, '¡MAGIA!', 128, 60, g.t - g.stampT, CENIZA_GOLD_FILL);
     if (g.state === 'lost' && g.stampT >= 0) cenizaStamp(c, '¡SE ESCAPAN!', 128, 60, g.t - g.stampT, CENIZA_BAD_FILL);
   },
   hint(g) { const s = g.stars.find(s => !s.got && !s.lost); const Cc = g.cat; return { x: Cc.x, y: Cc.y, to: s ? [s.x, Math.min(140, s.y + 30)] : [Cc.x + 50, Cc.y - 30] }; },
@@ -12352,7 +12598,7 @@ defMG({
       if (!p.in && !held) { shadowOval(c, p.x, p.y + 15, 11, 2.5, .3); if (!g.held && g.state === 'play') cenizaHalo(c, img, p.x, y, g.t + p.hop * .1, '#ffffff', o); }
       drawS(c, img, p.x, y, o);
     }
-    if (g.state === 'won') cenizaStamp(c, '¡A DORMIR!', 128, 100, g.t - g.stampT, ['#ffffff', '#e5d3fa', '#8959c5']);
+    if (g.state === 'won') cenizaStamp(c, '¡A DORMIR!', 128, 100, g.t - g.stampT, CENIZA_LILAC_FILL);
   },
   hint(g) { const p = g.pets.find(q => !q.in); if (!p) return null; const B = g.bask[p.kind]; return { x: p.x, y: p.y, to: [B.x, B.y - 10] }; },
   bot(g) {
@@ -12935,8 +13181,8 @@ defMG({
     const w = rd(g.cov / g.need * 58); rect(c, 186, SH - 22, 60, 7, INK); rect(c, 187, SH - 21, 58, 5, '#3a4a42'); rect(c, 187, SH - 21, Math.min(58, w), 5, g.cov >= g.need ? '#5bd18b' : '#fff27a');
     if (g.cov > .6 && g.state === 'play') txt(c, '¡Casi!', 216, SH - 34, '#fff27a', { align: 'c', out: '#1b2420' });
     hermanasPeek(c, 'kira', 26, 170, g);
-    if (g.state === 'won') mord(c, '¡PRECIOSO!', 132, 150, { u: 1.2, r: 1.3, rim: 1, sy: 1 }, { anim: i => ({ s: Math.max(0, spring(g.t - g.decidedAt - i * .04, 2.5, 7)) }) });
-    if (g.state === 'lost') shout(c, '¡UY, SIN TERMINAR!', 132, 150, g.t - g.decidedAt);
+    if (g.state === 'won') hermanasStamp(c, '¡PRECIOSO!', 142, 142, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡A MEDIAS!', 142, 142, g.t - g.decidedAt, false);
   },
   hint(g) { const n = g.dots.length, P = g.dots.slice(0, Math.ceil(n * .45)).map(d => [d.x, d.y]); return { x: P[0][0], y: P[0][1], mech: 'draw', path: P }; },
   bot(g) { if (!g.plan) g.plan = [g.dots.map(d => [d.x, d.y]).concat([[g.dots[0].x, g.dots[0].y], [g.dots[1].x, g.dots[1].y]])]; return hermanasBot(g, g.plan, 5.2, .15); },
@@ -13075,8 +13321,8 @@ defMG({
     // point at the sheep that still needs a route
     const ld = g.sheep.find(s => !s.inPen && !s.path.length && !s.wet);
     if (g.state === 'play' && ld) { hermanasTarget(c, ld.x, ld.y, 16, g.t, '#ffffff'); if (g.t < 2 * g.spb) hermanasTag(c, ld.x, ld.y - 22, 'DESDE AQUÍ', '#fff27a'); }
-    if (g.state === 'lost' && g.sheep.some(s => s.wet)) shout(c, '¡PLOF!', g.pondE.x, g.pondE.y - 30, g.t - g.decidedAt);
-    if (g.state === 'won') shout(c, '¡A SALVO!', HERMANAS_PEN.x + 20, 44, g.t - g.decidedAt);
+    if (g.state === 'lost' && g.sheep.some(s => s.wet)) hermanasStamp(c, '¡PLOF!', clamp(g.pondE.x, 60, 196), clamp(g.pondE.y - 46, 12, 140), g.t - g.decidedAt, false);
+    if (g.state === 'won') hermanasStamp(c, '¡A SALVO!', 112, 16, g.t - g.decidedAt);
   },
   hint(g) { const s = g.sheep[0], gm = (HERMANAS_PEN.gate0 + HERMANAS_PEN.gate1) / 2, P = [[s.x, s.y]]; if (g.pond) P.push([s.x + 40, s.y < 120 ? 80 : 164], [150, s.y < 120 ? 82 : 162]); P.push([HERMANAS_PEN.x - 14, gm - 6], [HERMANAS_PEN.x + 26, gm - 6]); return { x: s.x, y: s.y, mech: 'draw', path: P }; },
   bot(g) {
@@ -13185,7 +13431,7 @@ defMG({
       for (let i = 0; i < P.length; i++) disc(c, P[i][0], P[i][1], col ? 1.7 : 1, col ? col[0] : '#ffffff');
     }
     if (g.bad) { const k = g.t - g.bad.t; if (fl(k * 12) % 2 === 0) thickLine(c, g.bad.a[0], g.bad.a[1], g.bad.b[0], g.bad.b[1], 1.5, '#ff4060'); shout(c, '¡NO ES SU COLOR!', 140, 40, k); }
-    if (g.state === 'won') shout(c, '¡A PASEAR!', 140, 40, g.t - g.decidedAt);
+    if (g.state === 'won') hermanasStamp(c, '¡A PASEAR!', 140, 22, g.t - g.decidedAt);
   },
   hint(g) { const d = g.dogs[0], h = g.hooks.find(h => h.ci === d.ci), [x0, y0] = this.anchorD(d), [x1, y1] = this.anchorH(h); return { x: x0, y: y0, mech: 'draw', path: [[x0, y0], [(x0 + x1) / 2, (y0 + y1) / 2 + 8], [x1, y1]] }; },
   bot(g) {
@@ -13274,8 +13520,8 @@ defMG({
     // countdown on the platform: 3, 2, 1… ¡YA!
     if (!b.live && !b.done) { const n = Math.ceil(left * 2); if (n > 0) txt(c, String(n), 30, 34 - (left * 2 % 1) * 4, '#ffffff', { align: 'c', out: INK, bold: true }); }
     else if (b.live && g.b < g.release + .5) txt(c, '¡YA!', 34, 32, '#fff27a', { align: 'c', out: INK, bold: true });
-    if (g.state === 'lost') shout(c, '¡PLOF!', 96, 140, g.t - g.decidedAt);
-    if (g.state === 'won') shout(c, '¡ÑAM!', mx - 30, my - 30, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡PLOF!', 96, 118, g.t - g.decidedAt, false);
+    if (g.state === 'won') hermanasStamp(c, '¡ÑAM!', clamp(mx - 30, 60, 196), clamp(my - 52, 12, 130), g.t - g.decidedAt);
   },
   hint(g) { const [mx, my] = this.mouth(g); return { x: 58, y: 72, mech: 'draw', path: [[58, 72], [100, 94], [mx - 14, my - 3]] }; },
   bot(g) {
@@ -13380,19 +13626,21 @@ defMG({
       const k = clamp((g.t - g.lasso.t) / .35, 0, 1), b = g.lasso.b, P = g.lasso.poly.map(([x, y]) => [lerp(x, b.x, k * .7), lerp(y, b.y, k * .7)]);
       for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; thickLine(c, p[0], p[1], q[0], q[1], 1.8, '#c0662c'); }
       if (g.t - g.lasso.t > .5) { const fk = clamp((g.t - g.lasso.t - .5) / .4, 0, 1); drawS(c, hermanasFrisbeeSpr('#ff6b3d', 18), lerp(b.x + 8, b.x + 34, fk), lerp(b.y, b.y + 14, fk) - Math.sin(fk * Math.PI) * 22, { rot: fk * 6 }); }
-      shout(c, '¡TE PILLÉ!', clamp(b.x, 50, 206), clamp(b.y - 36, 30, 160), g.t - g.lasso.t);
+      hermanasStamp(c, '¡TE PILLÉ!', clamp(b.x, 86, 170), clamp(b.y - 56, 12, 130), g.t - g.lasso.t);
     }
     if (g.miss) { const k = g.t - g.miss.t; if (fl(k * 10) % 2 === 0) for (let i = 0; i < g.miss.poly.length; i += 2) px(c, g.miss.poly[i][0], g.miss.poly[i][1], '#ff4060'); shout(c, '¡ESA NO!', SW / 2, 40, k); }
   },
   hint(g) { const th = g.birds[0]; const P = hermanasCirclePts(th.x, th.y + 2, 26, 20, -Math.PI / 2, 1.1); return { x: P[0][0], y: P[0][1], mech: 'draw', path: P }; },
   bot(g) {
     const th = g.birds[0];
+    // like a person, it draws faster (and a bit wider) when the tempo climbs, and aims where she'll be when the loop closes
+    const hk = clamp(Math.pow(g.tempo || 1, .6), 1, 1.6), spd = 12 * hk, R = 30 + (hk - 1) * 10;
     if (!g.plan || (g._bot && g._bot.done && g.state === 'play')) {
-      const d = dist(th.x, th.y, th.tx, th.ty), sp = g.speed * 1.2 * .32, k = d > 1 ? Math.min(1, sp / d) : 0;
+      const T = TAU * R * 1.15 / spd / 60 + .05, d = dist(th.x, th.y, th.tx, th.ty), sp = g.speed * 1.2 * T, k = d > 1 ? Math.min(1, sp / d) : 0;
       const cx0 = th.x + (th.tx - th.x) * k, cy0 = th.y + (th.ty - th.y) * k;
-      g.plan = [hermanasCirclePts(cx0, cy0 + 2, 30, 30, -Math.PI / 2, 1.15)]; g._bot = null;
+      g.plan = [hermanasCirclePts(cx0, cy0 + 2, R, 30, -Math.PI / 2, 1.15)]; g._bot = null;
     }
-    return hermanasBot(g, g.plan, 12, .1);
+    return hermanasBot(g, g.plan, spd, .1);
   },
 });
 
@@ -13448,13 +13696,14 @@ defMG({
     g.impact = [5.4, 5.0, 4.8][g.level - 1]; // beat when the wave reaches the castles
     g.waveY = 34; g.st = hermanasStrokes(); g.layer = mkCanvas(SW, SH);
     g.cols = new Float32Array(SW).fill(999); // per column: the lowest wall point (999 = no wall)
-    g.hit = false; g.saved = false; g.flood = 0; g.recede = 0;
+    g.hit = false; g.saved = false; g.flood = 0; g.recede = 0; g.ebb = 0;
   },
   wallAt(g, x) { let y = 999; for (let d = -1; d <= 1; d++) { const v = g.cols[clamp(rd(x) + d, 0, SW - 1)]; if (v < 900 && (y > 900 || v > y)) y = v; } return y; },
   frontAt(g, x) { // where the water ends in this column
     let y = g.waveY + Math.sin(x * .09 + g.t * 5) * 3;
     const wy = this.wallAt(g, x);
-    if (wy < 900) y = Math.min(y, wy - 5); else if (g.hit && !g.saved) y = lerp(y, 190, g.flood);
+    if (wy < 900) y = Math.min(y, wy - 5);
+    else if (g.hit && !g.saved) { const surge = lerp(y, 182, E.outQ(g.flood)); y = lerp(surge, 58 + Math.sin(x * .09 + g.t * 5) * 3, E.ioQ(g.ebb)); } // crashes over the castle, then ebbs away
     return y;
   },
   update(g, dt) {
@@ -13484,7 +13733,7 @@ defMG({
         } else { for (const cs of g.castles) if (!cs.ok) cs.wrecked = true; g.lose(); sfx('splash'); sfx('whine', { delay: .3 }); g.shake(4, .3); }
       }
     }
-    if (g.hit && !g.saved) g.flood = Math.min(1, g.flood + dt * 1.8);
+    if (g.hit && !g.saved) { g.flood = Math.min(1, g.flood + dt * 1.8); if (g.flood >= 1) g.ebb = Math.min(1, g.ebb + dt * 1.1); }
   },
   draw(g, c) {
     c.drawImage(hermanasShoreBg(), 0, 0);
@@ -13504,14 +13753,17 @@ defMG({
       for (let x = cs.x - 6; x <= cs.x + cs.w + 6; x++) if (this.wallAt(g, x) > 900 && (x + ph) % 7 < 4) rect(c, x, y - 1, 1, 2, '#ffffff');
       if (g.t < 2.4 * g.spb && g.cols.every(v => v > 900)) hermanasTag(c, cs.x + cs.w / 2, y - 5, 'MURO AQUÍ', '#fff27a');
     }
+    // after the wave: a band of wet, darker sand where the water reached
+    if (g.hit && !g.saved && g.ebb > 0) { c.globalAlpha = .38 * Math.min(1, g.ebb * 3); for (let x = 0; x < SW; x += 2) { const y = rd(this.frontAt(g, x)); if (this.wallAt(g, x) > 900 && y < 182) rect(c, x, y + 2, 2, 182 - y, '#b98a52'); } c.globalAlpha = 1; }
     for (const cs of g.castles) drawS(c, hermanasCastleSpr(cs.w, cs.wrecked && g.flood > .45), cs.x - 4, cs.base + 3, { ax: 0, ay: 1 });
+    // the surge rolls over the castles before it ebbs
+    if (g.hit && !g.saved && g.ebb < 1) { c.globalAlpha = .8 * (1 - g.ebb); for (let x = 0; x < SW; x++) { const y = rd(this.frontAt(g, x)); if (y > 118) { c.fillStyle = '#3d8ad0'; c.fillRect(x, 118, 1, y - 121); c.fillStyle = '#ffffff'; c.fillRect(x, y - 3, 1, 3); } } c.globalAlpha = 1; }
     // Nala guarding her castle
     const nx = g.castles.length > 1 ? 128 : clamp(g.castles[0].x + g.castles[0].w + 26, 30, 226), mood = g.state === 'won' ? 'happy' : g.state === 'lost' ? 'sad' : 'wow';
     shadowOval(c, nx, 186, 16, 2.5, .35);
     drawS(c, hermanasAussieSide('nala', g.state === 'won' ? 'jump' : 'stand', mood, .55), nx, 186 - (g.state === 'won' ? Math.abs(Math.sin(g.t * 8)) * 6 : 0), { ax: .5, ay: 1, flip: true });
-    if (g.hit && !g.saved) { c.globalAlpha = .5 * g.flood; for (const cs of g.castles) if (cs.wrecked) rect(c, cs.x - 8, 120, cs.w + 16, 72, '#5aaee6'); c.globalAlpha = 1; }
-    if (g.state === 'won') shout(c, '¡SALVADO!', 128, 58, g.t - g.decidedAt);
-    if (g.state === 'lost') shout(c, '¡NOOOO!', 128, 58, g.t - g.decidedAt);
+    if (g.state === 'won') hermanasStamp(c, '¡SALVADO!', 128, 44, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡NOOOO!', 128, 44, g.t - g.decidedAt, false);
   },
   hint(g) { const a = g.castles[0], b = g.castles[g.castles.length - 1], y = a.top - 18; return { x: a.x - 6, y, mech: 'draw', path: [[a.x - 6, y], [b.x + b.w + 6, y]] }; },
   bot(g) { if (!g.plan) { const a = g.castles[0], b = g.castles[g.castles.length - 1], y = a.top - 16; g.plan = [[[a.x - 10, y], [b.x + b.w + 10, y]]]; } return hermanasBot(g, g.plan, 6, .15); },
@@ -13587,8 +13839,8 @@ defMG({
     // Kira supervising from the corner
     shadowOval(c, 34, 186, 16, 2.5, .35);
     drawS(c, hermanasAussieSide('kira', g.state === 'won' ? 'jump' : 'stand', g.state === 'won' ? 'happy' : g.state === 'lost' ? 'sad' : 'normal', .55), 34, 186, { ax: .5, ay: 1 });
-    if (g.state === 'won') mord(c, P.name, 140, 160, fitMord(P.name, 200, { u: 1.2, r: 1.3, rim: 1, sy: 1 }), { anim: i => ({ s: Math.max(0, spring(g.t - g.decidedAt - i * .04, 2.5, 7)) }) });
-    if (g.state === 'lost') shout(c, '¡NO HA DADO TIEMPO!', 140, 160, g.t - g.decidedAt);
+    if (g.state === 'won') hermanasStamp(c, P.name, 142, 152, g.t - g.decidedAt, true, 190);
+    if (g.state === 'lost') hermanasStamp(c, '¡SIN TIEMPO!', 142, 152, g.t - g.decidedAt, false);
   },
   hint(g) { const P = g.dots.slice(0, 3).map(d => [d.x, d.y]); return { x: P[0][0], y: P[0][1], mech: 'draw', path: P }; },
   bot(g) { if (!g.plan) g.plan = [g.dots.map(d => [d.x, d.y])]; return hermanasBot(g, g.plan, 7, .1); },
@@ -13712,8 +13964,8 @@ defMG({
     shadowOval(c, kx, ky + 2, 12, 2.5, .45);
     drawS(c, hermanasChibi(fr), kx, ky + 2, { ax: .5, ay: 1, flip: g.walk && g.okPath && this.heading(g) < 0 });
     if (g.state === 'play' && g.t < 2.2 * g.spb && !g.st.cur) hermanasTag(c, sx + 30, sy - 14, 'EMPIEZA AQUÍ', '#fff27a');
-    if (g.state === 'won' && g.walk && g.walk.d > 60) shout(c, '¡AL PARQUE!', 128, 24, g.t - g.decidedAt);
-    if (g.state === 'lost') shout(c, '¡NO HEMOS LLEGADO!', 128, 24, g.t - g.decidedAt);
+    if (g.state === 'won' && g.walk && g.walk.d > 60) hermanasStamp(c, '¡AL PARQUE!', 128, 12, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡NO LLEGAMOS!', 128, 12, g.t - g.decidedAt, false);
   },
   pathLen(g) { let L = 0; const P = g.okPath || []; for (let i = 1; i < P.length; i++) L += dist(P[i - 1][0], P[i - 1][1], P[i][0], P[i][1]); return L; },
   heading(g) { let d = g.walk.d; const P = g.okPath; for (let i = 1; i < P.length; i++) { const L = dist(P[i - 1][0], P[i - 1][1], P[i][0], P[i][1]); if (d <= L) return Math.sign(P[i][0] - P[i - 1][0]) || 1; d -= L; } return 1; },
@@ -13925,7 +14177,7 @@ defMG({
         }
       }
     }
-    if (g.st.cur && !g.owner) for (let i = 1; i < g.st.cur.length; i++) thickLine(c, g.st.cur[i - 1][0], g.st.cur[i - 1][1], g.st.cur[i][0], g.st.cur[i][1], 1.2, '#ffffff');
+    if (g.st.cur && !g.owner && g.state === 'play') for (let i = 1; i < g.st.cur.length; i++) thickLine(c, g.st.cur[i - 1][0], g.st.cur[i - 1][1], g.st.cur[i][0], g.st.cur[i][1], 1.2, '#ffffff');
     // the gull (on this screen)
     if (G.y > -40) {
       shadowOval(c, G.x, 150 + (G.y - 92) * .2, 16, 3, clamp((G.y + 30) / 150, .15, .4));
@@ -13947,6 +14199,8 @@ defMG({
       for (let i = 0; i < P.length; i += 1) { const p = P[i], q = P[(i + 1) % P.length]; thickLine(c, p[0], p[1], q[0], q[1], 2, '#c0662c'); }
       if (g.t - g.lasso.t < .5) shout(c, '¡ZAS!', clamp(G.x, 40, 216), clamp(G.y - 36, 22, 170), g.t - g.lasso.t);
     }
+    if (g.state === 'won') hermanasStamp(c, '¡ATRAPADO!', 128, 30, g.t - g.decidedAt);
+    if (g.state === 'lost') hermanasStamp(c, '¡SIN BOCATAS!', 128, 30, g.t - g.decidedAt, false);
     if (g.msg && g.t - g.msg.t < g.msg.dur) { const k = E.outBack(clamp((g.t - g.msg.t) / .2, 0, 1)); g.msg.w = g.msg.w || txtW(g.msg.s) + 14; panel(c, SW / 2 - g.msg.w / 2, rd(4 - (1 - k) * 20), g.msg.w, 15, '#ffffff', { r: 4 }); txt(c, g.msg.s, SW / 2, rd(8 - (1 - k) * 20), INK, { align: 'c' }); }
   },
   top(g, c) {
@@ -14383,12 +14637,13 @@ defMG({
     { i: 'bass', v: .85, n: 'A2 A3 A2 A3 A2 A3 A2 A3 B2 B3 B2 B3 B2 B3 B2 B3 C#3 C#4 C#3 C#4 C#3 C#4 C#3 C#4 E2 E3 E2 E3 E2 E3 E2 E3' },
     { i: 'd', v: .8, n: 'k h c h k h c h k h c h k h c c k h c h k h c h k h c h k c c c' }] }),
   init(g) {
-    g.need = [3, 4, 5][g.level - 1]; g.bows = [0, 1, 3][g.level - 1]; g.sliced = 0; g.objs = []; g.halves = []; g.nextT = .05; g.bowsLeft = g.bows; g.combo = 0;
+    g.need = Math.round([3, 4, 5][g.level - 1] / Math.pow(Math.max(1, g.tempo / 1.3), .75)); g.bows = [0, 1, 3][g.level - 1]; g.sliced = 0; g.objs = []; g.halves = []; g.nextT = .05; g.bowsLeft = g.bows; g.combo = 0;
     g.blade = pomponBlade();
+    g.grav = 520 * g.tempo * g.tempo; // speed ∝ tempo, gravity ∝ tempo²: the same arc, just quicker (it never flies off the top)
   },
   toss(g, kind) {
-    const x = g.r(46, 210), tx = clamp(x + g.r(-60, 60), 46, 210), up = g.r(360, 420) * Math.sqrt(g.tempo);
-    const T = 2 * up / 520; g.objs.push({ kind, x, y: SH + 14, vx: (tx - x) / T, vy: -up, rot: 0, vr: g.r(-4, 4), v: g.ri(0, 2), dead: false, born: g.t });
+    const x = g.r(46, 210), tx = clamp(x + g.r(-60, 60), 46, 210), up = g.r(360, 420) * g.tempo;
+    const T = 2 * up / g.grav; g.objs.push({ kind, x, y: SH + 14, vx: (tx - x) / T, vy: -up, rot: 0, vr: g.r(-4, 4), v: g.ri(0, 2), dead: false, born: g.t });
     sfx('boing', { pitch: kind === 'bow' ? 2 : 1.3, vol: .25 });
   },
   update(g, dt) {
@@ -14401,7 +14656,7 @@ defMG({
     }
     for (const o of g.objs) {
       if (o.dead) continue;
-      o.vy += 520 * dt; o.x += o.vx * dt; o.y += o.vy * dt; o.rot += o.vr * dt;
+      o.vy += g.grav * dt; o.x += o.vx * dt; o.y += o.vy * dt; o.rot += o.vr * dt;
       if (o.y > SH + 30 && o.vy > 0) o.dead = true;
       if (g.state !== 'play') continue;
       const r = o.kind === 'bow' ? 12 : 16;
@@ -14440,12 +14695,18 @@ defMG({
   },
   hint(g) { const o = g.objs.find(o => !o.dead && o.kind === 'knot'); const x = o ? clamp(o.x + o.vx * .5, 50, 206) : 128, y = 80; return { mech: 'cut', x, y, path: [[x - 24, y - 14], [x + 24, y + 14]] }; },
   bot(g) {
-    const o = g.objs.filter(o => !o.dead && o.kind === 'knot' && o.y < SH - 10 && o.y > 10).sort((a, b) => a.vy - b.vy)[0];
+    // a knot on screen with no bow close to it (the youngest first), sliced with a short swipe that leads it
+    const safe = o => !g.objs.some(b => !b.dead && b.kind === 'bow' && dist(b.x, b.y, o.x, o.y) < 38);
+    const o = g.objs.filter(o => !o.dead && o.kind === 'knot' && o.y < SH - 10 && o.y > 10 && safe(o)).sort((a, b) => a.vy - b.vy)[0];
     if (!o) return { down: false };
-    const bow = g.objs.find(b => !b.dead && b.kind === 'bow' && dist(b.x, b.y, o.x, o.y) < 38); if (bow) return { down: false };
-    const ph = (g._p = (g._p || 0) + 1) % 8;
-    if (ph < 2) return { x: o.x - 16, y: o.y - 10, down: false };
-    const q = (ph - 2) / 5; return { x: o.x - 16 + q * 32 + o.vx * STEP * ph, y: o.y - 10 + q * 20 + o.vy * STEP * ph, down: true };
+    if (o !== g._tgt) { g._tgt = o; g._p = 0; return { down: false }; } // lift the finger before moving to a new knot
+    const ph = (g._p = (g._p || 0) + 1) % 8, lead = STEP * ph, at = (b, l) => [b.x + b.vx * l, b.y + b.vy * l + .5 * g.grav * l * l];
+    const [px0, py0] = at(o, lead);
+    if (ph < 2) return { x: px0 - 16, y: py0 - 10, down: false };
+    // never swipe through a bow: check the stroke against where every bow will be
+    const segD = (x, y, ax, ay, bx, by) => { const vx = bx - ax, vy = by - ay, L = vx * vx + vy * vy || 1, k = clamp(((x - ax) * vx + (y - ay) * vy) / L, 0, 1); return dist(x, y, ax + vx * k, ay + vy * k); };
+    if (g.objs.some(b => { if (b.dead || b.kind !== 'bow') return false; const [bx, by] = at(b, lead); return segD(bx, by, px0 - 16, py0 - 10, px0 + 16, py0 + 10) < 24; })) { g._p = 0; return { down: false }; }
+    const q = (ph - 2) / 5; return { x: px0 - 16 + q * 32, y: py0 - 10 + q * 20, down: true };
   },
 });
 
@@ -14914,7 +15175,9 @@ defMG({
     const L = g.state === 'won' ? 'go' : this.light(g), on = L === 'go' ? '#5bd18b' : L === 'almost' ? '#ffdf4f' : '#ff4060';
     panel(c, 188, 24, 60, 62, '#2b2540', { r: 6, line: INK });
     for (const [y, col, lit] of [[40, '#ff4060', L === 'wait'], [58, '#ffdf4f', L === 'almost'], [76, '#5bd18b', L === 'go']]) { disc(c, 204, y, 7, INK); disc(c, 204, y, 6, lit ? col : mixHex(col, '#20162e', .7)); if (lit) { disc(c, 202, y - 2, 2, '#ffffff'); c.globalAlpha = .25; disc(c, 204, y, 12, col); c.globalAlpha = 1; } }
-    txt(c, L === 'go' ? '¡YA!' : L === 'almost' ? '¿...?' : 'ESPERA', 231, 52, on, { align: 'c', bold: true, out: INK });
+    // the cue word sits inside the box, beside its light
+    if (L === 'wait') { rect(c, 214, 36, 29, 9, INK); tiny(c, 'ESPERA', 229, 38, on); }
+    else txt(c, L === 'go' ? '¡YA!' : '¿…?', 229, L === 'go' ? 70 : 52, on, { align: 'c', bold: true, out: INK });
     // Keiko runs the show tonight: headset on, she calls the cue
     const kx = 222, ky = 180, kex = g.state === 'won' ? 'star' : g.state === 'lost' ? (g.early ? 'x' : 'sad') : L === 'go' ? 'wow' : L === 'almost' ? 'spiral' : 'normal';
     drawS(c, westieSitBody(), kx, ky, { ax: .5, ay: 1, s: .62 });
@@ -15046,10 +15309,17 @@ defMG({
     }
     if (IN.rel) for (const tr of g.traces) if (!tr.done) tr.reset();
     if (g.traces.every(t => t.done)) {
-      if (g.phase < 2) g.fx.add({ k: 'txt', s: ['¡PATAS PERFECTAS!', '¡COLA PERFECTA!'][g.phase], x: 128, y: 30, life: 1, c: '#fff27a' });
+      if (g.phase < POMPON_PHASES.length - 1) g.fx.add({ k: 'txt', s: ['¡PATAS PERFECTAS!', '¡COLA PERFECTA!'][g.phase], x: 128, y: 30, life: .8, c: '#fff27a' });
       sfx('sparkle'); g.cheer = 1; g.phaseDoneT = g.t;
       g.phase++;
-      if (g.phase >= POMPON_PHASES.length) { g.win(); pomponSparkle(g, 150, 60, 24); sfx('slam'); return; }
+      if (g.phase >= POMPON_PHASES.length) {
+        g.win(); g.fx.p = g.fx.p.filter(p => p.k !== 'txt'); // the stamp gets the stage to itself
+        pomponSparkle(g, 150, 60, 24); sfx('slam'); sfx('shutter'); sfx('shutter', { delay: .18, pitch: 1.1 }); sfx('shutter', { delay: .41, pitch: .95 });
+        // the whole Palau goes wild: confetti and hearts rain on the winner
+        for (let i = 0; i < 34; i++) g.fx.add({ k: 'conf', x: g.r(SW), y: g.r(-20, 30), vx: g.r(-30, 30), vy: g.r(30, 110), g: 60, life: 2.2, c: pick(['#ff5d9e', '#fff27a', '#ffffff', '#c49aff', '#8fd6b5']), rot: g.r(TAU), vr: g.r(-8, 8) });
+        for (let i = 0; i < 8; i++) g.fx.add({ k: 'heart', x: 150 + g.r(-50, 50), y: 150, vy: -g.r(30, 70), life: 1.2, c: '#ff5d9e' });
+        return;
+      }
       this.setupPhase(g);
     }
     // Vanesa's hairspray
@@ -15126,7 +15396,9 @@ defMG({
     // Vanesa up on the gantry, lobbing cans
     const pose = g.state === 'won' ? 'angry' : g.vanPose;
     pomponDrawVanesa(c, 218, 150, pose, { flip: true });
-    if (g.state === 'play' && g.vanPose === 'smug' && fl(t * .6) % 3 === 0) txt(c, '¡Un poquito de laca!', 180, 42, POMPON_VAN_LILAC[4], { align: 'c', out: INK });
+    if (g.state === 'play' && g.vanPose === 'smug' && fl(t * .6) % 3 === 0) pomponSay(c, '¡Un poquito de laca!', 172, 22, 206, 56);
+    // camera flashes pop all over the stalls for the winner
+    if (g.state === 'won') for (let i = 0; i < 7; i++) { const ph = ((g.t - g.decidedAt) * 2.3 + i * .37) % 1; if (ph < .18) { const fx0 = 14 + (i * 67) % 230, fy0 = 150 + (i * 23) % 30; drawStar(c, fx0, fy0, 7 * (1 - ph / .18), '#ffffff', i); disc(c, fx0, fy0, 2, '#fff7ae'); } }
     for (const cn of g.cans) { if (cn.dead) continue; const [x, yt] = this.canPos(cn); if (yt < SH + 12) pomponSprayCan(c, x, yt, cn.rot); }
     // HUD
     panel(c, 6, 40, 104, 70, '#fff8e6', { r: 6 });
@@ -15192,6 +15464,15 @@ function rizosSpecks(g, t, n = 14, x0 = 0, y0 = 0, w = SW, h = SH) {
   for (let i = 0; i < n; i++) { const x = x0 + ((i * 47 + t * (30 + (i % 3) * 12)) % w), y = y0 + ((i * 29 + Math.sin(t * .7 + i) * 16 + h) % h); rect(g, x, y, 2, 2, cols[i % 4]); }
 }
 // fog/foam dither tiles (4x4) by density level 1..4
+// replay tempos (up to ~2x) leave half the time: the "amount" goals shrink a little
+// above 156 bpm (1 below that, so normal play is untouched)
+function rizosEase(g) { return Math.pow(Math.max(1, g.tempo / 1.3), .75); }
+// a word that pops over the action; a second one too soon after (and too close) is skipped,
+// the particles and the sound still carry the feedback
+function rizosPop(g, s, x, y, c = '#ffffff', life = .55) {
+  const L = g._pop; if (L && g.t - L.t < .3 && Math.abs(L.x - x) < 60 && Math.abs(L.y - y) < 30) return;
+  g._pop = { t: g.t, x, y }; g.fx.add({ k: 'txt', s, x, y, life, c });
+}
 function rizosDitherTile(col, lvl) { return mdl('rizosDT' + col + lvl, () => { const c = mkCanvas(4, 4); c.g.fillStyle = col; for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (bayer(x, y) < lvl / 4) c.g.fillRect(x, y, 1, 1); return c; }); }
 
 // ---------------------------------------------------------------- 1 ESPUMA --
@@ -15245,7 +15526,7 @@ defMG({
           const done = g.spots.filter(q => q.clean).length;
           sfx('pop', { pitch: .8 + done * .15 }); sfx('fizz', { vol: .4 });
           g.fx.burst(sx, sy, 8, { k: 'star', c: ['#ffffff', '#9bd6f7', '#fff27a'], sp0: 40, sp1: 110 });
-          g.fx.add({ k: 'txt', s: '¡LIMPIO!', x: sx, y: sy - 14, life: .55, c: '#ffffff' });
+          rizosPop(g, '¡LIMPIO!', sx, sy - 14);
           g.face = done >= g.spots.length / 2 ? 'grin' : 'cool';
           if (g.spots.every(q => q.clean)) { g.win(); g.face = 'love'; sfx('boingy', { pitch: .8 }); g.fx.burst(hx, 50, 26, { k: 'bubble', c: '#ffffff', sp0: 60, sp1: 170, r: 4, life0: .6, life1: 1.1 }); }
         }
@@ -15289,8 +15570,8 @@ defMG({
     rizosDuck(c, 204, 143, g.t);
     // HUD: mud left
     const left = g.spots.filter(q => !q.clean).length;
-    panel(c, 6, 6, 74, 18, '#ffffff', { r: 5 }); drawS(c, rizosMudSplat(3, 5), 20, 15, {}); txt(c, 'BARRO: ' + left, 30, 11, INK, { bold: true });
-    if (g.state === 'won' && g.afroK > .5) shout(c, '¡AFRO DE ESPUMA!', 176, 30, g.afroK - .5);
+    if (g.state !== 'won') { panel(c, 6, 6, 74, 18, '#ffffff', { r: 5 }); drawS(c, rizosMudSplat(3, 5), 20, 15, {}); txt(c, 'BARRO: ' + left, 30, 11, INK, { bold: true }); }
+    if (g.state === 'won' && g.afroK > .5) rizosStamp(c, g, '¡AFRO DE ESPUMA!', 128, 30, .35);
     if (g.state === 'lost') txt(c, 'Sigue sucio…', 128, 26, '#6b4520', { align: 'c', out: '#ffffff', bold: true });
   },
   blobAt(c, x, y, r) { if (r < 1) return; disc(c, x, y + 1, r + 1, '#9fb4c8'); disc(c, x, y, r, '#dfe9f2'); disc(c, x - r * .2, y - r * .25, r * .72, '#ffffff'); },
@@ -15340,7 +15621,7 @@ defMG({
         g.fx.burst(g.dogX, 86, 18, { k: 'hair', c: [RIZOS_FUR[3], RIZOS_FUR[4], RIZOS_FUR[2]], sp0: 60, sp1: 160, r: 3, life0: .4, life1: .7 });
         g.fx.add({ k: 'txt', s: ['', '¡POF!', '¡POOF!', '¡PUFFF!'][st], x: g.dogX, y: 30, life: .6, c: '#ffffff' });
       }
-      if (g.dry >= 1) { g.win(); g.fx.burst(g.dogX, 90, 16, { k: 'star', c: [C.yellow, '#fff', RIZOS_NEON.pink], sp0: 60, sp1: 160 }); }
+      if (g.dry >= 1) { g.win(); g.toss = { t: g.t, x: g.tx, y: g.ty, r: g.trot }; sfx('swoosh', { pitch: 1.3 }); g.fx.burst(g.dogX, 90, 16, { k: 'star', c: [C.yellow, '#fff', RIZOS_NEON.pink], sp0: 60, sp1: 160 }); }
     }
     if (g.state === 'lost' && g.shakeT < 0) { g.shakeT = g.t; sfx('splash'); g.shake(3, .4); for (let i = 0; i < 26; i++) g.fx.add({ k: 'drop', x: g.dogX + g.r(-30, 30), y: 100 + g.r(-30, 30), vx: g.r(-260, 260), vy: g.r(-260, 60), g: 300, life: .9, c: pick(['#9bd6f7', '#5aaee6']) }); }
   },
@@ -15363,15 +15644,16 @@ defMG({
       if (g.stage === 0) for (const s of [-1, 1]) for (let i = 0; i < 3; i++) linePx(c, X + s * (50 + i * 3), 90 + i * 8, X + s * (54 + i * 3), 92 + i * 8, '#5aaee6');
       if (g.stage === 0 && fl(g.t * 2) % 2) txt(c, 'Brrr…', X + 42, 60, '#5aaee6', { out: '#ffffff' });
     }
-    // the towel follows the finger
-    drawS(c, rizosTowelSpr(), g.tx, g.ty, { rot: g.trot, sx: 1 + Math.abs(g.trot) * .2, sy: 1 - Math.abs(g.trot) * .15, alpha: IN.down ? 1 : .75 });
+    // the towel follows the finger; once he's dry it gets tossed over the shoulder
+    if (g.toss) { const k = g.t - g.toss.t, x = g.toss.x + k * 240, y = g.toss.y - k * 320 + k * k * 520; if (y < SH + 40 && x < SW + 40) drawS(c, rizosTowelSpr(), x, y, { rot: g.toss.r + k * 11 }); }
+    else drawS(c, rizosTowelSpr(), g.tx, g.ty, { rot: g.trot, sx: 1 + Math.abs(g.trot) * .2, sy: 1 - Math.abs(g.trot) * .15, alpha: IN.down ? 1 : .75 });
     // splash on the "lens" when he shakes it all off at you
     if (g.shakeT >= 0) for (let i = 0; i < 9; i++) { const k = clamp((g.t - g.shakeT) * 4 - i * .1, 0, 1); if (k > 0) { disc(c, 24 + i * 27, 30 + (i % 3) * 44 + k * 20, 7, 'rgba(155,214,247,.55)'); px(c, 21 + i * 27, 27 + (i % 3) * 44 + k * 20, '#ffffff'); } }
     // dryness meter: a drop that empties into a sun
     panel(c, 6, 6, 92, 18, '#ffffff', { r: 5 });
     polyPx(c, [[18, 9], [13, 17], [23, 17]], '#5aaee6'); disc(c, 18, 18, 5, '#5aaee6'); px(c, 16, 16, '#dff4ff');
     rect(c, 28, 12, 62, 7, INK); rect(c, 29, 13, rd(60 * g.dry), 5, g.dry > .9 ? '#ffd23f' : '#ffb020'); rect(c, 29, 13, rd(60 * g.dry), 1, '#fff7ae');
-    if (g.state === 'won') shout(c, '¡AFRO LISTO!', 176, 36, g.t - g.decidedAt);
+    if (g.state === 'won') rizosStamp(c, g, '¡AFRO LISTO!', 150, 34);
   },
   hint(g) { return { x: g.dogX, y: 104 }; },
   bot(g) { return { x: g.dogX + Math.sin(g.t * 34) * 30, y: 96 + Math.sin(g.t * 5) * 30, down: g.t > .2 && g.state === 'play' }; },
@@ -15410,7 +15692,8 @@ defMG({
     { i: 'bass', v: .9, n: 'E2 . . E2 . . E3 . D2 . . D2 . . D3 . C2 . . C2 . . C3 . B1 . . B1 . D2 E2 .' },
     { i: 'd', v: .85, n: 'k . h r s . h k . k h r s . h h k . h r s . h k . k h r s s s s' }] }),
   init(g) {
-    g.need = [7, 10, 13][g.level - 1]; g.count = 0; g.hype = 0;
+    // at replay tempos the song is over in ~2 s: ask for fewer scratches (unchanged up to 156 bpm)
+    g.need = Math.round([7, 10, 13][g.level - 1] / rizosEase(g)); g.count = 0; g.hype = 0;
     g.ang = 0; g.acc = 0; g.dir = 0; g.last = null; g.wiki = []; g.flash = 0;
     g.cx = 150; g.cy = 132;
   },
@@ -15477,7 +15760,7 @@ defMG({
     if (g.count < 2 && g.state === 'play') { const k = (g.t * 3) % 1; for (const sgn2 of [-1, 1]) for (let q = 0; q < 2; q++) { const x = g.cx + sgn2 * (74 + k * 5 + q * 5), y = g.cy; linePx(c, x, y - 5, x + sgn2 * 4, y, '#fff04f'); linePx(c, x + sgn2 * 4, y, x, y + 5, '#fff04f'); } }
     for (const w of g.wiki) { txt(c, w.s, w.x, w.y - w.t * 30, ['#ff4fa3', '#4ff2ff', '#fff04f'][fl(w.t * 10) % 3], { align: 'c', out: INK, bold: true }); }
     txt(c, 'SCRATCH ' + Math.min(g.count, g.need) + '/' + g.need, 8, 82, '#ffffff', { out: INK, bold: true });
-    if (g.state === 'won') shout(c, '¡OTRA, OTRA!', 128, 26, g.t - g.decidedAt);
+    if (g.state === 'won') rizosStamp(c, g, '¡OTRA, OTRA!', 128, 26);
     if (g.state === 'lost') { txt(c, 'Buuu…', 128, 26, '#b3b8d4', { align: 'c', out: INK, bold: true }); }
   },
   hint(g) { return { x: g.cx + 30, y: g.cy - 28 }; },
@@ -15503,7 +15786,7 @@ defMG({
     { i: 'bass', v: .85, n: 'C3 . . C3 . . G2 . A2 . . A2 . . E2 . D3 . . D3 . . A2 . G2 . . G2 . . B2 .' },
     { i: 'd', v: .6, n: 'k . z . k+c . z z k . z . k+c . z . k . z . k+c . z z k . z . k+c z c c' }] }),
   init(g) {
-    g.need = [.56, .66, .74][g.level - 1]; g.regrow = [0, 0, .07][g.level - 1];
+    g.need = [.56, .66, .74][g.level - 1] / Math.sqrt(rizosEase(g)); g.regrow = [0, 0, .07][g.level - 1];
     g.rub = rubTracker(); g.mx = 60; g.my = 26; g.mw = 136; g.mh = 116;
     g.cw = g.mw / 4; g.ch = g.mh / 4; g.fog = new Float32Array(g.cw * g.ch).fill(1); g.clear = 0; g.saidHi = false;
     g.drips = []; g.cx = 180; g.cy = 150; g.crot = 0;
@@ -15530,7 +15813,8 @@ defMG({
     let clr = 0; for (let i = 0; i < g.fog.length; i++) clr += 1 - g.fog[i];
     g.clear = clr / g.fog.length;
     if (g.clear > .35 && !g.saidHi) { g.saidHi = true; sfx('heart', { pitch: 1.2 }); }
-    if (g.clear >= g.need && g.state === 'play') { g.win(); sfx('sparkle'); g.fx.burst(128, 70, 16, { k: 'star', c: ['#fff', C.yellow, RIZOS_NEON.pink], sp0: 50, sp1: 140 }); }
+    if (g.clear >= g.need && g.state === 'play') { g.win(); g.toss = { t: g.t, x: g.cx, y: g.cy, r: g.crot }; sfx('sparkle'); sfx('swoosh', { pitch: 1.4, vol: .6 }); g.fx.burst(128, 70, 16, { k: 'star', c: ['#fff', C.yellow, RIZOS_NEON.pink], sp0: 50, sp1: 140 }); }
+    if (g.state === 'won') { for (let i = 0; i < g.fog.length; i++) g.fog[i] = Math.max(0, g.fog[i] - dt * 3); g.drips.length = 0; }
   },
   draw(g, c) {
     rect(c, 0, 0, SW, SH, '#dce7ea'); subwayTiles(c, 0, 0, SW, SH);
@@ -15540,7 +15824,13 @@ defMG({
     greenWall(c, mx, my, mw, mh);
     const ex = g.state === 'won' ? 'love' : g.clear > .35 ? 'grin' : 'cool';
     drawS(c, rizosHead(ex), mx + mw / 2 + Math.sin(g.t * 2) * 2, my + mh - 30, { ax: .5, ay: .8 });
-    rect(c, mx + mw / 2 - 20, my + mh - 20, 40, 20, RIZOS_SHIRT[3]); ringRect(c, mx + mw / 2 - 20, my + mh - 20, 40, 21, 1, RIZOS_SHIRT[1]);
+    // his shoulders in the reflection: the white disco shirt, wide collar, gold chain
+    const bx = mx + mw / 2, by = my + mh - 4;
+    ellipsePx(c, bx, by + 8, 31, 17, INK); ellipsePx(c, bx, by + 8, 30, 16, RIZOS_SHIRT[3]); ellipsePx(c, bx - 7, by + 3, 18, 8, RIZOS_SHIRT[4]);
+    // wide seventies lapels spreading down from the neck, an open V and the gold chain
+    for (const sx of [-1, 1]) { polyPx(c, [[bx + sx * 2, by - 11], [bx + sx * 22, by - 5], [bx + sx * 9, by + 1]], INK); polyPx(c, [[bx + sx * 3, by - 10], [bx + sx * 19, by - 5], [bx + sx * 9, by - 1]], RIZOS_SHIRT[2]); }
+    polyPx(c, [[bx - 5, by - 10], [bx + 5, by - 10], [bx, by - 1]], RAMP.apricot ? RAMP.apricot[3] : '#e8b98a');
+    for (let a = .5; a < Math.PI - .5; a += .25) px(c, bx + Math.cos(a) * 6, by - 9 + Math.sin(a) * 6, '#ffd23f');
     // glass glint across the cleaned parts
     c.globalAlpha = .35; for (let i = 0; i < 3; i++) linePx(c, mx + 20 + i * 8 + g.clear * 40, my, mx - 10 + i * 8 + g.clear * 40, my + mh, '#ffffff'); c.globalAlpha = 1;
     // steam: thicker towards the bottom, with beads of condensation
@@ -15552,13 +15842,16 @@ defMG({
       if (v > .9 && hash2(x, y, 7) < .06) { px(c, mx + x * 4 + 1, my + y * 4 + 1, '#ffffff'); px(c, mx + x * 4 + 2, my + y * 4 + 2, '#b9cad0'); }
     }
     for (const d of g.drips) { vline(c, d.x, d.y - d.L, d.y, '#b3d9ff'); px(c, d.x, d.y + 1, '#ffffff'); }
+    // a clean mirror: a bright glint sweeps across the glass
+    if (g.state === 'won') { const k = (g.t - g.decidedAt) / .6; if (k < 1) { const gx = mx - 40 + k * (mw + 80); c.globalAlpha = .75; polyPx(c, [[gx, my], [gx + 14, my], [gx - 26, my + mh], [gx - 40, my + mh]], '#ffffff'); polyPx(c, [[gx + 20, my], [gx + 26, my], [gx - 14, my + mh], [gx - 20, my + mh]], '#ffffff'); c.globalAlpha = 1; } }
     c.restore();
     // steam curling up from below
     for (let i = 0; i < 7; i++) { const ph = (g.t * .6 + i * .14) % 1, x = 40 + i * 30 + Math.sin(g.t * 2 + i) * 8, y = 190 - ph * 70; c.globalAlpha = (1 - ph) * .5; disc(c, x, y, 6 + ph * 8, '#ffffff'); c.globalAlpha = 1; }
     drawPortalFrame(c, 'mirror', mx, my, mw, mh, g.b);
-    // the cloth in your hand
-    drawS(c, rizosClothSpr(), g.cx, g.cy, { rot: g.crot, alpha: IN.down ? 1 : .7 });
-    if (g.state === 'won') shout(c, '¡GUAPÍSIMO!', 196, 40, g.t - g.decidedAt);
+    // the cloth in your hand, flicked away once the glass is clean
+    if (g.toss) { const k = g.t - g.toss.t, x = g.toss.x + k * 200, y = g.toss.y - k * 280 + k * k * 480; if (y < SH + 30 && x < SW + 30) drawS(c, rizosClothSpr(), x, y, { rot: g.toss.r + k * 12 }); }
+    else drawS(c, rizosClothSpr(), g.cx, g.cy, { rot: g.crot, alpha: IN.down ? 1 : .7 });
+    if (g.state === 'won') rizosStamp(c, g, '¡GUAPÍSIMO!', 128, 24);
     // clear-o-meter as a gold tag under the frame
     panel(c, SW / 2 - 40, 170, 80, 16, '#fff8e6', { r: 4 }); txt(c, 'LIMPIO ' + fl(Math.min(1, g.clear / g.need) * 100) + '%', SW / 2, 175, INK, { align: 'c', bold: true });
   },
@@ -15623,7 +15916,7 @@ defMG({
     g.need = [1, 1, 1][g.level - 1]; g.joy = 0; g.kick = 0; g.kickA = 0; g.rub = rubTracker();
     g.rad = [20, 16, 13][g.level - 1];
     g.sx = g.r(98, 136); g.sy = g.r(114, 124); g.tsx = g.sx; g.tsy = g.sy; g.hopT = 1.1;
-    g.rate = [1 / 560, 1 / 700, 1 / 800][g.level - 1];
+    g.rate = [1 / 560, 1 / 700, 1 / 800][g.level - 1] * rizosEase(g); // less rubbing needed at replay tempos
   },
   update(g, dt) {
     // the itch wanders (level 2) or jumps around (level 3)
@@ -15661,7 +15954,7 @@ defMG({
     }
     // gustómetro: a row of hearts filling up
     for (let i = 0; i < 5; i++) { const on = g.joy * 5 > i + .5; drawHeart(c, 88 + i * 20, 18, on ? '#ff4060' : '#5a3396', 1.4); if (on) px(c, 86 + i * 20, 15, '#ffffff'); }
-    if (g.state === 'won') shout(c, '¡QUÉ GUSTAZO!', 128, 44, g.t - g.decidedAt);
+    if (g.state === 'won') rizosStamp(c, g, '¡QUÉ GUSTAZO!', 128, 40);
     else if (g.kick > .5) txt(c, '¡AHÍ, AHÍ!', g.sx, g.sy + 24, '#ffffff', { align: 'c', out: INK, bold: true });
   },
   hint(g) { return { x: g.sx, y: g.sy }; },
@@ -15829,8 +16122,8 @@ defMG({
     // the big paddle brush in the hand
     drawS(c, rizosPaddleSpr(), g.bx, g.by, { rot: g.brot + .6, ax: .5, ay: .08 });
     const left = g.knots.filter(k => k.hp > 0).length;
-    panel(c, 6, 6, 70, 14, '#ffffff', { r: 4 }); txt(c, 'NUDOS: ' + left, 12, 9, INK, { bold: true });
-    if (g.state === 'won') { shout(c, '¡QUÉ SUAVECITO!', 150, 26, g.t - g.decidedAt); if (fl(g.t * 8) % 2) for (let i = 0; i < 4; i++) drawStar(c, g.dogX - 40 + i * 26, 50 + (i % 2) * 40, 3.2, '#ffffff', g.t * 5); }
+    if (g.state !== 'won') { panel(c, 6, 6, 70, 14, '#ffffff', { r: 4 }); txt(c, 'NUDOS: ' + left, 12, 9, INK, { bold: true }); }
+    if (g.state === 'won') { rizosStamp(c, g, '¡QUÉ SUAVECITO!', 136, 26); if (fl(g.t * 8) % 2) for (let i = 0; i < 4; i++) drawStar(c, g.dogX - 40 + i * 26, 50 + (i % 2) * 40, 3.2, '#ffffff', g.t * 5); }
     if (g.state === 'lost') txt(c, '¡Grrr!', g.dogX, 22, '#ffffff', { align: 'c', out: INK, bold: true });
   },
   hint(g) { const k = g.knots.find(k => k.hp > 0); return k && { x: g.dogX - 55 + k.x, y: 30 + k.y }; },
@@ -15910,7 +16203,7 @@ defMG({
       if (l.gone) { l.x += l.vx * dt; l.y += l.vy * dt; l.vy += 300 * dt; l.rot += dt * 20; continue; }
       if (l.hidden) {
         // buried deep in the fur: brushing nearby parts the coat and reveals it
-        if (IN.down && dist(g.bx, g.by, l.x, l.y) < 34 && speed > 60) { l.peek += dt * 3; if (l.peek >= 1) { l.hidden = false; sfx('squeaky', { pitch: 1.8 }); g.fx.add({ k: 'txt', s: '¡AHÍ ESTÁ!', x: l.x, y: l.y - 16, life: .7, c: '#ff4060' }); } }
+        if (IN.down && dist(g.bx, g.by, l.x, l.y) < 34 && speed > 60) { l.peek += dt * 3; if (l.peek >= 1) { l.hidden = false; sfx('squeaky', { pitch: 1.8 }); rizosPop(g, '¡AHÍ ESTÁ!', l.x, l.y - 16, '#ff4060', .7); } }
         continue;
       }
       // wander, and (level 2+) scurry away from the brush
@@ -15928,7 +16221,7 @@ defMG({
         HITSTOP = 2; buzz(8); g.shake(1.5, .08);
         sfx('coin', { pitch: .9 + g.count * .12 }); sfx('squeaky', { pitch: 1.5 });
         g.fx.burst(l.x, l.y, 10, { k: 'star', c: ['#ff4060', '#ffd23f', '#ffffff'], sp0: 50, sp1: 130, life0: .25, life1: .5 });
-        g.fx.add({ k: 'txt', s: '¡PING!', x: l.x, y: l.y - 12, life: .5, c: '#ff4060' });
+        rizosPop(g, '¡PING!', l.x, l.y - 12, '#ff4060', .5);
         if (g.lice.every(q => q.gone)) { g.win(); g.winT = g.t; sfx('sparkle'); }
       }
     }
@@ -15940,7 +16233,7 @@ defMG({
       const k = clamp((g.t - g.winT - .45) / .35, 0, 1);
       c.drawImage(rizosFurCloseUp(), 0, 0);
       c.save(); c.beginPath(); c.arc(SW / 2, SH / 2, 10 + k * 180, 0, TAU); c.clip(); c.drawImage(rizosFluffyOnGrass(), 0, 0); c.restore();
-      if (k >= 1) { shout(c, '¡SIN BICHOS!', 128, 28, g.t - g.winT - .8); for (let i = 0; i < 5; i++) drawStar(c, 60 + i * 34, 64 + Math.sin(g.t * 6 + i) * 6, 3, '#fff27a', g.t * 3); }
+      if (k >= 1) { rizosStamp(c, g, '¡SIN BICHOS!', 128, 28, .8); for (let i = 0; i < 5; i++) drawStar(c, 60 + i * 34, 64 + Math.sin(g.t * 6 + i) * 6, 3, '#fff27a', g.t * 3); }
       return;
     }
     c.drawImage(rizosFurCloseUp(), 0, 0);
@@ -16134,7 +16427,7 @@ defMG({
     else rizosBolaDraw(g, c);
     if (!won) drawS(c, rizosChamoisSpr(), g.cx, g.cy, { rot: g.crot, alpha: IN.down ? 1 : .75 });
     panel(c, 6, 6, 78, 16, '#fff8e6', { r: 4 }); txt(c, 'BRILLO ' + fl(Math.min(1, g.shine / g.need) * 100) + '%', 45, 10, INK, { align: 'c', bold: true });
-    if (won) shout(c, '¡A BAILAR!', 188, 150, k);
+    if (won) rizosStamp(c, g, '¡A BAILAR!', 188, 152);
     if (g.state === 'lost') txt(c, 'Sin brillo no hay fiesta…', 164, 176, '#b3b8d4', { align: 'c', out: INK, bold: true });
     if (won && k < .25) { c.globalAlpha = (1 - k / .25) * .7; rect(c, 0, 0, SW, SH, '#ffffff'); c.globalAlpha = 1; }
   },
@@ -16327,7 +16620,7 @@ defMG({
     // the afro pick in your hand
     if (!won) drawS(c, rizosPickSpr(), g.px, g.py, { ax: .5, ay: .92, rot: g.prot, alpha: IN.down ? 1 : .75 });
     rizosAfroMeter(c, won ? 1 : g.fv, g.t);
-    if (won) shout(c, '¡AFRO XXL!', 128, 24, k);
+    if (won) rizosStamp(c, g, '¡AFRO XXL!', 128, 24);
     if (lost) txt(c, '¡Pelo chafado!', 128, 26, '#ffb3d6', { align: 'c', out: INK, bold: true });
   },
   hint(g) { return { x: g.hx, y: 82 + rizosAfroShape(g.fv).cy - 4 }; },
@@ -16363,13 +16656,15 @@ function rizosAfroWall() {
   });
 }
 function rizosFaceCrop(ex) { return mdl('rizosFaceCrop:' + ex, () => faceCrop(rizosHead(ex), 16, 30, 52, 44)); }
-function rizosDrawKnot(g, x, y, k, t, seed, hot) {
-  // k: 0 (loose) .. 1 (tight): a lumpy snarl of dark hair with a frizzy halo
+function rizosDrawKnot(g, x, y, k, t, seed, hot, sq = 0) {
+  // k: 0 (loose) .. 1 (tight): a lumpy snarl of dark hair with a frizzy halo.
+  // sq squashes it wide (+) or tall (−) while it's being rubbed.
   const r = 10 + k * 7, wob = Math.sin(t * 9 + seed) * (hot ? 1.5 : .6);
+  const sqx = 1 + sq, sqy = 1 - sq, S = ([a, b]) => [x + (a - x) * sqx, y + (b - y) * sqy];
   // frizz halo sticking out all round
-  for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + hash2(i, seed) * .4, l = r + 4 + hash2(seed, i) * 6; linePx(g, x + Math.cos(a) * (r - 3), y + Math.sin(a) * (r - 3), x + Math.cos(a + .25 + wob * .05) * l, y + Math.sin(a + .25) * l, i % 3 ? '#f0b573' : '#3e2016'); }
+  for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + hash2(i, seed) * .4, l = r + 4 + hash2(seed, i) * 6; const [x0, y0] = S([x + Math.cos(a) * (r - 3), y + Math.sin(a) * (r - 3)]), [x1, y1] = S([x + Math.cos(a + .25 + wob * .05) * l, y + Math.sin(a + .25) * l]); linePx(g, x0, y0, x1, y1, i % 3 ? '#f0b573' : '#3e2016'); }
   // lumpy body
-  const pts = []; for (let i = 0; i < 14; i++) { const a = i / 14 * TAU, rr = r * (.78 + hash2(i, seed + 2) * .34) + Math.sin(t * 7 + i) * (hot ? 1 : 0); pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr * .88]); }
+  const pts = []; for (let i = 0; i < 14; i++) { const a = i / 14 * TAU, rr = r * (.78 + hash2(i, seed + 2) * .34) + Math.sin(t * 7 + i) * (hot ? 1 : 0); pts.push(S([x + Math.cos(a) * rr, y + Math.sin(a) * rr * .88])); }
   polyPx(g, pts.map(([a, b]) => [a + 1, b + 2]), '#3e1a0c');
   polyPx(g, pts, INK); polyPx(g, pts.map(([a, b]) => [lerp(a, x, .1), lerp(b, y, .1)]), mixHex('#4a2210', '#9c5a30', 1 - k));
   polyPx(g, pts.map(([a, b]) => [lerp(a, x - r * .3, .5), lerp(b, y - r * .3, .5)]), mixHex('#6e3520', '#d4874c', 1 - k));
@@ -16378,7 +16673,7 @@ function rizosDrawKnot(g, x, y, k, t, seed, hot) {
   for (let i = 0; i < n; i++) {
     const a0 = hash2(i, seed) * TAU, rr = r * (.25 + hash2(seed, i) * .55), ox = (hash2(i, seed + 3) - .5) * r * .9, oy = (hash2(i, seed + 5) - .5) * r * .8;
     let lx = null, ly = null;
-    for (let a = a0; a < a0 + 4.8; a += .34) { const px0 = x + ox + Math.cos(a + wob * .1) * rr, py0 = y + oy + Math.sin(a) * rr * .8; if (lx != null) linePx(g, lx, ly, px0, py0, i % 3 === 0 ? '#1e0c05' : i % 3 === 1 ? '#f0b573' : '#8a4a24'); lx = px0; ly = py0; }
+    for (let a = a0; a < a0 + 4.8; a += .34) { const [px0, py0] = S([x + ox + Math.cos(a + wob * .1) * rr, y + oy + Math.sin(a) * rr * .8]); if (lx != null) linePx(g, lx, ly, px0, py0, i % 3 === 0 ? '#1e0c05' : i % 3 === 1 ? '#f0b573' : '#8a4a24'); lx = px0; ly = py0; }
   }
 }
 defMG({
@@ -16481,10 +16776,12 @@ defMG({
         if (dt0 < .8) drawStar(c, k.x + 8, k.y - 8, 3 * (1 - dt0 / .8) + .5, '#ffffff', dt0 * 8);
         continue;
       }
-      const kk = clamp(k.hp / k.max, 0, 1), sh = k.shake ? Math.sin(g.t * 60) * k.shake * 1.5 : 0;
-      rizosDrawKnot(c, k.x + sh, k.y, kk, g.t, k.seed, k.shake > .5);
-      // life ring
-      for (let a = 0; a < kk * TAU; a += .12) px(c, k.x + Math.cos(a - Math.PI / 2) * 19, k.y + Math.sin(a - Math.PI / 2) * 19, kk > .5 ? '#ff4060' : '#ffb020');
+      const kk = clamp(k.hp / k.max, 0, 1), sh = k.shake ? Math.sin(g.t * 60) * k.shake * 1.5 : 0, sq = k.shake > .5 ? Math.sin(g.t * 34) * .12 * k.shake : 0;
+      // life ring: a bold arc on a dark track, so you can read how loose it is
+      for (let a = 0; a < TAU; a += .1) px(c, k.x + Math.cos(a) * 20, k.y + Math.sin(a) * 20, 'rgba(29,20,36,.35)');
+      for (let a = 0; a < kk * TAU; a += .07) { const ca = Math.cos(a - Math.PI / 2), sa = Math.sin(a - Math.PI / 2), col = kk > .5 ? '#ff4060' : kk > .25 ? '#ffb020' : '#5bd18b'; px(c, k.x + ca * 20, k.y + sa * 20, col); px(c, k.x + ca * 21, k.y + sa * 21, col); }
+      rizosDrawKnot(c, k.x + sh, k.y, kk, g.t, k.seed, k.shake > .5, sq);
+      if (kk < .25 && fl(g.t * 10) % 2) drawStar(c, k.x + 12, k.y - 12, 2.5, '#fff27a', g.t * 5); // nearly loose!
     }
     // Pulgui
     const P = g.pul;
@@ -16498,7 +16795,8 @@ defMG({
       if (P.st === 'sit' && g.phase === 1 && P.target >= 0 && !g.knots[P.target].done) txt(c, '~', P.x + 8, P.y - 10 + Math.sin(g.t * 20) * 2, '#ff93bf', { out: INK });
     }
     if (g.phase === 2 && g.state === 'play') for (let i = 0; i < 3; i++) drawHeart(c, P.x - 8 + i * 8, P.y - 20, i < P.hp ? '#ff4060' : '#5a2a9a', .7);
-    if (g.state === 'won' && g.t - g.flyT < 1.6) shout(c, '¡VOLVERÉEE!', 128, 60, g.t - g.flyT);
+    if (g.state === 'won' && g.t - g.flyT < 1.6) shout(c, '¡VOLVERÉEE!', clamp(g.pul.x, 50, 206), clamp(g.pul.y - 20, 70, 150), g.t - g.flyT);
+    if (g.state === 'won') rizosStamp(c, g, '¡AFRO LIBRE!', 128, 26, .25);
   },
   top(g, c) {
     // HUD: the five knots and the itch meter
@@ -16556,14 +16854,19 @@ defMG({
   nextPhase(g) {
     g.ph++; g.phT = 0; g.phaseCmdT = 0; sfx('slam'); sfx('bark', { pitch: 1.2 }); HITSTOP = 4; g.shake(3, .25);
     g.fx.burst(g.mx, g.my - 30, 16, { k: 'star', c: [C.yellow, '#fff', C.pinkL], sp0: 60, sp1: 180 });
+    // the monster takes the hit: it squashes, its eyes cross, mud flies and it shrinks a little
+    g.hurtT = .6; g.stepPop = { i: g.ph - 1, t: 0 };
+    g.fx.burst(g.mx, g.my - 34, 14, { k: 'puff', c: ['#7c5530', '#5b3a1d', '#a07748'], sp0: 60, sp1: 170, r: 4, g: 260 });
+    if (g.ph < 6) g.fx.add({ k: 'txt', s: ['¡GLORGH!', '¡BLURP!', '¡GLUP!', '¡PLOF!', '¡BLOB!'][(g.ph - 1) % 5], x: g.mx, y: g.my - 88, life: .8, c: '#ffdf4f' });
     if (g.ph === 1) for (let i = 0; i < g.dirt.length; i++) g.dirt[i] = Math.max(g.dirt[i], g.r() < .55 ? g.r(.6, 1) : g.dirt[i]);
     if (g.ph === 2) g.tent = [0, 1, 2].map(i => ({ ang: -2.2 + i * .6, cut: false, sw: g.r(TAU) }));
-    if (g.ph === 6) { g.win(); sfx('sparkle'); flash('bot', '#ffffff', .3); }
+    if (g.ph === 6) { g.win(); sfx('sparkle'); flash('bot', '#ffffff', .3); g.fx.burst(g.mx, g.my - 40, 30, { k: 'conf', c: [C.yellow, C.pink, C.mint, C.sky, '#ffffff'], sp0: 80, sp1: 220, g: 200 }); }
   },
   update(g, dt) {
     g.phT += dt; g.phaseCmdT += dt; g.shakeM = Math.max(0, g.shakeM - dt * 3);
+    g.hurtT = Math.max(0, (g.hurtT || 0) - dt); if (g.stepPop) g.stepPop.t += dt; g.jet = Math.max(0, (g.jet || 0) - dt * 4);
     for (const tn of g.tent) if (tn.cut) tn.fall = (tn.fall || 0) + dt; // cut tentacles keep falling in every phase
-    if (g.state !== 'play') { g.wash = Math.min(1, g.wash + dt * .8); return; }
+    if (g.state !== 'play') { if (g.state === 'won') g.wash = Math.min(1, g.wash + dt * .8); return; } // only a win washes it off
     // the shop gets dirtier if you dawdle
     if (g.phT > 7) g.mud = Math.min(100, g.mud + dt * 5);
     const sp = [1, 1.15, 1.3][g.level - 1];
@@ -16607,10 +16910,10 @@ defMG({
       else if (!B.done) { B.x = lerp(B.x, 40, .1); B.y = lerp(B.y, 150, .1); }
     } else if (g.ph === 5) { // SPIN the hydrant
       const d = g.spin.update(dt);
-      if (Math.abs(d) > 0) { g.wash = clamp(Math.abs(g.spin.ang) / (TAU * [2.5, 3, 3.5][g.level - 1]), 0, 1); if (FRAME % 5 === 0) sfx('ratchet', { vol: .5 }); if (FRAME % 2 === 0) g.fx.add({ k: 'drop', x: 214, y: 150, vx: -g.r(160, 240), vy: -g.r(60, 140), g: 260, life: .7, c: pick(['#9bd6f7', '#dff4ff', '#5aaee6']) }); }
+      if (Math.abs(d) > 0) { g.jet = 1; g.wash = clamp(Math.abs(g.spin.ang) / (TAU * [2.5, 3, 3.5][g.level - 1]), 0, 1); if (FRAME % 5 === 0) sfx('ratchet', { vol: .5 }); if (FRAME % 2 === 0) g.fx.add({ k: 'drop', x: 214, y: 150, vx: -g.r(160, 240), vy: -g.r(60, 140), g: 260, life: .7, c: pick(['#9bd6f7', '#dff4ff', '#5aaee6']) }); }
       if (g.wash >= 1) this.nextPhase(g);
     }
-    if (g.mud >= 100) { g.lose(); sfx('boom'); }
+    if (g.mud >= 100) { g.lose(); sfx('boom'); sfx('splash', { pitch: .5 }); g.shake(5, .4); }
   },
   draw(g, c) {
     c.drawImage(streetBottom(), 0, 0);
@@ -16618,7 +16921,18 @@ defMG({
     for (let j = 0; j < 5; j++) for (let i = 0; i < 10; i++) { const d = g.dirt[j * 10 + i]; if (d > .1) { const x = BARRO_WIN.x + i * BARRO_WIN.w / 10, y = BARRO_WIN.y + j * BARRO_WIN.h / 5; c.globalAlpha = Math.min(1, d); disc(c, x + 5, y + 6, 6, '#5b3a1d'); disc(c, x + 3, y + 4, 3, '#7c5530'); c.globalAlpha = 1; } }
     // the monster (or Nube underneath, as the water washes it)
     const mx = g.mx + Math.sin(g.t * 20) * g.shakeM * 3, my = g.my;
-    if (g.wash < 1) drawMudMonster(c, mx, my - 30, g.t, 1);
+    const hurt = g.hurtT > 0 ? g.hurtT / .6 : 0, sc = 1 - Math.min(g.ph, 5) * .045, sq = hurt ? Math.sin((1 - hurt) * Math.PI * 3) * .14 * hurt : 0;
+    if (g.wash < 1) {
+      drawS(c, mudMonsterModel(fl(g.t * 3) % 2), mx, my - 30, { sx: sc * (1 + sq), sy: sc * (1 - sq) * (1 + Math.sin(g.t * 4) * .03) });
+      if (hurt > .15) for (const ex of [-16, 14]) { const x0 = rd(mx + ex * sc), y0 = rd(my - 38 * sc - 30 + 30 * (1 - sc)); disc(c, x0, y0, 6 * sc, '#5b3a1d'); linePx(c, x0 - 4, y0 - 4, x0 + 4, y0 + 4, INK); linePx(c, x0 + 4, y0 - 4, x0 - 4, y0 + 4, INK); }
+    }
+    // the fire hydrant's jet, arcing onto the monster while you spin the valve
+    if (g.ph === 5 && g.jet > 0) {
+      const x0 = 214, y0 = 150, x1 = mx + 10, y1 = my - 44, w = 3 + g.jet * 2;
+      for (let q = 0; q <= 1.001; q += .04) { const x = lerp(x0, x1, q), y = lerp(y0, y1, q) - Math.sin(q * Math.PI) * 40; disc(c, x, y, w + 1, '#2f6fb0'); }
+      for (let q = 0; q <= 1.001; q += .04) { const x = lerp(x0, x1, q), y = lerp(y0, y1, q) - Math.sin(q * Math.PI) * 40; disc(c, x, y, w, '#9bd6f7'); if (((q * 25 + fl(g.t * 30)) % 3) < 1) px(c, x, y - w + 1, '#ffffff'); }
+      if (FRAME % 2 === 0) g.fx.add({ k: 'drop', x: x1 + g.r(-14, 14), y: y1 + g.r(-8, 8), vx: g.r(-120, 120), vy: -g.r(40, 140), g: 380, life: .5, c: pick(['#9bd6f7', '#dff4ff']) });
+    }
     if (g.wash > 0) { c.save(); c.beginPath(); c.rect(mx - 60, my - 90 + (1 - g.wash) * 112, 120, 112 * g.wash + 4); c.clip(); c.drawImage(prepDog('clean', 1, g.wash >= 1 ? 'proud' : 'happy'), rd(mx - 52), rd(my - 90)); c.restore(); }
     // tentacles: tapered, curling mud with drips
     if (g.ph === 2 || g.tent.some(t => t.cut && (t.fall || 0) < .8)) for (const tn of g.tent) {
@@ -16638,21 +16952,72 @@ defMG({
     // live drawing trace for the loop phase
     if (g.ph === 3 && IN.down && IN.path.length > 1) for (let i = 1; i < IN.path.length; i++) thickLine(c, IN.path[i - 1].x, IN.path[i - 1].y, IN.path[i].x, IN.path[i].y, 1.2, '#ffffff');
     // the shampoo bottle
-    if (g.ph === 4 && !g.bottle.done) { const B = g.bottle; rect(c, B.x - 10, B.y - 34, 20, 34, INK); rect(c, B.x - 9, B.y - 33, 18, 32, '#5bb593'); rect(c, B.x - 9, B.y - 33, 4, 32, '#94dcbc'); rect(c, B.x - 5, B.y - 42, 10, 9, INK); rect(c, B.x - 4, B.y - 41, 8, 8, '#ffffff'); disc(c, B.x, B.y - 18, 5, '#fffaf0'); tiny(c, 'WB', B.x, B.y - 20, RAMP.green[2], { align: 'c' }); if (!B.held) drawHand(c, B.x + 16, B.y - 20 + Math.sin(g.t * 6) * 2, false); }
+    if (g.ph === 4 && !g.bottle.done) {
+      const B = g.bottle, near = B.held && dist(B.x, B.y - 14, g.mx, g.my - 40) < 44;
+      // the same Westie BLVRD shampoo as in the salon; the monster's bubble glows when it's close enough to drop
+      if (near) { ringPx(c, g.mx, g.my - 40, 50 + Math.sin(g.t * 12) * 2, '#5bd18b'); ringPx(c, g.mx, g.my - 40, 49 + Math.sin(g.t * 12) * 2, '#5bd18b'); }
+      if (typeof prepBottle === 'function') prepBottle(c, B.x, B.y - 6, B.held ? .4 : 0);
+      else { rect(c, B.x - 10, B.y - 34, 20, 34, INK); rect(c, B.x - 9, B.y - 33, 18, 32, '#5bb593'); }
+      if (!B.held) drawHand(c, B.x + 16, B.y - 20 + Math.sin(g.t * 6) * 2, false);
+    }
     // the hydrant + its valve
     if (g.ph >= 5) { rect(c, 218, 150, 18, 30, INK); rect(c, 219, 151, 16, 29, '#e23b4e'); rect(c, 219, 151, 4, 29, '#ff6b7a'); disc(c, 226, 160, 10, INK); disc(c, 226, 160, 9, RAMP.steel[3]); const a = g.spin.ang; for (let i = 0; i < 4; i++) { const q = a + i * Math.PI / 2; thickLine(c, 226, 160, 226 + Math.cos(q) * 12, 160 + Math.sin(q) * 12, 1.5, INK); } disc(c, 226, 160, 3, RAMP.gold[3]); if (g.wash < .1) ringPx(c, 226, 160, 16 + Math.sin(g.t * 8) * 2, '#ffffff'); }
-    // phase command slam
-    if (g.state === 'play' && g.phaseCmdT < 1.2) { const [cmd, sub] = BARRO_PH[g.ph] || BARRO_PH[0]; mord(c, cmd, SW / 2, 12, { u: 1.8, r: 2, rim: 2, sy: 2 }, { anim: i => ({ s: Math.max(0, spring(g.phaseCmdT - i * .03, 2.6, 8)), a: g.phaseCmdT > .9 ? 1 - (g.phaseCmdT - .9) / .3 : 1 }) }); txt(c, sub, SW / 2, 46, '#ffffff', { align: 'c', out: INK }); }
+    // phase caption: a comic box drops in at the top-left with the gesture, then flies off
+    if (g.state === 'play' && g.phaseCmdT < 1.5) {
+      const [cmd, sub] = BARRO_PH[g.ph] || BARRO_PH[0], out = g.phaseCmdT > 1.2 ? E.inQ((g.phaseCmdT - 1.2) / .3) : 0, dy = rd((1 - E.outBack(clamp(g.phaseCmdT / .3, 0, 1))) * -60 - out * 70);
+      c.save(); c.translate(0, dy);
+      rect(c, 8, 4, 176, 44, INK); rect(c, 10, 6, 172, 40, '#ffdf4f'); for (let y = 8; y < 44; y += 3) for (let x = 12 + (y % 2) * 2; x < 180; x += 5) px(c, x, y, '#f2c330');
+      rect(c, 10, 6, 172, 2, '#fff7ae');
+      mord(c, cmd, 92, 8, fitMord(cmd, 150, { u: 1.6, r: 1.8, rim: 2, sy: 2, fill: ['#ffffff', '#ffd1e4', '#ff5d9e'] }), { anim: i => ({ s: Math.max(0, spring(g.phaseCmdT - .06 - i * .03, 2.6, 8)) }) });
+      txt(c, sub, 92, 34, INK, { align: 'c' });
+      if (typeof drawMechMini === 'function') drawMechMini(c, 200, 26, ['tap', 'rub', 'cut', 'draw', 'drag', 'spin'][g.ph] || 'tap', g.t);
+      c.restore();
+    }
+    if (g.state === 'lost') { // the shop drowns in mud
+      const k = clamp((g.t - g.decidedAt) / .5, 0, 1);
+      for (let x = 0; x < SW; x += 6) { const h = k * (70 + Math.sin(x * .2 + g.t * 3) * 10); rect(c, x, SH - h, 6, h, x % 12 ? '#5b3a1d' : '#6b4527'); }
+      shout(c, '¡PUAJ! ¡BARRO!', SW / 2, 60, g.t - g.decidedAt - .3, '#e0b070');
+    }
     if (g.state === 'won' && g.wash >= 1) shout(c, '¿¡…GUAU!?', g.mx, g.my - 96, g.t - g.decidedAt - 1);
   },
   top(g, c) {
-    panel(c, 6, 26, 244, 44, '#fff8e6', { r: 6 });
-    drawS(c, mudMonsterModel(0), 30, 48, { s: .32 });
-    txt(c, 'MONSTRUO DE BARRO', 54, 31, INK, { bold: true });
-    for (let i = 0; i < 6; i++) { const done = i < g.ph; panel(c, 54 + i * 32, 44, 28, 10, done ? '#c8c6d3' : '#5b3a1d', { r: 2 }); tiny(c, BARRO_PH[i][0].replace(/[¡!]/g, '').slice(0, 5), 68 + i * 32, 47, done ? '#6b6977' : '#fff8e6', { align: 'c' }); }
-    txt(c, 'BARRO EN LA TIENDA', 54, 58, '#6b6977');
-    rect(c, 150, 58, 94, 8, INK); rect(c, 151, 59, 92, 6, '#dce7ea'); rect(c, 151, 59, rd(g.mud * .92), 6, g.mud > 66 ? '#e23b4e' : g.mud > 33 ? '#ffb020' : '#7c5530');
-    drawSuperWestie(c, 200, 130 + Math.sin(g.t * 3) * 4, g.t, { flip: true, mood: g.state === 'lost' ? 'sad' : 'happy' });
+    // a comic page under the command: the monster's panel, the six gestures, the mud meter, Súper Keiko
+    rect(c, 0, 44, SW, SH - 44, '#231f5e'); for (let y = 46; y < SH; y += 4) for (let x = (y % 8) / 2; x < SW; x += 4) px(c, x, y, '#2c2870');
+    const pan = (x, y, w, h, fill) => { rect(c, x - 2, y - 2, w + 4, h + 4, INK); rect(c, x, y, w, h, fill); };
+    // the villain's panel: halftone red, the monster wobbling, its name
+    pan(6, 48, 92, 84, '#c0392b'); for (let y = 50; y < 130; y += 4) for (let x = 8 + (y % 8) / 2; x < 96; x += 4) px(c, x, y, '#d9534f');
+    const hurt = g.hurtT > 0 ? Math.sin(g.t * 40) * 2 * (g.hurtT / .6) : 0;
+    drawS(c, mudMonsterModel(fl(g.t * 3) % 2), 52 + hurt, 86, { s: .62 * (1 - Math.min(g.ph, 5) * .045), sy: .62 * (1 + Math.sin(g.t * 4) * .04) });
+    rect(c, 6, 118, 92, 14, INK); tiny(c, 'EL MONSTRUO', 52, 121, '#ffdf4f', { align: 'c' }); tiny(c, 'DE BARRO', 52, 127, '#ffffff', { align: 'c' });
+    // the six gestures, ticked off as they're done
+    pan(104, 48, 146, 44, '#fff8e6');
+    tiny(c, 'SEIS GESTOS PARA LAVARLO', 177, 51, INK, { align: 'c' });
+    const mechs = ['tap', 'rub', 'cut', 'draw', 'drag', 'spin'];
+    for (let i = 0; i < 6; i++) {
+      const x = 108 + i * 23, y = 60, done = i < g.ph, cur = i === g.ph && g.state === 'play';
+      const pop = g.stepPop && g.stepPop.i === i && g.stepPop.t < .6 ? 1 + Math.sin(Math.min(1, g.stepPop.t / .6) * Math.PI) * .35 : 1;
+      c.save(); c.translate(x + 10, y + 10); c.scale(pop, pop); c.translate(-(x + 10), -(y + 10));
+      panel(c, x, y + (cur ? Math.sin(g.t * 8) * 1.5 : 0), 20, 20, done ? '#9be3b8' : cur ? '#ffdf4f' : '#ffffff', { r: 3, line: INK });
+      if (typeof drawMechMini === 'function') drawMechMini(c, x + 10, y + 10 + (cur ? Math.sin(g.t * 8) * 1.5 : 0), mechs[i], g.t);
+      if (done) { disc(c, x + 17, y + 3, 4, INK); disc(c, x + 17, y + 3, 3, '#35a869'); px(c, x + 16, y + 3, '#ffffff'); px(c, x + 17, y + 4, '#ffffff'); px(c, x + 18, y + 2, '#ffffff'); }
+      c.restore();
+    }
+    // the mud meter: if it fills up, the shop is lost
+    pan(104, 98, 146, 34, '#fff8e6');
+    txt(c, 'BARRO EN LA TIENDA', 110, 102, INK, { bold: true });
+    const shake = g.mud > 66 && g.state === 'play' ? Math.sin(g.t * 50) : 0;
+    rect(c, 110 + shake, 116, 134, 10, INK); rect(c, 111 + shake, 117, 132, 8, '#dce7ea');
+    const w = rd(132 * g.mud / 100); rect(c, 111 + shake, 117, w, 8, g.mud > 66 ? '#e23b4e' : g.mud > 33 ? '#ffb020' : '#7c5530'); rect(c, 111 + shake, 117, w, 2, 'rgba(255,255,255,.4)');
+    for (let i = 1; i < 4; i++) vline(c, 111 + i * 33 + shake, 117, 124, 'rgba(29,20,36,.25)');
+    // Súper Keiko in her inset, with a word for the moment
+    pan(104, 136, 146, 31, '#63a0ef'); for (let y = 138; y < 167; y += 4) for (let x = 106 + (y % 8) / 2; x < 250; x += 4) px(c, x, y, '#7ab3f5');
+    // her little menu self fits the inset: walking on the spot, cheering when it's over
+    const hero = STAGES.superwestie.chibi ? STAGES.superwestie.chibi(g.state === 'won' ? 'happy' : g.state === 'lost' ? 'idle' : (fl(g.t * 6) % 2 ? 'walk1' : 'walk0'), g.t) : null;
+    if (hero) drawS(c, hero, 222, 166 - (g.state === 'won' ? Math.abs(Math.sin(g.t * 8)) * 3 : 0), { ax: .5, ay: 1, flip: true });
+    else drawSuperWestie(c, 220, 154, g.t, { flip: true });
+    const say = g.state === 'lost' ? '¡Nooo!' : g.state === 'won' ? '¡Lo logramos!' : g.mud > 66 ? '¡Rápido!' : ['¡A por él!', '¡Frota fuerte!', '¡Zas, zas!', '¡Rodéalo!', '¡Espuma!', '¡Agua va!'][g.ph] || '¡Vamos!';
+    panel(c, 110, 142, 76, 18, '#ffffff', { r: 5, line: INK }); polyPx(c, [[184, 148], [192, 151], [184, 154]], INK);
+    txt(c, say, 148, 147, g.mud > 66 ? '#e23b4e' : INK, { align: 'c', bold: true });
   },
   bot(g) {
     if (g.ph === 0) { const b = g.balls.find(b => !b.dead && b.t > .15); return b ? { x: b.cx, y: b.cy, down: fl(g.t * 20) % 3 === 0 } : { down: false }; }
@@ -18155,7 +18520,11 @@ const BOOT = {
     } else {
       rect(g, 0, 0, SW, SH, '#ffffff');
       const k = this.k, drop = k < .5 ? -120 * (1 - E.outBounce(k / .5)) : 0;
+      // Keiko pops up from behind the sign when it barks, then ducks back down
+      const pk = k < .5 ? 0 : k < 1.9 ? spring(k - .5, 2.6, 7) : Math.max(0, 1 - (k - 1.9) * 3), tilt = Math.sin(k * 9) * .06 * (k < 1.2 ? 1 : 0);
+      if (pk > 0) drawS(g, keikoHead(k < 1.4 ? 'happy' : 'wink'), SW / 2 + 42, 78 - pk * 17, { rot: tilt, s: .62 });
       drawS(g, wbSign(), SW / 2, 84 + drop, {});
+      if (k > .55 && k < 1.5) { const bk = spring(k - .55, 3, 8); g.save(); g.translate(SW / 2 + 76, 30); g.scale(bk, bk); panel(g, -24, -9, 48, 16, '#ffffff', { r: 5 }); polyPx(g, [[-14, 6], [-22, 13], [-8, 6]], '#ffffff'); txt(g, '¡GUAU!', 0, -5, INK, { align: 'c', bold: true }); g.restore(); }
       this.fx.draw(g);
     }
   },
@@ -18166,12 +18535,15 @@ const BOOT = {
     } else {
       const k = this.k;
       if (k > .7) { const a = clamp((k - .7) * 3, 0, 1); g.globalAlpha = a; txt(g, 'presenta', SW / 2, 60, '#6b6977', { align: 'c' }); g.globalAlpha = 1; }
-      if (k > 1.1) { g.globalAlpha = clamp((k - 1.1) * 3, 0, 1); txt(g, 'un juego hecho con mucho cariño', SW / 2, 110, '#9896a4', { align: 'c' }); txt(g, 'para Anahí y sus peludos', SW / 2, 122, '#9896a4', { align: 'c' }); drawHeart(g, SW / 2, 142, '#ff4060', 1.4); g.globalAlpha = 1; }
+      if (k > 1.1) { g.globalAlpha = clamp((k - 1.1) * 3, 0, 1); txt(g, 'un juego hecho con mucho cariño', SW / 2, 110, '#9896a4', { align: 'c' }); txt(g, 'para Anahí y sus peludos', SW / 2, 122, '#9896a4', { align: 'c' }); drawHeart(g, SW / 2, 142, '#ff4060', 1.4 + Math.max(0, Math.sin(k * 7)) * .25); g.globalAlpha = 1; }
     }
   },
 };
 // ============================================================================
-//  title — the WESTIE WARE ¡Tocados! logo and the title screen.
+//  title — the WESTIE WARE ¡Grooming! logo and the title screen.
+//  The logo: WESTIE in westie fur (the card pens' letters grown into tufts),
+//  WARE in WarioWare gold, ¡Grooming! on a pink ribbon that the shears snip,
+//  and Keiko peeking over the top with her paws on the letters.
 // ============================================================================
 'use strict';
 
@@ -18181,35 +18553,210 @@ const SONG_TITLE = { spb: 4, loop: true, tracks: [
   { i: 'p12', v: .3, n: 'E4 . G4 C5 . E5 C5 . G4 . E4 . F4 . G4 . E4 . G4 C5 . E5 G5 . E5 . C5 . G4 . F4 . A4 . C5 F5 . A5 F5 . C5 . A4 . B4 . D5 . B4 . G4 E4 . F4 G4 . E4 . . . . . . .' },
   { i: 'bass', v: .85, n: 'C3 . . C3 . . G2 . A2 . . A2 . . E2 . F2 . . F2 . . C3 . G2 . . G2 . . D3 . F2 . . F2 . . A2 . Bb2 . . Bb2 . . F2 . C3 . . G2 . . E2 . C3 . G2 . C3 . . .' },
   { i: 'd', v: .75, n: 'k . h k s . h . k . h k s . h h k . h k s . h . k k h . s s s s' }] };
+const TITLE_BPM = 128;
 
 // ---------------------------------------------------------------- the logo --
-const LOGO_ST = { u: 2.35, r: 2.45, rim: 2, sy: 4, sx: 1, fill: ['#ffffff', '#fff27a', '#ffc23a'], line: INK, shadow: RAMP.green[0] };
-const LOGO_ST2 = { u: 1.7, r: 1.9, rim: 2, sy: 2, sx: 1, fill: ['#ffffff', '#ffd1e4', '#ff5d9e'], line: INK, shadow: '#7a1f4a', slant: .28 };
-// (x, y) = centre of the word line; t = seconds since it appeared
+// the pens: WESTIE is drawn from this round nib (then furred), WARE is chunky
+// WarioWare gold, ¡Grooming! a flat-nib script in candy pink on the ribbon
+const TITLE_FUR = { id: 'titleFur', u: 3.05, r: 4.2, nib: 'round', slant: 0, gap: .45, rim: 0, sx: 0, sy: 0 };
+const TITLE_WARE = { id: 'titleWare', u: 2.45, r: 3, nib: 'round', slant: .14, gap: .8, fill: ['#fff7ae', '#ffd23f', '#f0981a'], line: INK, rim: 2, sx: 1, sy: 4, shadow: ['#a8510c', '#6b2e06', INK], hi: '#ffffff', lo: '#c56d12' };
+const TITLE_GROOM = { id: 'titleGroom', u: 1.75, nib: 'flat', r: 2.35, ang: -.8, ratio: .34, slant: .3, gap: .45, fill: ['#ffffff', '#fff0f6', '#ffc9e0'], line: '#4a0f30', rim: 1, sx: 0, sy: 2, shadow: '#4a0f30' };
+const TITLE_TAP = { id: 'titleTap', u: 1.3, r: 1.55, nib: 'round', slant: .08, gap: .9, fill: ['#fff7ae', '#ffd23f', '#f0981a'], line: INK, rim: 1, sx: 0, sy: 2, shadow: '#6b2e06', hi: '#ffffff' };
+
+// one letter of WESTIE in fur: the pen's mask, tufted along the top and the
+// sides, lit from the top-left with soft lilac shade and strands, inked round
+function titleFurGlyph(ch) {
+  return mdl('titleFur:' + ch, () => {
+    const S = cardStyle(TITLE_FUR), G = cardGlyph(ch, S), P = 3, W = G.W + P * 2, H = G.H + P * 2;
+    const M = new Uint8Array(W * H), seed = ch.charCodeAt(0);
+    for (let y = 0; y < G.H; y++) for (let x = 0; x < G.W; x++) if (G.M[y * G.W + x]) M[(y + P) * W + x + P] = 1;
+    // tufts: clumps of fur standing up off the top edges and out of the sides
+    const grow = [];
+    for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) {
+      const i = y * W + x; if (!M[i]) continue;
+      if (!M[i - W]) { const v = vnoise(x * .45 + seed, y * .3, 5); if (v > .48) { grow.push(i - W); if (v > .68) grow.push(i - 2 * W); } }
+      for (const dx of [-1, 1]) if (!M[i + dx] && M[i - dx]) { const v = vnoise(x * .3, y * .45 + seed, 9 + dx); if (v > .6) { grow.push(i + dx); if (v > .8) grow.push(i + dx * 2); } }
+    }
+    for (const i of grow) M[i] = 1;
+    const F = RAMP.fur, c = mkCanvas(W, H), img = c.g.createImageData(W, H), d = img.data;
+    const inside = (x, y) => x >= 0 && y >= 0 && x < W && y < H && M[y * W + x] === 1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!M[y * W + x]) continue;
+      let col = F[4];
+      if (!inside(x + 1, y + 1) || !inside(x, y + 1)) col = F[2];
+      else if (!inside(x + 2, y + 2) || !inside(x, y + 2)) col = F[3];
+      else if (vnoise((x - y * .6) * .8, y * .2 + seed, 4) > .72) col = F[3]; // strands
+      if (!inside(x - 1, y - 1) && !inside(x, y - 1) && inside(x, y + 1)) col = '#ffffff';
+      const [r, gg, b] = cardRGBA(col), o = (y * W + x) * 4; d[o] = r; d[o + 1] = gg; d[o + 2] = b; d[o + 3] = 255;
+    }
+    c.g.putImageData(img, 0, 0);
+    return outlined(c, INK, true);
+  });
+}
+function titleFurShadow(ch) { return mdl('titleFurSh:' + ch, () => silhouette(titleFurGlyph(ch), '#04150f')); }
+// letter pen positions of a word, centred on 0
+function titleWord(s, st) {
+  return mdl('titleWord:' + s + ':' + st.id, () => {
+    const S = cardStyle(st), w = cardWordW(s, st); let xx = -w / 2; const L = [];
+    for (const ch of s) { L.push({ ch, x: xx }); xx += ch === ' ' ? 4 * S.u : cardAdv(ch, S); }
+    return { L, w };
+  });
+}
+// WARE, finished, split in two so the shine only runs over the gold
+function titleWareCanvas(part) {
+  return mdl('titleWare:' + part, () => {
+    const S = cardStyle(TITLE_WARE), G = cardGlyph('W', S), w = cardWordW('WARE', TITLE_WARE), c = mkCanvas(Math.ceil(w) + 24, G.H + 6);
+    cardWord(c.g, 'WARE', c.width / 2, G.oy + 1, TITLE_WARE, { layers: part === 'fill' ? ['fill'] : ['glow', 'shadow', 'line2', 'line'] });
+    c.oy = G.oy + 1; return c;
+  });
+}
+const TITLE_SCRATCH = { c: null };
+function titleShine(g, src, X, Y, p) {
+  let c = TITLE_SCRATCH.c; if (!c || c.width !== src.width || c.height !== src.height) c = TITLE_SCRATCH.c = mkCanvas(src.width, src.height);
+  c.g.clearRect(0, 0, c.width, c.height); c.g.drawImage(src, 0, 0);
+  c.g.globalCompositeOperation = 'source-atop';
+  const bx = lerp(-24, c.width + 16, p);
+  polyPx(c.g, [[bx, 0], [bx + 8, 0], [bx - 6, c.height], [bx - 14, c.height]], '#ffffff');
+  polyPx(c.g, [[bx + 12, 0], [bx + 15, 0], [bx + 1, c.height], [bx - 2, c.height]], '#fffbe0');
+  c.g.globalCompositeOperation = 'source-over';
+  g.drawImage(c, rd(X), rd(Y));
+}
+// the shears that snip the ribbon: pivot at (x, y), blades pointing left
+function titleShears(g, x, y, open, rot = 0) {
+  const a = .05 + open * .36;
+  // handles first (behind), then the blades crossing over the pivot
+  for (const s of [1, -1]) {
+    const ha = rot - s * a * 1.25, hx = x + Math.cos(ha) * 12, hy = y + Math.sin(ha) * 12 + s * 2.5;
+    thickLine(g, x, y, hx, hy, 2.4, INK); thickLine(g, x, y, hx, hy, 1.3, '#c93a7c');
+    disc(g, hx, hy, 6.4, INK); disc(g, hx, hy, 5.4, '#ff5d9e'); disc(g, hx - 1.5, hy - 1.5, 2.6, '#ffb3d1'); disc(g, hx, hy, 2.6, INK); disc(g, hx + .5, hy + .5, 1.4, '#6b1a45');
+  }
+  for (const s of [1, -1]) {
+    const ang = Math.PI + rot + s * a, tx = x + Math.cos(ang) * 23, ty = y + Math.sin(ang) * 23, nx = -Math.sin(ang) * s, ny = Math.cos(ang) * s;
+    polyPx(g, [[x + nx * 3.2, y + ny * 3.2], [tx, ty], [x - nx * 2.2, y - ny * 2.2]], INK);
+    polyPx(g, [[x + nx * 2.1, y + ny * 2.1], [tx - Math.cos(ang), ty - Math.sin(ang)], [x - nx * 1.1, y - ny * 1.1]], '#c8ccdc');
+    linePx(g, x + nx * 1.2 + Math.cos(ang) * 3, y + ny * 1.2 + Math.sin(ang) * 3, tx - Math.cos(ang) * 3, ty - Math.sin(ang) * 3, '#ffffff');
+  }
+  disc(g, x, y, 2.6, INK); disc(g, x, y, 1.6, '#e7c35f'); px(g, x - 1, y - 1, '#fff0a6');
+}
+// the pink ribbon: an arched band with forked tails; k = how far it has unrolled.
+// Once it is all out it comes from a cached picture (it was ~1000 rects a frame).
+function titleRibbon(g, x, cy, T, k, cut) {
+  if (k >= 1) {
+    const c = mdl('titleRibbon:' + (cut ? 1 : 0), () => { const cv = mkCanvas(240, 48); cv.info = titleRibbonDraw(cv.g, 120, 20, T, 1, cut); return cv; });
+    g.drawImage(c, rd(x - 120), rd(cy - 20));
+    const I = c.info; return { x0: I.x0 - 120 + rd(x), x1: I.x1 - 120 + rd(x), w: I.w, h: I.h, arch: xx => I.arch(xx - rd(x) + 120) };
+  }
+  return titleRibbonDraw(g, x, cy, T, k, cut);
+}
+function titleRibbonDraw(g, x, cy, T, k, cut) {
+  const tw = titleWord('¡GROOMING!', TITLE_GROOM).w, w = Math.ceil(tw + 26), x0 = rd(x - w / 2), x1 = x0 + w, h = 18;
+  const arch = xx => Math.round(Math.sin((xx - x0) / w * Math.PI) * -4);
+  const reveal = x0 + w * E.outC(k), yTop = xx => cy + arch(xx) - (h >> 1);
+  // tails behind the band (the right one is long until the shears get it)
+  const tail = (xa, dir, len) => {
+    const y0 = yTop(xa) + 4, y1 = y0 + h - 2, xe = xa + dir * len;
+    polyPx(g, [[xa, y0 - 1], [xe + dir, y0 + 3], [xe - dir * 5, (y0 + y1) / 2 + 3], [xe + dir, y1 + 6], [xa, y1 + 1]], INK);
+    polyPx(g, [[xa, y0], [xe, y0 + 4], [xe - dir * 5, (y0 + y1) / 2 + 3], [xe, y1 + 5], [xa, y1]], '#a1245f');
+    linePx(g, xa, y0 + 1, xe - dir, y0 + 4, '#c93a7c');
+  };
+  if (k > .02) tail(x0 + 2, -1, 14);
+  if (k > .98) tail(x1 - 2, 1, cut ? 12 : 24);
+  for (let xx = x0; xx < Math.min(x1, reveal); xx++) {
+    const y = yTop(xx);
+    rect(g, xx, y - 1, 1, h + 2, INK); rect(g, xx, y, 1, h, '#d63c83');
+    rect(g, xx, y, 1, 2, '#ff8fc0'); rect(g, xx, y + h - 3, 1, 3, '#a1245f');
+    if (xx % 4 < 2 && xx > x0 + 2 && xx < x1 - 3) { px(g, xx, y + 3, '#ffc2dc'); px(g, xx, y + h - 5, '#e8659f'); } // stitching
+  }
+  if (reveal > x0) { rect(g, x0 - 1, yTop(x0) - 1, 1, h + 2, INK); if (reveal >= x1) rect(g, x1, yTop(x1 - 1) - 1, 1, h + 2, INK); }
+  return { x0, x1, w, arch, h };
+}
+function titleGlow() {
+  return mdl('titleGlow', () => {
+    const W = 236, H = 150, c = mkCanvas(W, H), g = c.g, G = RAMP.green;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const v = Math.hypot((x - W / 2) / (W / 2), (y - H / 2) / (H / 2));
+      if (v < 1 && bayerK(x, y) < (1 - v) * 1.15) px(g, x, y, v < .55 && bayerK(x + 1, y + 2) < (.55 - v) * 1.4 ? G[3] : G[2]);
+    }
+    return c;
+  });
+}
+// the whole logo; (x, y) = the middle of the WESTIE line, t = seconds since it began
+const TITLE_T = { drop: .08, land: .32, keiko: .78, ware: .95, ribbon: 1.2, words: 1.3, shears: 1.55, snip: 1.93 };
 function drawLogo(g, x, y, t, o = {}) {
-  const T = Math.max(0, t);
-  // emblem: the crest westie in a gilt badge, popping up behind the letters
-  const ek = spring(T - .35, 2.2, 6), ex = x - 2, ey = y - 22 - ek * 6;
-  if (ek > 0) {
-    // a gilt sunburst medallion behind the westie
-    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + T * .4; polyPx(g, [[ex, ey + 2], [ex + Math.cos(a - .1) * 36 * ek, ey + 2 + Math.sin(a - .1) * 36 * ek], [ex + Math.cos(a + .1) * 36 * ek, ey + 2 + Math.sin(a + .1) * 36 * ek]], i % 2 ? RAMP.gold[3] : RAMP.gold[2]); }
-    disc(g, ex, ey + 2, 31 * ek, INK); disc(g, ex, ey + 2, 30 * ek, RAMP.gold[3]); disc(g, ex, ey + 2, 27 * ek, RAMP.green[2]); disc(g, ex - 2, ey, 22 * ek, RAMP.green[3]);
-    if (ek > .6) drawS(g, keikoHead(fl(T * 1.3) % 5 === 0 ? 'wink' : 'happy'), ex, ey + 6, { s: 1 });
+  const T = Math.max(0, t), beat = T * TITLE_BPM / 60, bob = T > 2 ? Math.round(Math.sin(beat * Math.PI) * 1.2) : 0;
+  const Sf = cardStyle(TITLE_FUR), capY = y - 17;
+  // a soft pool of light behind the words (dithered, so it stays pixel art)
+  if (!o.noSparkle) g.drawImage(titleGlow(), rd(x - 118), rd(y - 58));
+  // sparkles on the beat and bubbles drifting up behind everything
+  if (!o.noSparkle) {
+    for (let i = 0; i < 10; i++) { const ph = (T * .16 + i * .137) % 1, bx = x - 110 + ((i * 71) % 220), by = y + 80 - ph * 150, r = 2 + (i % 3); if (T < 1 || ph < .05) continue; g.globalAlpha = Math.min(1, (1 - ph) * 2.5); ringPx(g, bx + Math.sin(T * 2 + i) * 4, by, r, '#dff4ff'); px(g, bx + Math.sin(T * 2 + i) * 4 - r * .4, by - r * .5, '#ffffff'); g.globalAlpha = 1; }
   }
-  // WESTIE WARE: letters drop in one by one, then keep a lazy wave
-  mord(g, 'WESTIE WARE', x, y - 6, LOGO_ST, { anim: (i) => {
-    const lt = T - i * .05; if (lt <= 0) return { s: 0 };
-    const drop = lt < .35 ? -40 * (1 - E.outBounce(lt / .35)) : 0;
-    return { dy: drop + Math.sin(T * 3 + i * .6) * 1.6, s: 1, rot: Math.sin(T * 2.2 + i) * .03 };
-  } });
-  // ¡Tocados! — a pink sticker slapped under it
-  const sk = spring(T - .9, 2.6, 7);
-  if (sk > 0) {
-    g.save(); g.translate(rd(x + 34), rd(y + 34)); g.rotate(-.08 + Math.sin(T * 2) * .02); g.scale(sk, sk);
-    mord(g, '¡Tocados!'.toUpperCase(), 0, -10, LOGO_ST2, {});
-    g.restore();
+  // Keiko climbs up behind the letters and peeks over them
+  const kk = spring(T - TITLE_T.keiko, 2.4, 6.5), hx = x + 1;
+  if (kk > 0) {
+    const hy = capY + 20 - kk * 30 + bob, wink = fl(beat) % 8 === 7;
+    drawS(g, keikoHead(T < TITLE_T.keiko + .45 ? 'wow' : wink ? 'wink' : 'happy'), hx, hy, { ax: .5, ay: .5, rot: T > 2 ? Math.sin(beat * Math.PI / 2) * .035 : 0 });
   }
-  if (!o.noSparkle) for (let i = 0; i < 4; i++) { const ph = (T * .7 + i * .25) % 1; if (ph < .3) drawStar(g, x - 110 + i * 70 + (i % 2) * 20, y - 20 + (i % 3) * 22, 3.5 * (1 - ph / .3) + .5, '#ffffff', ph * 6); }
+  // WESTIE in westie fur: letters drop, land with a squash, then sway on the beat
+  const Wd = titleWord('WESTIE', TITLE_FUR);
+  Wd.L.forEach((L, i) => {
+    const lt = T - i * TITLE_T.drop; if (lt <= 0) return;
+    const img = titleFurGlyph(L.ch), sh = titleFurShadow(L.ch), G = cardGlyph(L.ch, Sf);
+    const fall = clamp(lt / TITLE_T.land, 0, 1), dy = (1 - E.inQ(fall)) * -80;
+    const land = lt - TITLE_T.land, sq = land > 0 ? Math.exp(-land * 8) * Math.cos(land * 24) : 0;
+    const sy = 1 - sq * .24, sx = 1 + sq * .18, wave = T > 2 ? Math.round(Math.sin(beat * Math.PI / 2 + i * .9) * 1.4) : 0;
+    const bx = x + L.x - 4 + img.width / 2, by = capY - G.oy - 4 + img.height + dy + wave + bob;
+    for (let k = 3; k >= 1; k--) drawS(g, sh, bx, by + k, { ax: .5, ay: 1, sx, sy });
+    drawS(g, img, bx, by, { ax: .5, ay: 1, sx, sy });
+    if (land > 0 && land < .35 && !o.noSparkle) for (let q = 0; q < 3; q++) { const pk = land / .35, px0 = bx + (q - 1) * 9 * (1 + pk * 1.5), py0 = by + 3 - pk * 6; g.globalAlpha = 1 - pk; disc(g, px0, py0, 2.5 - pk * 1.5, '#ffffff'); g.globalAlpha = 1; }
+  });
+  // a twinkle hops across the fur
+  if (!o.noSparkle && T > 2.2) { const tw = (T * .8) % 1, L = Wd.L[fl(T * .8) % Wd.L.length]; if (tw < .35) drawStar(g, x + L.x + 8 + (fl(T * .8) * 7) % 10, capY + 4 + (fl(T * .8) * 11) % 20, 3.2 * Math.sin(tw / .35 * Math.PI) + .4, '#ffffff'); }
+  // her paws on top of the letters
+  if (kk > .55) for (const s of [-1, 1]) {
+    const px0 = hx + s * 21, py0 = capY + 2 + bob + (T > 2 && fl(beat) % 2 === (s > 0 ? 1 : 0) ? -1 : 0);
+    ellipsePx(g, px0, py0, 6, 4.2, INK); ellipsePx(g, px0, py0 - .5, 5, 3.2, '#ffffff'); hline(g, px0 - 3, px0 + 2, py0 + 1, RAMP.fur[3]);
+    px(g, px0 - 2, py0 + 2, INK); px(g, px0 + 1, py0 + 2, INK); px(g, px0 - 1, py0 - 2, '#ffffff');
+  }
+  // WARE slams in, then catches the light now and then
+  const wk = T - TITLE_T.ware, wy = y + 25 + bob;
+  if (wk > 0) {
+    if (wk < .9) cardWord(g, 'WARE', x + 4, wy, TITLE_WARE, { anim: i => cardAnimSlam(wk, i, { stagger: .07, from: 2.6 }) });
+    else {
+      const R = titleWareCanvas('rest'), Fc = titleWareCanvas('fill'), X = x + 4 - R.width / 2, Y = wy - R.oy, sp = (T - 1.9) % 3;
+      g.drawImage(R, rd(X), rd(Y));
+      if (sp > 0 && sp < .5) titleShine(g, Fc, X, Y, sp / .5); else g.drawImage(Fc, rd(X), rd(Y));
+    }
+  } else cardPrewarm([['WARE', TITLE_WARE], ['¡GROOMING!', TITLE_GROOM]]);
+  // ¡Grooming! on the pink ribbon, then the shears come and snip its tail
+  const rk = clamp((T - TITLE_T.ribbon) / .3, 0, 1), cut = T > TITLE_T.snip, cy = y + 66 + bob;
+  if (rk > 0) {
+    const R = titleRibbon(g, x, cy, T, rk, cut), Wg = titleWord('¡GROOMING!', TITLE_GROOM), n = Wg.L.length;
+    const tk = T - TITLE_T.words;
+    if (tk > 0) cardWord(g, '¡GROOMING!', x, cy - 11, TITLE_GROOM, { anim: i => {
+      const lt = tk - i * .045; if (lt <= 0) return { s: 0 };
+      const a = R.arch(x + Wg.L[i].x + 6), hop = T > 2 && fl(beat) % 4 === 0 ? Math.round(Math.sin(clamp((beat % 1) / .5, 0, 1) * Math.PI) * -2 * (i % 2 ? 1 : .5)) : 0;
+      return { s: spring(lt, 2.6, 7), dy: a + hop, rot: lt < .25 ? (1 - lt / .25) * (i % 2 ? .3 : -.3) : 0 };
+    } });
+    // the shears
+    const st = T - TITLE_T.shears;
+    if (st > 0) {
+      const inK = E.outBack(clamp(st / .3, 0, 1)), ex = R.x1 + 14, ey = cy + 1;
+      let open = .9;
+      if (T > TITLE_T.shears + .3 && T < TITLE_T.snip + .15) open = Math.abs(Math.cos((T - TITLE_T.shears - .3) * 21));
+      else if (T > 2.4 && (beat % 4) > 3.6) open = .15; // a little snip every bar
+      else if (cut) open = .55;
+      titleShears(g, lerp(ex + 70, ex, inK), lerp(ey - 40, ey, inK), open, cut ? -.35 : 0);
+      if (cut && T < TITLE_T.snip + .3 && !o.noSparkle) { const k2 = (T - TITLE_T.snip) / .3; for (let q = 0; q < 4; q++) { const a = q / 4 * TAU + .4; drawStar(g, ex - 4 + Math.cos(a) * 10 * k2, ey + Math.sin(a) * 8 * k2, 3 * (1 - k2) + .5, '#fff27a'); } }
+      // the snipped bit of ribbon tumbles away
+      if (cut) { const ft = T - TITLE_T.snip; if (ft < 1.4) { const fx = R.x1 + 18 + ft * 26, fy = cy + 6 + ft * 40 + ft * ft * 140, fr = ft * 7; g.save(); g.translate(rd(fx), rd(fy)); g.rotate(fr); polyPx(g, [[-6, -5], [6, -3], [1, 3], [6, 6], [-6, 5]], INK); polyPx(g, [[-5, -4], [5, -2], [0, 3], [5, 5], [-5, 4]], '#a1245f'); g.restore(); } }
+    }
+  }
+  // sparkles on the beat
+  if (!o.noSparkle && T > 2) {
+    const b = fl(beat), ph = beat - b;
+    if (ph < .4) for (let q = 0; q < 2; q++) { const hs = hash2(b, q, 11), sx0 = x - 104 + hs * 208, sy0 = y - 40 + hash2(q, b, 12) * 118; drawStar(g, sx0, sy0, 4 * Math.sin(ph / .4 * Math.PI) + .5, q ? '#fff27a' : '#ffffff', ph * 3); }
+  }
 }
 // small version on the console lid (tall phones)
 function drawLidLogo(g, x, y) {
@@ -18217,15 +18764,58 @@ function drawLidLogo(g, x, y) {
 }
 
 // ---------------------------------------------------------------- TITLE -----
+// top: the salon wall in green damask and gilt, gold rays behind the logo and
+// everyone you have met so far bopping on the counter; bottom: the shop sign
+// and a big gilt START plaque
+function titleTopBg() {
+  return mdl('titleTopBg', () => {
+    const c = mkCanvas(SW, SH), g = c.g, G = RAMP.green, Au = RAMP.gold;
+    g.drawImage(cardSalonBg(), 0, 0);
+    // the counter everyone stands on
+    rect(g, 0, 162, SW, SH - 162, G[0]); rect(g, 0, 162, SW, 1, INK); rect(g, 0, 163, SW, 2, Au[3]); rect(g, 0, 165, SW, 1, Au[1]);
+    for (let x = 0; x < SW; x += 16) { rect(g, x, 168, 14, 22, G[1]); rect(g, x + 1, 169, 12, 1, G[2]); }
+    return c;
+  });
+}
+function titleBotBg() {
+  return mdl('titleBotBg', () => {
+    const c = mkCanvas(SW, SH), g = c.g, G = RAMP.green, Au = RAMP.gold;
+    rect(g, 0, 0, SW, SH, G[1]);
+    for (let y = 0; y < SH; y += 12) for (let x = ((y / 12) % 2) * 12; x < SW; x += 24) rect(g, x, y, 12, 12, G[2]);
+    // the footer strip for the credits
+    rect(g, 0, 164, SW, SH - 164, G[0]); rect(g, 0, 164, SW, 1, Au[1]); rect(g, 0, 165, SW, 1, Au[3]);
+    ringRect(g, 3, 3, SW - 6, 158, 1, Au[2]); ringRect(g, 6, 6, SW - 12, 152, 1, Au[1]);
+    for (const [cx, cy, sx, sy] of [[3, 3, 1, 1], [SW - 4, 3, -1, 1], [3, 160, 1, -1], [SW - 4, 160, -1, -1]]) { for (let i = 0; i < 7; i++) { px(g, cx + sx * i, cy + sy * 3, Au[3]); px(g, cx + sx * 3, cy + sy * i, Au[3]); } disc(g, cx + sx * 5, cy + sy * 5, 1.4, Au[3]); }
+    return c;
+  });
+}
+// who stands on the counter: Keiko, Anahí and everyone unlocked since
+function titleCrew() {
+  const L = ['keiko', 'anahi'];
+  for (const id of STORY_STAGES.concat(['superwestie'])) if (id !== 'anahi' && STAGES[id] && stageUnlocked(id) && STAGES[id].chibi) L.push(id);
+  return L;
+}
 const TITLE = {
-  enter() { this.t = 0; this.idle = 0; this.out = -1; stopAllMusic(.1); this.song = playSong(SONG_TITLE, { bpm: 128 }); this.fx = new FX(); },
+  enter() { this.t = 0; this.idle = 0; this.out = -1; this.cue = {}; stopAllMusic(.1); this.song = playSong(SONG_TITLE, { bpm: TITLE_BPM }); this.fx = new FX(); this.press = 0; },
   exit() { },
+  // the logo's little sounds, once each, in time with its entrance
+  cues(t) {
+    const C0 = .15, at = (k, time, fn) => { if (!this.cue[k] && t >= time + C0) { this.cue[k] = 1; fn(); } };
+    for (let i = 0; i < 6; i++) at('l' + i, i * TITLE_T.drop + TITLE_T.land, () => sfx('pop', { pitch: .9 + i * .09, vol: .55 }));
+    at('keiko', TITLE_T.keiko + .05, () => sfx('bark', { pitch: 1.35, vol: .45 }));
+    at('ware', TITLE_T.ware + .1, () => { sfx('slam'); shake('top', 2, .18); });
+    at('ribbon', TITLE_T.ribbon, () => sfx('swoosh', { pitch: 1.3, vol: .5 }));
+    at('shears', TITLE_T.shears, () => sfx('whoosh', { pitch: 1.4, vol: .35 }));
+    at('snip', TITLE_T.snip, () => { sfx('snip'); sfx('sparkle', { vol: .5 }); });
+  },
   update(dt) {
-    this.t += dt; this.fx.update(dt); this.idle = REALTAP ? 0 : this.idle + dt;
+    this.t += dt; this.fx.update(dt); this.idle = REALTAP ? 0 : this.idle + dt; this.press = Math.max(0, this.press - dt * 4);
+    if (this.out < 0) this.cues(this.t);
     if (this.idle > 25 && this.out < 0 && !TESTING) { this.out = 0; transit('blinds', DEMO, {}); return; }
     if (this.out < 0 && this.t > .8 && (IN.tap || IN.anyTap)) {
-      this.out = 0; sfx('bark', { n: 2, pitch: 1.1 }); sfx('slam'); flash('both', '#ffffff', .15); shake('top', 3, .25);
+      this.out = 0; this.press = 1; sfx('bark', { n: 2, pitch: 1.1 }); sfx('slam'); flash('both', '#ffffff', .15); shake('top', 3, .25);
       this.fx.burst(IN.x || SW / 2, IN.y || 100, 18, { k: 'star', c: [C.yellow, '#fff', C.pinkL], sp0: 60, sp1: 180 });
+      this.fx.burst(SW / 2, 104, 12, { k: 'bubble', c: '#dff4ff', sp0: 30, sp1: 90, g: -60, r: 3, life0: .5, life1: .9 });
       stopSong(this.song, .3);
       // the prologue plays on the first visit, and once more for players of an older version (it was redrawn with Keiko)
       after(.55, () => { if (!SAVE.prologue || (SAVE.prologueV || 1) < PROLOGUE_V) playCut('prologo', () => { SAVE.prologue = true; SAVE.prologueV = PROLOGUE_V; persist(); go(MENU, { first: true }); }); else transit('paw', MENU, {}); });
@@ -18233,29 +18823,48 @@ const TITLE = {
     if (this.out >= 0) this.out += dt;
   },
   drawTop(g) {
-    const t = this.t;
-    // WarioWare-orange sunburst tempered with Westie cream
-    rect(g, 0, 0, SW, SH, '#ffb347');
-    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + t * .15; polyPx(g, [[SW / 2, SH / 2 + 10], [SW / 2 + Math.cos(a) * 300, SH / 2 + 10 + Math.sin(a) * 300], [SW / 2 + Math.cos(a + .2) * 300, SH / 2 + 10 + Math.sin(a + .2) * 300]], '#ffc56b'); }
-    // paw prints drifting
-    for (let i = 0; i < 14; i++) { const x = (i * 47 + t * 14) % (SW + 30) - 15, y = (i * 83 + t * 9) % (SH + 30) - 15; drawPawPrint(g, x, y, '#ffd28c', i % 2 ? .5 : -.4); }
-    drawLogo(g, SW / 2, 86, t - .2);
-    // unlocked characters peeking from the bottom edge
-    const peek = titlePeekers();
-    peek.forEach((p, i) => { const px0 = 30 + i * (196 / Math.max(1, peek.length - 1 || 1)), bob = Math.abs(Math.sin(t * 3 + i)) * 3; p(g, px0, SH + 8 - bob, t); });
+    const t = this.t, beat = t * TITLE_BPM / 60, Au = RAMP.gold;
+    g.drawImage(titleTopBg(), 0, 0);
+    // slow gold rays behind the logo, brighter on the downbeat
+    const pulse = .08 + Math.max(0, 1 - (beat % 1) * 3) * .05 * (t > 2 ? 1 : 0);
+    g.globalAlpha = pulse;
+    for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + t * .12; polyPx(g, [[SW / 2, 78], [SW / 2 + Math.cos(a - .09) * 240, 78 + Math.sin(a - .09) * 240], [SW / 2 + Math.cos(a + .09) * 240, 78 + Math.sin(a + .09) * 240]], Au[4]); }
+    g.globalAlpha = 1;
+    drawLogo(g, SW / 2, 70, t - .15);
+    // the crew on the counter, bopping on the beat (a cheer every two bars)
+    const crew = titleCrew(), n = crew.length, sp = Math.min(34, 200 / Math.max(1, n - 1));
+    crew.forEach((id, i) => {
+      const k = E.outBack(clamp((t - .4 - i * .07) / .4, 0, 1)); if (k <= 0) return;
+      const cx = n === 1 ? SW / 2 : SW / 2 + (i - (n - 1) / 2) * sp, ph = (beat + i * .25) % 1, hop = ph < .25 ? Math.round(Math.sin(ph / .25 * Math.PI) * 2) : 0;
+      const cheer = fl(beat) % 8 === 0 || this.out >= 0, frame = cheer ? 'happy' : 'idle';
+      const img = id === 'keiko' ? keikoChibi(frame, t) : menuChibi(id, frame, t);
+      shadowOval(g, cx, 183, 8, 2, .45);
+      drawS(g, img, cx, 184 - hop + (1 - k) * 40, { ax: .5, ay: 1, flip: cx > SW / 2 && id !== 'keiko' });
+    });
   },
   drawBot(g) {
-    const t = this.t, G = RAMP.green;
-    rect(g, 0, 0, SW, SH, G[2]);
-    for (let y = 0; y < SH; y += 12) for (let x = ((y / 12) % 2) * 12; x < SW; x += 24) rect(g, x + fl(t * 8) % 24 - 12, y, 12, 12, G[3]);
-    drawS(g, wbSign(), SW / 2, 44, {});
-    const k = .9 + Math.sin(t * 5) * .06;
-    if (this.out < 0 && t > .8) {
-      mord(g, 'TOCA PARA EMPEZAR', SW / 2, 104, { u: 1.25, r: 1.4, rim: 1, sy: 2, fill: ['#ffffff', '#fff27a', '#ffc23a'] }, { anim: (i) => ({ s: k, dy: Math.sin(t * 6 + i * .4) * 1.5 }) });
-      drawHand(g, SW / 2 + 70, 128 + (fl(t * 2) % 2) * 3, fl(t * 2) % 2);
+    const t = this.t, beat = t * TITLE_BPM / 60, G = RAMP.green, Au = RAMP.gold;
+    g.drawImage(titleBotBg(), 0, 0);
+    // soap bubbles rising through the green
+    for (let i = 0; i < 8; i++) { const ph = (t * .12 + i * .19) % 1, bx = 14 + ((i * 97) % 228) + Math.sin(t * 1.6 + i) * 5, by = 160 - ph * 170, r = 2 + (i % 3); g.globalAlpha = Math.min(1, (1 - ph) * 3) * .8; ringPx(g, bx, by, r, G[4]); px(g, bx - 1, by - r + 1, '#ffffff'); g.globalAlpha = 1; }
+    // the sign drops in and swings
+    const sk = E.outBack(clamp((t - .1) / .45, 0, 1)), sw = Math.sin(t * 5) * .05 * Math.exp(-Math.max(0, t - .5) * 2);
+    g.save(); g.translate(SW / 2, -40 + sk * 88); g.rotate(sw); drawS(g, wbSign(), 0, 0, {}); g.restore();
+    // the START plaque, breathing on the beat
+    if (t > .7) {
+      const k = E.outBack(clamp((t - .7) / .35, 0, 1)), pulse = this.out < 0 ? 1 + Math.max(0, 1 - (beat % 1) * 4) * .04 : 1, press = this.press;
+      g.save(); g.translate(SW / 2, 110); g.scale(k * pulse * (1 + press * .06), k * pulse * (1 - press * .12));
+      panel(g, -94, -17, 188, 34, Au[2], { r: 8, line: INK }); panel(g, -91, -14, 182, 28, G[2], { r: 6, line: Au[1] });
+      rect(g, -86, -12, 172, 2, G[3]); hline(g, -86, 86, 10, G[1]);
+      for (const [px0, py0] of [[-86, -9], [86, -9], [-86, 9], [86, 9]]) { disc(g, px0, py0, 1.4, INK); px(g, px0, py0, Au[4]); }
+      if (this.out < 0 || fl(this.out * 16) % 2 === 0) cardWord(g, 'TOCA PARA EMPEZAR', 0, -9, cardFit('TOCA PARA EMPEZAR', 168, TITLE_TAP), { anim: i => ({ dy: Math.round(Math.sin(beat * Math.PI + i * .45) * 1.2) }) });
+      g.restore();
+      if (this.out < 0) drawHand(g, SW / 2 + 82, 124 + (fl(beat) % 2) * 3, fl(beat) % 2);
+      // paw prints trot along under the plaque
+      for (let i = 0; i < 7; i++) { const a = clamp(1 - Math.abs(((t * .9) % 7) - i) / 2.2, 0, 1); if (a > 0) { g.globalAlpha = a * .7; drawPawPrint(g, 52 + i * 26, 146 + (i % 2) * 5, G[4], 1.45); g.globalAlpha = 1; } }
     }
-    txt(g, '© 2026 Westie BLVRD · by Anahí Gavilán', SW / 2, 172, RAMP.cream[3], { align: 'c' });
-    txt(g, 'C/ Viladomat 185 · Barcelona', SW / 2, 182, RAMP.mint[2], { align: 'c' });
+    txt(g, '© 2026 Westie BLVRD · by Anahí Gavilán', SW / 2, 170, RAMP.cream[3], { align: 'c' });
+    txt(g, 'C/ Viladomat 185 · Barcelona', SW / 2, 181, RAMP.mint[2], { align: 'c' });
     this.fx.draw(g);
   },
 };
@@ -18263,16 +18872,6 @@ function drawPawPrint(g, x, y, col, rot = 0) {
   const c = Math.cos(rot), s = Math.sin(rot), P = (dx, dy) => [x + dx * c - dy * s, y + dx * s + dy * c];
   const [mx, my] = P(0, 2); ellipsePx(g, mx, my, 4, 3.4, col);
   for (const [dx, dy] of [[-4.5, -2.5], [-1.6, -5], [1.6, -5], [4.5, -2.5]]) { const [tx, ty] = P(dx, dy); disc(g, tx, ty, 1.7, col); }
-}
-// who peeks on the title screen: everyone you've met so far
-function titlePeekers() {
-  const out = [(g, x, y) => drawS(g, keikoHead('happy'), x, y - 8, { ax: .5, ay: 1 })];
-  out.push((g, x, y, t) => drawAnahiFull(g, x, y + 86, fl(t * .5) % 2 ? 'thumbs' : 'idle', t, { k: .6 }));
-  for (const id of STORY_STAGES.concat(['superwestie'])) {
-    const d = STAGES[id]; if (!d || id === 'anahi' || !stageUnlocked(id) || !d.face) continue;
-    out.push((g, x, y) => { const f = d.face(); drawS(g, f, x, y + 4, { ax: .5, ay: 1 }); });
-  }
-  return out;
 }
 // ---------------------------------------------------------------- DEMO ------
 // the attract mode: the bot plays random microgames until someone touches
@@ -18592,7 +19191,7 @@ const MENU = {
   drawColTop(g) {
     rect(g, 0, 0, SW, SH, RAMP.purple[2]); for (let y = 0; y < SH; y += 8) rect(g, 0, y, SW, 1, RAMP.purple[1]);
     const seen = this.colItems().filter(id => SAVE.seen[id]).length, total = this.colItems().length;
-    mord(g, 'COLECCIÓN', SW / 2, 10, { u: 1.6, r: 1.7, rim: 2, sy: 2 });
+    mord(g, 'ÁLBUM', SW / 2, 10, { u: 1.8, r: 1.9, rim: 2, sy: 2 });
     txt(g, seen + ' / ' + total + ' microjuegos descubiertos', SW / 2, 44, '#ffffff', { align: 'c', out: INK });
     const id = this.subSel;
     if (id) {
@@ -18617,7 +19216,7 @@ const MENU = {
         sfx('select');
         if (id === 'sound') setSound(!AU.on);
         if (id === 'haptic') { SAVE.opts.haptic = SAVE.opts.haptic === 0 ? 1 : 0; persist(); buzz(30); }
-        if (id === 'prologo') playCut('prologo', () => go(MENU, {}));
+        if (id === 'prologo') playCut('prologo', () => go(MENU, { tab: 'opciones' }));
         if (id === 'credits') transit('curtain', CREDITS, {});
         if (id === 'erase') { if (this.eraseArm) { SAVE = defaultSave(); persist(); this.eraseArm = false; transit('paw', BOOT, {}); } else this.eraseArm = true; }
       }
@@ -18632,10 +19231,11 @@ const MENU = {
   },
   drawOptTop(g) {
     rect(g, 0, 0, SW, SH, RAMP.teal[2]); for (let i = 0; i < 20; i++) drawPawPrint(g, (i * 57) % SW, (i * 37) % SH, RAMP.teal[3], i);
-    drawLogo(g, SW / 2, 70, 3 + this.t, { noSparkle: true });
-    txt(g, 'Westie BLVRD · Grooming, Spa & Store', SW / 2, 130, '#ffffff', { align: 'c', out: INK });
-    txt(g, 'Carrer de Viladomat, 185 · Barcelona', SW / 2, 144, '#ffffff', { align: 'c', out: INK });
-    txt(g, 'Cita: 688 72 57 01 · @westie.blvrd', SW / 2, 158, C.yellowL, { align: 'c', out: INK });
+    drawLogo(g, SW / 2, 62, 3 + this.t, { noSparkle: true });
+    g.globalAlpha = .55; rect(g, 0, 145, SW, 43, INK); g.globalAlpha = 1;
+    txt(g, 'Westie BLVRD · Grooming, Spa & Store', SW / 2, 149, '#ffffff', { align: 'c' });
+    txt(g, 'Carrer de Viladomat, 185 · Barcelona', SW / 2, 161, '#ffffff', { align: 'c' });
+    txt(g, 'Cita: 688 72 57 01 · Instagram: westie.blvrd', SW / 2, 173, C.yellowL, { align: 'c' });
   },
   // ------------------------------------------------------------ juguetes ---
   updJuguetes(dt) { if (typeof toysUpdate === 'function') toysUpdate(this, dt); },
@@ -18668,15 +19268,28 @@ const CREDITS = {
   update(dt) { this.t += dt; if (this.t > 2 && IN.anyTap) transit('curtain', MENU, {}); },
   drawTop(g) {
     rect(g, 0, 0, SW, SH, RAMP.green[1]);
-    drawLogo(g, SW / 2, 70, this.t);
-    txt(g, 'Un homenaje de fans a WarioWare: Touched!', SW / 2, 140, '#ffffff', { align: 'c' });
-    txt(g, 'hecho para Westie BLVRD', SW / 2, 152, RAMP.cream[3], { align: 'c' });
+    drawLogo(g, SW / 2, 62, this.t);
+    g.globalAlpha = .45; rect(g, 0, 150, SW, 30, INK); g.globalAlpha = 1;
+    txt(g, 'Un homenaje de fans a WarioWare: Touched!', SW / 2, 154, '#ffffff', { align: 'c' });
+    txt(g, 'hecho para Westie BLVRD', SW / 2, 166, RAMP.cream[3], { align: 'c' });
   },
   drawBot(g) {
     rect(g, 0, 0, SW, SH, RAMP.green[2]);
+    for (let y = 0; y < 150; y += 8) for (let x = ((y / 8) % 2) * 8; x < SW; x += 16) rect(g, x, y, 8, 8, RAMP.green[1]);
     const lines = ['PELUQUERÍA', 'Anahí Gavilán', '', 'MASCOTA', 'Keiko (y todos los peludos)', '', 'IDEA Y PRODUCCIÓN', 'Nahuel Gavilán', '', 'PROGRAMACIÓN, ARTE Y MÚSICA', 'Claude Opus 5.5', '', 'Grooming · Spa & Store', 'Carrer de Viladomat, 185', '688 72 57 01 · @westie.blvrd', '', '¡Gracias por jugar!'];
-    const y0 = SH - this.t * 18;
-    lines.forEach((l, i) => { const y = y0 + i * 12; if (y > -10 && y < SH) txt(g, l, SW / 2, y, l === l.toUpperCase() && l ? C.yellowL : '#ffffff', { align: 'c', out: INK, bold: l === l.toUpperCase() }); });
+    // the names roll up above the floor…
+    g.save(); g.beginPath(); g.rect(0, 0, SW, 150); g.clip();
+    const y0 = 150 - this.t * 18;
+    lines.forEach((l, i) => { const y = y0 + i * 12; if (y > -10 && y < 150) txt(g, l, SW / 2, y, l === l.toUpperCase() && l ? C.yellowL : '#ffffff', { align: 'c', out: INK, bold: l === l.toUpperCase() }); });
+    g.restore();
+    // …while the whole cast parades along it, Keiko leading
+    rect(g, 0, 150, SW, 42, RAMP.wood[2]); rect(g, 0, 150, SW, 2, INK); for (let x = (-(this.t * 28) % 24 + 24) % 24 - 24; x < SW; x += 24) vline(g, rd(x), 152, SH, RAMP.wood[1]);
+    const cast = ["keiko"].concat(menuStageIds().filter(id => id !== "mezcla" && id !== "unpelo")), gap = 40, span = Math.max(cast.length * gap, SW + gap);
+    cast.forEach((id, i) => {
+      const x = ((this.t * 28 + (cast.length - i) * gap) % span) - 30, step = fl(this.t * 6 + i) % 2, hop = Math.abs(Math.sin(this.t * 6 + i)) * 2;
+      const img = id === 'keiko' ? (typeof keikoChibi === 'function' ? keikoChibi(step ? 'walk1' : 'walk0', this.t) : keikoSide(.34, 'wag', 'happy')) : menuChibi(id, step ? 'walk1' : 'walk0', this.t);
+      shadowOval(g, x, 184, 8, 2, .35); drawS(g, img, x, 184 - hop, { ax: .5, ay: 1 });
+    });
   },
 };
 
@@ -19192,19 +19805,25 @@ function runIcon() {
   const o = mkCanvas(192, 192); o.g.drawImage(c, 32, 0, 192, 192, 0, 0, 192, 192);
   document.documentElement.setAttribute('data-result', o.toDataURL('image/png'));
 }
-// ?test=thumb — the 320x200 portfolio label (scaled x2 to 640x400 by tools)
+// ?test=thumb — the 320x200 portfolio label (scaled x2 to 640x400 by tools):
+// the title's green damask, the cast along a gilt counter, Anahí and Súper Keiko
 function runThumb() {
   const c = mkCanvas(320, 200), g = c.g, t = 3.2;
-  rect(g, 0, 0, 320, 200, '#ffb347');
-  for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; polyPx(g, [[160, 96], [160 + Math.cos(a - .1) * 400, 96 + Math.sin(a - .1) * 400], [160 + Math.cos(a + .1) * 400, 96 + Math.sin(a + .1) * 400]], '#ffc56b'); }
-  for (let i = 0; i < 14; i++) drawPawPrint(g, (i * 47) % 330, (i * 83) % 210, '#ffd28c', i % 2 ? .5 : -.4);
+  // the salon damask of the title, drawn at the label's own size (no seams)
+  { const G = RAMP.green, Au = RAMP.gold, W = 320, H = 200;
+    rect(g, 0, 0, W, H, G[1]);
+    for (let k = -H; k < W + H; k += 18) { linePx(g, k, 0, k + H, H, G[2]); linePx(g, k + H, 0, k, H, G[2]); }
+    for (let y = 0; y <= H + 9; y += 9) for (let x = ((y / 9) % 2) * 9; x <= W + 9; x += 18) { px(g, x, y, G[3]); px(g, x - 1, y, G[2]); px(g, x + 1, y, G[2]); px(g, x, y - 1, G[3]); px(g, x, y + 1, G[2]); }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = Math.hypot((x - W / 2) / (W / 2), (y - H / 2) / (H / 2)); if (v > 1 && bayerK(x, y) < (v - 1) * 1.6) px(g, x, y, G[0]); }
+    ringRect(g, 3, 3, W - 6, H - 6, 1, Au[2]); ringRect(g, 6, 6, W - 12, H - 12, 1, Au[1]); }
+  for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; g.globalAlpha = .1; polyPx(g, [[160, 80], [160 + Math.cos(a - .08) * 400, 80 + Math.sin(a - .08) * 400], [160 + Math.cos(a + .08) * 400, 80 + Math.sin(a + .08) * 400]], '#ffd23f'); } g.globalAlpha = 1;
   // the cast along the bottom
   const cast = STORY_STAGES.filter(id => STAGES[id] && STAGES[id].face && id !== 'anahi');
-  rect(g, 0, 150, 320, 50, RAMP.green[2]); rect(g, 0, 150, 320, 2, INK); for (let x = 0; x < 320; x += 16) rect(g, x, 152, 8, 48, RAMP.green[3]);
+  rect(g, 0, 150, 320, 50, RAMP.green[1]); rect(g, 0, 150, 320, 2, RAMP.gold[3]); rect(g, 0, 152, 320, 1, INK); for (let x = 0; x < 320; x += 16) rect(g, x, 153, 8, 47, RAMP.green[2]);
   cast.forEach((id, i) => { const d = STAGES[id]; drawS(g, bubbleImg(id, 19, d.face(), d.rim || RAMP.gold[3], false), 104 + i * 42, 172); });
   drawAnahi(g, 40, 206, 'win', 0);
-  drawSuperWestie(g, 272, 124, 1, { flip: true });
-  drawLogo(g, 150, 70, t, { noSparkle: true });
+  drawSuperWestie(g, 292, 134, 1, { flip: true });
+  drawLogo(g, 140, 72, t, { noSparkle: true });
   document.documentElement.setAttribute('data-result', c.toDataURL('image/png'));
 }
 // ============================================================================
@@ -19213,7 +19832,7 @@ function runThumb() {
 'use strict';
 const SCENE_TABLE = {
   lab: () => go(LAB),
-  stage: () => go(STG, { id: QS.get('id') || 'anahi', story: !QS.has('nostory') }),
+  stage: () => go(STG, { id: QS.get('id') || 'anahi', story: !QS.has('nostory'), practice: QS.get('practice') || null }), // practice=<mg id> plays just that one
   mg: () => go(MGT),
   title: () => go(TITLE),
   icon: () => go(ICON),

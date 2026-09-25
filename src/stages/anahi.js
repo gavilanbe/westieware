@@ -45,21 +45,24 @@ const ANAHI_SONGS = {
   },
 };
 
-// the hanging oval plate that holds the counter
+// the hanging oval plate that holds the counter: big enough to frame two or three digits
 function counterPlate(g, x, y) {
-  vline(g, x - 16, 0, y - 6, RAMP.gold[1]); vline(g, x + 16, 0, y - 6, RAMP.gold[1]);
-  for (let i = 1; i < y - 6; i += 3) { px(g, x - 16, i, RAMP.gold[3]); px(g, x + 16, i, RAMP.gold[3]); }
-  ellipsePx(g, x, y + 8, 27, 13, INK); ellipsePx(g, x, y + 8, 26, 12, RAMP.gold[2]); ellipsePx(g, x, y + 8, 24, 10, RAMP.green[1]); ellipsePx(g, x - 1, y + 7, 22, 8, RAMP.green[2]);
-  for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; px(g, x + Math.cos(a) * 25, y + 8 + Math.sin(a) * 11.5, RAMP.gold[4]); }
+  const cy = y + 15, rx = 34, ry = 17, G = RAMP.gold;
+  for (const sx of [-20, 20]) { for (let yy = 0; yy < cy - ry + 3; yy += 3) { px(g, x + sx, yy, G[1]); px(g, x + sx, yy + 1, G[3]); } }
+  ellipsePx(g, x, cy, rx + 1, ry + 1, INK); ellipsePx(g, x, cy, rx, ry, G[2]); ellipsePx(g, x, cy - 1, rx - 1, ry - 1, G[3]);
+  ellipsePx(g, x, cy, rx - 4, ry - 4, INK); ellipsePx(g, x, cy, rx - 5, ry - 5, RAMP.green[1]); ellipsePx(g, x - 2, cy - 2, rx - 9, ry - 8, RAMP.green[2]);
+  for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; px(g, x + Math.cos(a) * (rx - 2), cy + Math.sin(a) * (ry - 2), i % 2 ? G[4] : G[1]); }
+  disc(g, x, cy - ry, 3, INK); disc(g, x, cy - ry, 2, G[3]); px(g, x - 1, cy - ry - 1, G[4]); // the little crest on top
 }
 const ANA_REACT = { ready: 'ready', win: 'win', lose: 'lose', clear: 'clear', over: 'over' };
+const ANAHI_COUNTER_X = 150; // the counter hangs right of the sign, over the grooming table
 // the salon: Anahí behind the grooming table, Keiko on top of it, the counter
 // hanging from the ceiling in its gilt oval
 function anahiRoomTop(g, S) {
   anahiPrewarm();
   g.drawImage(salonBackdrop(), 0, 0);
-  wallClock(g, 168, 38, 600 + NOW * 30);
-  counterPlate(g, SW / 2, 8);
+  wallClock(g, 204, 22, 600 + NOW * 30);
+  counterPlate(g, ANAHI_COUNTER_X, 5);
   const beat = S.pb || 0, rt = S.reactT || 0;
   let pose = rt < 1.2 ? (ANA_REACT[S.react] || 'idle') : 'idle';
   if (S.phase === 'inter' && S.special === 'speed' && S.pb >= 2) pose = 'speed';
@@ -78,7 +81,7 @@ function anahiRoomTop(g, S) {
     if (S.react === 'win' && rt < .05 && S._burst !== S.count) { S._burst = S.count; S.topFx.burst(188, 84, 14, { k: 'star', c: ['#fff27a', '#ffffff', '#ffd1e4'], sp0: 60, sp1: 150, g: 120, life0: .4, life1: .8 }); S.topFx.burst(126, 100, 8, { k: 'heart', c: '#ff5d9e', sp0: 30, sp1: 70, g: -20, life0: .6, life1: 1 }); }
     if (S.react === 'lose' && rt < .05 && S._burst !== -S.count) { S._burst = -S.count; S.topFx.burst(126, 104, 10, { k: 'puff', c: ['#9896a4', '#b3b8d4'], sp0: 20, sp1: 60, r: 4, life0: .4, life1: .7 }); }
   }
-  if (pose === 'lose' || pose === 'over') { const k = Math.min(1, rt * 3); drawRainCloud(g, 190, 30 + (1 - k) * -30, rt); }
+  if (pose === 'lose' || pose === 'over') { const k = Math.min(1, rt * 3); drawRainCloud(g, 192, 38 + (1 - k) * -40, rt); }
   if (pose === 'speed') { for (let i = 0; i < 6; i++) { const yy = 70 + i * 12, xx = (i * 53 + fl((S.pt || 0) * 300)) % 90; rect(g, 216 + xx * .3, yy, 16, 1, '#ffffff'); } }
 }
 function drawRainCloud(g, x, y, t) {
@@ -96,8 +99,14 @@ function anahiLife(g, x, y, st, bt) {
   if (st === 'break') { const k = clamp(bt / 1.1, 0, 1); drawS(g, lifeKeiko(true), x + E.inQ(k) * 90 * (x > SW / 2 ? 1 : -1), y - Math.sin(k * Math.PI) * 18, { flip: x < SW / 2 }); if (bt < .5) txt(g, '¡Aaay!', x, y - 22 - bt * 10, '#ffffff', { align: 'c', out: INK }); return; }
   drawS(g, lifeKeiko(false), x, y);
 }
+// during the microgame: Anahí's bust in the bottom-left corner, watching (hand on chin),
+// thumbs up with a hop when you win, crestfallen when you don't
 function anahiMini(g, x, y, st, S) {
-  drawAnahiFull(g, 34, SH + 84 - (st === 'win' ? 5 : 0), st === 'win' ? 'thumbs' : st === 'lose' ? 'sad' : 'idle', S.pt, { k: .6 });
+  const t = S.pt || 0, pose = st === 'win' ? 'thumbs' : st === 'lose' ? 'sad' : 'think';
+  const hop = st === 'win' ? Math.abs(Math.sin(t * 8)) * 4 : 0, bob = st === 'play' || st === 'watch' ? Math.round(Math.sin(t * 3) * 1) : 0;
+  drawAnahiFull(g, 40, SH + 34 - hop + bob, pose, t, { k: .5 });
+  if (st === 'win') for (let i = 0; i < 3; i++) drawStar(g, 18 + i * 22, 112 + Math.sin(t * 8 + i) * 4, 2 + Math.sin(t * 11 + i), '#fff27a');
+  if (st === 'lose') { g.globalAlpha = .8; for (let i = 0; i < 3; i++) { const yy = 118 + ((t * 40 + i * 9) % 20); vline(g, 30 + i * 9, yy, yy + 3, '#63a0ef'); } g.globalAlpha = 1; }
 }
 
 // ---------------------------------------------------------------- announcements
@@ -310,7 +319,7 @@ defStage({
   intro: 'anahi_in', outro: 'anahi_out',
   room: {
     top: anahiRoomTop, bot: anahiRoomBot, frame: 'mirror', life: anahiLife, lifeY: 141, lifeSpacing: 34,
-    counter: { x: SW / 2, y: 7 }, mini: anahiMini, portal: { x: 64, y: 24, w: 128, h: 96 }, bossLabel: '¡Lady Di, lista para las 12:00!',
+    counter: { x: ANAHI_COUNTER_X, y: 7 }, mini: anahiMini, portal: { x: 64, y: 24, w: 128, h: 96 }, bossLabel: '¡Lady Di, lista para las 12:00!',
     special: anahiSpecial, specialBot: anahiSpecialBot,
     staticCols: [RAMP.green[1], RAMP.green[2]], playCols: [RAMP.green[2], RAMP.green[3]], cardCol: RAMP.green,
   },
@@ -345,10 +354,37 @@ defCut('anahi_out', {
   shots: [
     { dur: 0, sfx: [[.2, 'slam'], [.4, 'sparkle']], lines: [['narr', '12:00 en punto. Y la ganadora es…'], ['lady', '¡LADY DI VILADOMAT! ¡Cuatro de cuatro!']],
       top(g, t) { podium(g, t); lady(g, 128, 140, 'happy'); if (CUT.li >= 1) rosette(g, 146, 112, C.red, '#ffffff'); },
-      bot(g, t) { rect(g, 0, 0, SW, SH, '#3b2757'); for (let i = 0; i < 18; i++) { const x = 8 + i * 14, y = 150 + Math.abs(Math.sin(t * 6 + i)) * -6; drawS(g, lifeWestie(i % 5 === 0), x, y); } txt(g, '¡GUAU! ¡GUAU! ¡GUAU!', SW / 2, 40 + Math.sin(t * 8) * 2, '#ffffff', { align: 'c', out: INK, bold: true }); } },
+      bot(g, t) {
+        // the stands: two rows of cheering westies above the dialogue box, confetti over them
+        rect(g, 0, 0, SW, SH, '#3b2757'); for (let i = 0; i < 6; i++) { g.globalAlpha = .1; polyPx(g, [[20 + i * 44, 0], [40 + i * 44, 0], [60 + i * 40, 140], [30 + i * 40, 140]], '#fff7ae'); } g.globalAlpha = 1;
+        rect(g, 0, 118, SW, 30, '#2a1d3f'); rect(g, 0, 118, SW, 2, '#4b3570');
+        for (let r = 0; r < 2; r++) for (let i = 0; i < 15; i++) { const x = 10 + i * 17 + r * 8, y = 96 + r * 22 + Math.abs(Math.sin(t * 7 + i * 1.3 + r)) * -7; drawS(g, lifeWestie(false), x, y); }
+        for (let i = 0; i < 24; i++) { const x = (i * 41 + t * 30) % SW, y = (i * 29 + t * 60) % 130; rect(g, x, y, 2, 2, [C.yellow, C.pink, C.mint, '#ffffff'][i % 4]); }
+        const k = spring(t - .1, 2.4, 6); g.save(); g.translate(SW / 2, 44); g.scale(k, k); txt(g, '¡GUAU! ¡GUAU! ¡GUAU!', 0, -4 + Math.sin(t * 8) * 2, '#ffffff', { align: 'c', out: INK, bold: true }); g.restore();
+      } },
     { dur: 0, lines: [['anahi', 'Y una más para la pared… ¡la número catorce!'], ['keiko', '¿Ñam? ¿Se come?'], ['anahi', '¡KEIKO! ¡Las rosetas no se comen!'], ['narr', 'Y así llegaron las rosetas a la pared verde de Westie BLVRD.']],
-      top(g, t) { g.drawImage(salonBackdrop(), 0, 0); rosette(g, 40, 64 + (CUT.li === 0 ? Math.max(0, 1 - t * 2) * -40 : 0), C.red, '#ffffff'); drawAnahiFull(g, 90, 170, CUT.li === 2 ? 'lose' : 'win', t); drawKeikoSit(g, 190, 186, CUT.li === 1 ? 'wow' : CUT.li === 2 ? 'sad' : 'happy'); },
-      bot(g, t) { g.drawImage(salonBotBackdrop(), 0, 0); drawPortalFrame(g, 'mirror', 64, 24, 128, 96, t); rect(g, 64, 24, 128, 96, '#dfe9ee'); rosette(g, 128, 70, C.red, '#ffffff'); txt(g, '1er PREMIO', 128, 90, INK, { align: 'c', bold: true }); } },
+      top(g, t) {
+        g.drawImage(salonBackdrop(), 0, 0);
+        const li = CUT.li, gulp = li === 2; // line 2: the rosette is in Keiko's mouth
+        if (!gulp) rosette(g, 40, 64 + (li === 0 ? Math.max(0, 1 - t * 2) * -40 : 0), C.red, '#ffffff');
+        drawAnahiFull(g, 90, 170, li === 2 ? 'lose' : 'win', t);
+        const kb = gulp ? Math.abs(Math.sin(t * 9)) * 2 : 0;
+        drawKeikoSit(g, 190, 186 - kb, li === 1 ? 'wow' : li === 2 ? 'wink' : 'happy');
+        if (gulp) { rosette(g, 196, 146 - kb, C.red, '#ffffff'); if (fl(t * 4) % 2) txt(g, '¡ÑAM!', 214, 104, '#ffffff', { out: INK, bold: true }); }
+        if (li === 1) { g.globalAlpha = .6 + .4 * Math.sin(t * 8); for (let i = 0; i < 3; i++) px(g, 150 - i * 30, 100 - i * 12, '#fff27a'); g.globalAlpha = 1; } // her gaze, rosette-bound
+      },
+      bot(g, t) {
+        // the first prize, framed in the salon's gilt mirror
+        g.drawImage(salonBotBackdrop(), 0, 0); drawPortalFrame(g, 'mirror', 64, 24, 128, 96, t); rect(g, 64, 24, 128, 96, '#dfe9ee');
+        for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + t * .5; g.globalAlpha = .18; polyPx(g, [[128, 64], [128 + Math.cos(a - .1) * 90, 64 + Math.sin(a - .1) * 90], [128 + Math.cos(a + .1) * 90, 64 + Math.sin(a + .1) * 90]], '#fff7ae'); } g.globalAlpha = 1;
+        g.save(); g.beginPath(); g.rect(64, 24, 128, 96); g.clip();
+        drawS(g, anahiBigRosette(), 128, 62 + Math.sin(t * 2) * 1.5, { s: 3 });
+        g.restore();
+        txt(g, '1er PREMIO', 128, 96, INK, { align: 'c', bold: true }); tiny(g, 'CONCURSO CANINO DE BARCELONA', 128, 108, '#6b6977', { align: 'c' });
+        for (let i = 0; i < 4; i++) drawStar(g, 84 + i * 30, 40 + Math.sin(t * 5 + i) * 4, 2 + Math.sin(t * 9 + i), '#fff27a');
+      } },
   ],
 });
 WHO.lady = { name: 'Lady Di', col: '#e05b98', voice: 'keiko' };
+// the first prize rosette at 1x, to be drawn scaled up (x3) in the gilt frame
+function anahiBigRosette() { return mdl('anahiBigRosette', () => { const c = mkCanvas(14, 20); rosette(c.g, 7, 6, C.red, '#ffffff'); return c; }); }

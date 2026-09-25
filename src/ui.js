@@ -122,5 +122,5 @@ function drawRotateHint(g) {
   panel(g, -18, -30, 36, 60, '#ffffff', { r: 5 }); rect(g, -14, -24, 28, 46, RAMP.green[2]); drawS(g, lifeWestie(), 0, 0);
   g.restore();
   txt(g, 'WESTIE WARE se juega en vertical', cx0, cy0 + 50, '#ffffff', { align: 'c', bold: true });
-  txt(g, 'Gira el móvil ↻  (o toca para seguir)', cx0, cy0 + 64, RAMP.mint[3], { align: 'c' });
+  txt(g, 'Gira el móvil (o toca para seguir)', cx0, cy0 + 64, RAMP.mint[3], { align: 'c' });
 }
